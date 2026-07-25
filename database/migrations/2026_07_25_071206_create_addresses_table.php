@@ -11,17 +11,47 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('wallets', function (Blueprint $table) {
+        Schema::create('addresses', function (Blueprint $table) {
+
+
             $table->id();
 
+
             $table->foreignId('user_id')
-                ->unique()
                 ->constrained()
                 ->cascadeOnDelete();
 
-            $table->bigInteger('balance')->default(0);
+
+            $table->string('title')
+                ->nullable();
+
+
+            $table->string('receiver_name');
+
+
+            $table->string('phone');
+
+
+            $table->string('province');
+
+
+            $table->string('city');
+
+
+            $table->text('address');
+
+
+            $table->string('postal_code')
+                ->nullable();
+
+
+
+            $table->boolean('is_default')
+                ->default(false);
+
 
             $table->timestamps();
+
         });
     }
 
@@ -30,6 +60,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('wallets');
+        Schema::dropIfExists('addresses');
     }
 };

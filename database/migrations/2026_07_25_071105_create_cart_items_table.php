@@ -12,18 +12,39 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('cart_items', function (Blueprint $table) {
+
             $table->id();
+
 
             $table->foreignId('cart_id')
                 ->constrained()
                 ->cascadeOnDelete();
 
-            $table->foreignId('course_id')
+
+            $table->foreignId('product_id')
                 ->constrained()
                 ->cascadeOnDelete();
 
+
+
+            $table->unsignedInteger('quantity')
+                ->default(1);
+
+
+
+            // قیمت لحظه اضافه شدن به سبد
             $table->unsignedBigInteger('price');
+
+
+
+            // رنگ، سایز، مدل
+            $table->json('attributes')
+                ->nullable();
+
+
+
             $table->timestamps();
+
         });
     }
 

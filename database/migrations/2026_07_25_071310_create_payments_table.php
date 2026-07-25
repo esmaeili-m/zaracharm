@@ -12,29 +12,68 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('payments', function (Blueprint $table) {
+
+
             $table->id();
-            $table->foreignId('invoice_id')
+
+
+            $table->foreignId('order_id')
                 ->constrained()
                 ->cascadeOnDelete();
 
-            $table->string('gateway');
 
-            $table->string('authority')->nullable();
 
-            $table->string('ref_id')->nullable();
+            $table->enum('method',[
+
+                'wallet',
+                'gateway',
+                'installment'
+
+            ]);
+
+
+
+            // مثلا zarinpal یا digipay
+
+            $table->string('gateway')
+                ->nullable();
+
+
+
+            $table->string('transaction_id')
+                ->nullable();
+
+
 
             $table->unsignedBigInteger('amount');
 
-            $table->enum('status', [
+
+
+            $table->enum('status',[
+
                 'pending',
                 'success',
                 'failed'
-            ])->default('pending');
 
-            $table->json('response')->nullable();
+            ])
+                ->default('pending');
 
-            $table->timestamp('paid_at')->nullable();
+
+
+            // پاسخ درگاه
+            $table->json('gateway_response')
+                ->nullable();
+
+
+
+            $table->timestamp('paid_at')
+                ->nullable();
+
+
+
             $table->timestamps();
+
+
         });
     }
 

@@ -6,10 +6,22 @@ use Illuminate\Database\Eloquent\Model;
 
 class CartItem extends Model
 {
-    protected $guarded =[];
 
-    public function course()
+    protected $casts=[
+        'attributes'=>'array'
+    ];
+
+
+    public function cart()
     {
-        return $this->belongsTo(Course::class);
+        return $this->belongsTo(Cart::class);
     }
+
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+
 }

@@ -6,17 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class Cart extends Model
 {
-    protected $fillable = ['user_id'];
+
+    protected $fillable=[
+        'user_id',
+        'status'
+    ];
+
 
     public function items()
     {
         return $this->hasMany(CartItem::class);
     }
-    public function total()
+
+
+    public function user()
     {
-        return $this->items()
-            ->with('course')
-            ->get()
-            ->sum(fn($item) => $item->course->price);
+        return $this->belongsTo(User::class);
     }
+
+
 }

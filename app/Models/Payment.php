@@ -6,5 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
 {
-    protected $guarded=[];
+
+
+    protected $casts=[
+        'gateway_response'=>'array'
+    ];
+
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+
 }
