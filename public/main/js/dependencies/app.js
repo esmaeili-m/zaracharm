@@ -21,32 +21,82 @@ let categoryFiltersInstance = null;
  * Displays Persian-formatted countdown for special offers
  */
 function startIncredibleTimer() {
-    const countDownDate = new Date().getTime() + (24 * 60 * 60 * 1000);
 
-    const timerInterval = setInterval(() => {
-        const now = new Date().getTime();
-        const distance = countDownDate - now;
+    const timerContainer = document.querySelector(
+        ".incredible-timer-container"
+    );
 
-        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    if (!timerContainer) {
+        return;
+    }
 
-        const hoursEl = document.getElementById("hours");
-        const minutesEl = document.getElementById("minutes");
-        const secondsEl = document.getElementById("seconds");
-        const timerContainer = document.querySelector(".incredible-timer-container");
+    const endTime = Number(
+        timerContainer.dataset.endTime
+    ) * 1000;
 
-        // Display with Persian digits
-        if (hoursEl) hoursEl.innerHTML = hours < 10 ? "۰" + hours : hours;
-        if (minutesEl) minutesEl.innerHTML = minutes < 10 ? "۰" + minutes : minutes;
-        if (secondsEl) secondsEl.innerHTML = seconds < 10 ? "۰" + seconds : seconds;
+    const hoursEl = document.getElementById("hours");
+    const minutesEl = document.getElementById("minutes");
+    const secondsEl = document.getElementById("seconds");
 
-        if (distance < 0) {
+    function toPersianDigits(value) {
+
+        return String(value)
+            .padStart(2, "0")
+            .replace(/\d/g, digit => "۰۱۲۳۴۵۶۷۸۹"[digit]);
+
+    }
+
+    function updateTimer() {
+
+        const now = Date.now();
+        const distance = endTime - now;
+
+        if (distance <= 0) {
+
             clearInterval(timerInterval);
-            if (timerContainer) timerContainer.innerHTML = "Offer Expired";
+
+            if (hoursEl) hoursEl.innerHTML = "۰۰";
+            if (minutesEl) minutesEl.innerHTML = "۰۰";
+            if (secondsEl) secondsEl.innerHTML = "۰۰";
+
+            return;
         }
-    }, 1000);
+
+        const hours = Math.floor(
+            distance / (1000 * 60 * 60)
+        );
+
+        const minutes = Math.floor(
+            (distance % (1000 * 60 * 60)) /
+            (1000 * 60)
+        );
+
+        const seconds = Math.floor(
+            (distance % (1000 * 60)) /
+            1000
+        );
+
+        if (hoursEl) {
+            hoursEl.innerHTML = toPersianDigits(hours);
+        }
+
+        if (minutesEl) {
+            minutesEl.innerHTML = toPersianDigits(minutes);
+        }
+
+        if (secondsEl) {
+            secondsEl.innerHTML = toPersianDigits(seconds);
+        }
+    }
+
+    updateTimer();
+
+    const timerInterval = setInterval(
+        updateTimer,
+        1000
+    );
 }
+
 
 /**
  * AMAZING TIMER (8-HOUR COUNTDOWN)
@@ -705,14 +755,16 @@ function initShopFiltering() {
 
             setTimeout(() => {
                 cards.forEach(card => {
-                    const category = card.getAttribute('data-category');
+                    const categories = card.getAttribute('data-categories').split(' ');
 
-                    if (filterValue === 'all' || category === filterValue) {
+                    if (filterValue === 'all' || categories.includes(filterValue)) {
                         card.classList.remove('hidden');
+
                         setTimeout(() => {
                             card.style.opacity = '1';
                             card.style.transform = 'scale(1) translateY(0)';
                         }, 50);
+
                     } else {
                         card.classList.add('hidden');
                     }
@@ -1799,7 +1851,7 @@ function initTicketChat() {
             <div class="flex flex-col ${isUser ? 'items-end' : 'items-start'} gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div class="${isUser
             ? 'bg-primary-500 text-white rounded-tl-none shadow-lg shadow-primary-500/20'
-            : 'bg-white/50 dark:bg-white/5 backdrop-blur-md border border-white/40 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-tr-none'} 
+            : 'bg-white/50 dark:bg-white/5 backdrop-blur-md border border-white/40 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-tr-none'}
                     p-4 rounded-[1.5rem] max-w-[85%]">
                     <p class="text-[11px] font-bold leading-6">${text}</p>
                 </div>

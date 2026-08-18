@@ -14,8 +14,6 @@ new class extends Component
                 'items.page',
             ])
             ->first();
-
-        $this->categories = \App\Models\Category::active()->withCount('courser')->take(6)->get();
         $this->logo = \App\Models\Setting::where('key','logo')->with('media')->first();
     }
 

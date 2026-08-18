@@ -8,9 +8,9 @@ class Page extends Model
 {
     use HasSeoMeta;
     protected $guarded=[];
-    public function sections()
+    public function rows()
     {
-        return $this->hasMany(PageSection::class)
+        return $this->hasMany(PageRow::class)
             ->orderBy('sort');
     }
 

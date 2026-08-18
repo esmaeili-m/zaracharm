@@ -25,7 +25,6 @@ return new class extends Migration
 
             // Barcode (EAN, UPC, ...)
             $table->string('barcode')->nullable();
-
             // Selling price
             $table->unsignedBigInteger('price')->nullable();
 

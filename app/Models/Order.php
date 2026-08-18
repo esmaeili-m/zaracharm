@@ -3,7 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+use App\Models\Transaction;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
 
@@ -34,7 +35,10 @@ class Order extends Model
         return $this->hasOne(Payment::class);
     }
 
-
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
 
     public function shipment()
     {

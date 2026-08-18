@@ -28,6 +28,9 @@ return new class extends Migration
                 'female',
                 'other'
             ])->nullable();
+            $table->string('national_code', 10)
+                ->nullable()
+                ->unique();
             $table->string('password')->nullable();
 
             $table->boolean('status')

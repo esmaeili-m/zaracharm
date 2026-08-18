@@ -13,11 +13,19 @@ return new class extends Migration
     {
         Schema::create('sections', function (Blueprint $table) {
             $table->id();
+
             $table->string('name');
             $table->string('key')->unique();
-            $table->string('component');
+
+            $table->string('component')->nullable();
+
+            $table->boolean('is_livewire')->default(false);
+
+            // آیا سکشن آیتم دارد؟
             $table->boolean('has_items')->default(false);
-            $table->boolean('livewire')->default(false);
+
+            // فرم تنظیمات پنل
+            $table->json('schema')->nullable();
             $table->timestamps();
         });
     }

@@ -19,8 +19,9 @@ class UserTableSeeder extends Seeder
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         User::truncate();
         $admin = User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@madarenee.ir',
+            'first_name' => 'مهدی',
+            'last_name' => 'اسماعیلی',
+            'email' => 'admin@zaracharm.ir',
             'mobile' => '09193544391',
             'password' => Hash::make('password123'),
         ]);

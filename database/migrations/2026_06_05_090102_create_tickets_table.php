@@ -12,15 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tickets', function (Blueprint $table) {
-
             $table->id();
 
             $table->foreignId('user_id')
                 ->constrained()
                 ->cascadeOnDelete();
 
-            $table->string('ticket_number')->unique();
-            $table->boolean('is_read')->default(false);
+            $table->string('ticket_number', 30)
+                ->unique();
+
             $table->string('title');
 
             $table->enum('status', [
@@ -29,10 +29,22 @@ return new class extends Migration
                 'closed',
             ])->default('open');
 
+            $table->enum('priority', [
+                'low',
+                'normal',
+                'high',
+            ])->default('normal');
+
             $table->timestamp('last_reply_at')
                 ->nullable();
 
+            $table->timestamp('closed_at')
+                ->nullable();
+
             $table->timestamps();
+
+            $table->index(['user_id', 'status']);
+            $table->index('last_reply_at');
         });
     }
 

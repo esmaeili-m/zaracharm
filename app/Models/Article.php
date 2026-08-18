@@ -41,12 +41,23 @@ class Article extends Model
         return $this->morphOne(Media::class, 'mediable')
             ->where('collection', 'featured_image');
     }
+    protected function readingTime(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $content = strip_tags($this->description);
 
+                $words = preg_split('/\s+/u', trim($content));
+
+                return max(1, ceil(count($words) / 200));
+            }
+        );
+    }
     protected function featuredImageUrl(): Attribute
     {
         return Attribute::make(
             get: fn () => $this->featuredImage
-                ? url('/media/' . $this->featuredImage->file_path)
+                ? url('/storage/' . $this->featuredImage->file_path)
                 : null
         );
     }
@@ -61,7 +72,7 @@ class Article extends Model
     {
         return Attribute::make(
             get: fn () => $this->bannerImage
-                ? url('/media/' . $this->bannerImage->file_path)
+                ? url('/storage/' . $this->bannerImage->file_path)
                 : null
         );
     }

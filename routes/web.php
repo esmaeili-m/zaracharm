@@ -11,7 +11,7 @@ Route::post('/logout', function () {
 })->name('logout');
 
 Route::livewire('/login', 'pages::auth.login')->name('login');
-Route::livewire('/user/dashboard', 'pages::auth.dashboard')->name('user.dashboard');
+Route::livewire('/user/dashboard', 'pages::main.user.dashboard')->name('user.dashboard');
 
 // ─── Static Pages ────────────────────────────────────────
 Route::livewire('/cart', 'pages::main.cart.index')->name('cart.index');
@@ -69,6 +69,19 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/brands', 'pages::dashboard.brands.index')->name('brands.index');
     Route::livewire('/brands/trash', 'pages::dashboard.brands.trash')->name('brands.trash');
 
+    Route::livewire('/stories', 'pages::dashboard.stories.index')->name('stories.index');
+    Route::livewire('/stories/trash', 'pages::dashboard.stories.trash')->name('stories.trash');
+
+    Route::livewire('/campaign', 'pages::dashboard.campaign.index')->name('campaign.index');
+    Route::livewire('/campaign/trash', 'pages::dashboard.campaign.trash')->name('campaign.trash');
+    Route::livewire('/campaign/{campaign}/targets', 'pages::dashboard.campaign.targets')->name('campaign.targets');
+    Route::livewire('/campaign/{campaign}/conditions', 'pages::dashboard.campaign.conditions')->name('campaign.conditions');
+    Route::livewire('/campaign/{campaign}/rewards', 'pages::dashboard.campaign.rewards')->name('campaign.rewards');
+
+    Route::livewire('/sliders', 'pages::dashboard.sliders.index')->name('sliders.index');
+    Route::livewire('/sliders/trash', 'pages::dashboard.sliders.trash')->name('sliders.trash');
+    Route::livewire('/sliders/{slider}/item', 'pages::dashboard.sliders.item')->name('sliders.item');
+
     Route::livewire('/inventories', 'pages::dashboard.inventories.index')->name('inventories.index');
     Route::livewire('/inventories/trash', 'pages::dashboard.inventories.trash')->name('inventories.trash');
 
@@ -103,6 +116,9 @@ Route::prefix('dashboard') ->middleware([
 
 
     Route::livewire('/pages', 'pages::dashboard.pages.index')->name('pages.index');
+    Route::livewire('/pages/{page}/rows', 'pages::dashboard.pages.rows.index')->name('pages.rows');
+    Route::livewire('/pages/{row}/sections', 'pages::dashboard.pages.sections.page-section')->name('pages.rows.sections');
+
     Route::livewire('/galleries', 'pages::dashboard.galleries.index')->name('galleries.index');
     Route::livewire('/storage', 'pages::dashboard.storage.index')->name('storage.index');
     Route::livewire('/pages/{id}', 'pages::dashboard.pages.items')->name('pages.item');

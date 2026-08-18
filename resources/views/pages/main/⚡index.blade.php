@@ -8,6 +8,7 @@ new class extends Component
     public function mount()
     {
         $this->page=\App\Models\Page::where('slug','home')->with('sections')->first();
+        dd($this->page);
     }
 };
 ?>

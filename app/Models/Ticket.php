@@ -11,13 +11,18 @@ class Ticket extends Model
         'ticket_number',
         'title',
         'status',
-        'is_read',
+        'priority',
         'last_reply_at',
+        'closed_at',
     ];
 
-    protected $casts = [
-        'last_reply_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'last_reply_at' => 'datetime',
+            'closed_at' => 'datetime',
+        ];
+    }
 
     public function user()
     {
@@ -29,13 +34,9 @@ class Ticket extends Model
         return $this->hasMany(TicketMessage::class);
     }
 
-    public static function generateNumber(): string
+    public function latestMessage()
     {
-        return 'TK-' . now()->format('Ymd') . '-' . random_int(1000, 9999);
+        return $this->hasOne(TicketMessage::class)
+            ->latestOfMany();
     }
-    public function lastMessage()
-    {
-        return $this->hasOne(TicketMessage::class)->latestOfMany();
-    }
-
 }

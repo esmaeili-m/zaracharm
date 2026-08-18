@@ -10,6 +10,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\WithdrawalAccount;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -49,11 +51,22 @@ class User extends Authenticatable
     {
         return $this->morphMany(Media::class, 'mediable');
     }
-
+    public function rewardPointTransactions(): HasMany
+    {
+        return $this->hasMany(RewardPointTransaction::class);
+    }
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
     public function avatar()
     {
         return $this->morphOne(Media::class, 'mediable')
             ->where('collection', 'avatar');
+    }
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class);
     }
     public function wishlists()
     {
@@ -64,6 +77,15 @@ class User extends Authenticatable
         return $this->courses()
             ->where('course_id', $courseId)
             ->exists();
+    }
+    public function notificationPreference()
+    {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
+    public function notificationPreferences()
+    {
+        return $this->hasOne(NotificationPreference::class);
     }
     public function socials()
     {
@@ -86,7 +108,7 @@ class User extends Authenticatable
         return Attribute::make(
             get: fn () => $this->avatar
                 ? url('/storage/' . $this->avatar->file_path)
-                : null
+                : asset('main/images/panel/default-avatar.png')
         );
     }
     public function tickets()
@@ -105,15 +127,15 @@ class User extends Authenticatable
     {
         return $query->role('teacher');
     }
-    public function wallet()
+    public function orders()
     {
-        return $this->hasOne(Wallet::class);
+        return $this->hasMany(Order::class);
+    }
+    public function withdrawalAccounts(): HasMany
+    {
+        return $this->hasMany(WithdrawalAccount::class);
     }
 
-    public function transactions()
-    {
-        return $this->hasMany(Transactions::class);
-    }
     public function getRoleLabelAttribute()
     {
         return [

@@ -143,7 +143,26 @@ class Product extends Model
                 : Jalalian::fromFormat('Y/m/d', $value)->toCarbon(),
         );
     }
-
+    public function displayVariant()
+    {
+        return $this->hasOne(ProductVariant::class)
+            ->where('status', 1)
+            ->whereHas('inventoryItems', function ($q) {
+                $q->where('status', 1)
+                    ->whereRaw('quantity > reserved_quantity')
+                    ->whereHas('inventory', function ($q) {
+                        $q->where('status', 1);
+                    });
+            })
+            ->orderByRaw("
+            CASE
+                WHEN compare_price IS NOT NULL
+                     AND compare_price > price THEN 0
+                ELSE 1
+            END
+        ")
+            ->orderBy('price');
+    }
     public function tags(): MorphToMany
     {
         return $this->morphToMany(Tag::class, 'taggable');

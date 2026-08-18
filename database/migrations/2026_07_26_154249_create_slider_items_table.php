@@ -11,17 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('page_sections', function (Blueprint $table) {
+        Schema::create('slider_items', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('page_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('section_id')->constrained()->cascadeOnDelete();
-
-            $table->integer('sort')->default(0);
+            $table->foreignId('slider_id')
+                ->constrained()
+                ->cascadeOnDelete();
 
             $table->string('title')->nullable();
 
-            $table->json('data')->nullable();
+            $table->text('description')->nullable();
+
+            $table->unsignedInteger('sort')->default(0);
 
             $table->boolean('status')->default(true);
 
@@ -34,6 +35,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('page_sections');
+        Schema::dropIfExists('slider_items');
     }
 };

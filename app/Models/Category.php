@@ -27,22 +27,27 @@ class Category extends Model
     {
         return $this->hasMany(Category::class,'parent_id');
     }
+    public function getAllDescendantIds()
+    {
+        $ids = collect();
 
+        foreach ($this->children as $child) {
+            $ids->push($child->id);
+            $ids = $ids->merge($child->getAllDescendantIds());
+        }
+
+        return $ids;
+    }
     public function featuredImage()
     {
         return $this->morphOne(Media::class, 'mediable')
             ->where('collection', 'featured_image');
     }
 
-    public function courser()
-    {
-        return $this->hasMany(Course::class);
-    }
-
     public function getFeaturedImageUrlAttribute()
     {
         return $this->featuredImage
-            ? url('/media/' . $this->featuredImage->file_path)
+            ? url('/storage/' . $this->featuredImage->file_path)
             : null;
     }
 
@@ -55,9 +60,12 @@ class Category extends Model
     {
         return $this->morphToMany(Tag::class, 'taggable');
     }
+    public function products()
+    {
+        return $this->belongsToMany(Product::class);
 
-
-    public function scopeActive($query)
+    }
+        public function scopeActive($query)
     {
         return $query->where('status', true);
     }

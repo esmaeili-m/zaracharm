@@ -853,6 +853,14 @@
                             <span class="side-menu__label">محصولات</span>
                         </a>
                     </li>
+                    {{-- استوری --}}
+                    <li class="slide">
+                        <a class="side-menu__item {{ request()->routeIs('stories.*') ? 'active' : '' }}"
+                           href="{{ route('stories.index') }}">
+                            <i class="ri-book-open-line side-menu__icon"></i>
+                            <span class="side-menu__label">استوری</span>
+                        </a>
+                    </li>
 
                     {{-- برندها --}}
                     <li class="slide">
@@ -902,6 +910,24 @@
                            href="{{ route('coupons.index') }}">
                             <i class="ri-book-open-line side-menu__icon"></i>
                             <span class="side-menu__label">کوپن تخفیف</span>
+                        </a>
+                    </li>
+
+                    {{--اسلایدر --}}
+                    <li class="slide">
+                        <a class="side-menu__item {{ request()->routeIs('sliders.*') ? 'active' : '' }}"
+                           href="{{ route('sliders.index') }}">
+                            <i class="ri-book-open-line side-menu__icon"></i>
+                            <span class="side-menu__label">اسلایدر</span>
+                        </a>
+                    </li>
+
+                    {{--کمپین --}}
+                    <li class="slide">
+                        <a class="side-menu__item {{ request()->routeIs('campaign.*') ? 'active' : '' }}"
+                           href="{{ route('campaign.index') }}">
+                            <i class="ri-book-open-line side-menu__icon"></i>
+                            <span class="side-menu__label">کمپین ها</span>
                         </a>
                     </li>
 

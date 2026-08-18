@@ -205,7 +205,7 @@ new class extends Component
                                                         class="ri-edit-line"></i></a>
                                             @endcan
                                                 @can('sections.view')
-                                                <a  href="{{route('sections.page',$item->id)}}" class="text-warning fs-14 lh-1"><i
+                                                <a  href="{{route('pages.rows',$item->id)}}" class="text-warning fs-14 lh-1"><i
                                                         class="ri-list-view"></i></a>
                                                 @endcan
                                                  @can('pages.delete')

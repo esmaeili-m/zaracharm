@@ -24,10 +24,12 @@ return new class extends Migration
 
             $table->longText('message');
 
-            $table->boolean('is_admin')
-                ->default(false);
+            $table->timestamp('read_at')
+                ->nullable();
 
             $table->timestamps();
+
+            $table->index(['ticket_id', 'created_at']);
         });
     }
 

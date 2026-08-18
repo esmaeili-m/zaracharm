@@ -19,6 +19,8 @@
     <link rel="stylesheet" href="{{asset('main/js/plugin/story-player/styles.css')}}">
     <link rel="stylesheet" href="{{asset('main/js/plugin/swiper/swiper-bundle.min.css')}}">
     <link rel="stylesheet" href="{{asset('main/css/app.css')}}">
+    @stack('styles')
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
 
@@ -171,11 +173,13 @@
                 </button>
 
                 <div class="relative group">
-                    <button id="login-btn"
+                    <a
+{{--                        id="login-btn" --}}
+                       href="{{ auth()->check() ? route('user.dashboard') : route('login')}}"
                             class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-md hover:border-primary-500/50 hover:bg-primary-50/50 dark:hover:bg-primary-500/10 transition-all duration-300 group shadow-sm">
                         <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-primary-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                         <span class="text-xs font-black text-gray-700 dark:text-gray-200 hidden lg:block uppercase tracking-tighter">ورود یا ثبت‌نام</span>
-                    </button>
+                    </a>
                 </div>
 
                 <button id="cart-btn"
@@ -1173,7 +1177,6 @@
 </div>
 <!--END Mobile Menu-->
 
-<script src="{{asset('main/js/plugin/story-player/story-player.js')}}"></script>
 <script src="{{asset('main/js/plugin/swiper/swiper-bundle.min.js')}}"></script>
 <script src="{{asset('main/js/dependencies/swiper-script.js')}}"></script>
 <script src="{{asset('main/js/plugin/sweetalert/sweetalert.min.js')}}"></script>
@@ -1181,116 +1184,8 @@
 <script src="{{asset('main/js/dependencies/app.js')}}"></script>
 
 <!-- INITIAL STORY SECTION -->
-<script>
-    const stories = [
-        {
-            type: 'image',
-            user: 'استوری ۱',
-            avatar: 'assets/images/story/1.jpg',
-            url: 'assets/images/story/1.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'image',
-            user: 'استوری 2',
-            avatar: 'assets/images/story/2.jpg',
-            url: 'assets/images/story/2.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'image',
-            user: 'استوری 3',
-            avatar: 'assets/images/story/3.jpg',
-            url: 'assets/images/story/3.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'image',
-            user: 'استوری 4',
-            avatar: 'assets/images/story/5.jpg',
-            url: 'assets/images/story/5.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'image',
-            user: 'استوری 5',
-            avatar: 'assets/images/story/6.jpg',
-            url: 'assets/images/story/6.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'image',
-            user: 'استوری 6',
-            avatar: 'assets/images/story/7.jpg',
-            url: 'assets/images/story/7.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'image',
-            user: 'استوری 7',
-            avatar: 'assets/images/story/8.jpg',
-            url: 'assets/images/story/8.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'video',
-            user: 'استوری 8',
-            avatar: 'assets/images/story/4.jpg',
-            url: 'assets/images/story/video/1.mp4',
-            duration: null,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'image',
-            user: 'استوری ۱',
-            avatar: 'assets/images/story/1.jpg',
-            url: 'assets/images/story/1.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'image',
-            user: 'استوری 2',
-            avatar: 'assets/images/story/2.jpg',
-            url: 'assets/images/story/2.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'image',
-            user: 'استوری 3',
-            avatar: 'assets/images/story/3.jpg',
-            url: 'assets/images/story/3.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'image',
-            user: 'استوری 4',
-            avatar: 'assets/images/story/5.jpg',
-            url: 'assets/images/story/5.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-        {
-            type: 'image',
-            user: 'استوری 5',
-            avatar: 'assets/images/story/6.jpg',
-            url: 'assets/images/story/6.jpg',
-            duration: 5000,
-            link: 'https://www.rtl-theme.com/author/amir_rezaii/products/'
-        },
-    ];
+@stack('scripts')
 
-    new StoryPlayer('stories-container', stories);
-</script>
 @livewireScripts
 @stack('scripts')
 </body>

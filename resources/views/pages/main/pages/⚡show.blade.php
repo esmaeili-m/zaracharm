@@ -9,12 +9,9 @@ new class extends Component
     public function mount(?string $slug = null)
     {
         $slug ??= 'home';
-
-
         $this->page = \App\Models\Page::query()
             ->with([
-                'sections.section',
-                'sections.media'
+                'rows.sections.section','rows.sections.media'
             ])
             ->where('slug', $slug)
             ->where('status', true)
@@ -27,38 +24,42 @@ new class extends Component
 ?>
 
 <div>
-    @foreach($page->sections as $pageSection)
-        @if($pageSection->section?->livewire)
-            <livewire:is
-                :component="$pageSection->section->component"
-                :data="$pageSection->data"
-                :images="$pageSection->media
-        ->mapWithKeys(function ($media) {
-            return [
-                $media->collection => asset('/storage/' . $media->file_path)
-            ];
-        })
-        ->toArray()"
-            />
-        @else
+    <main class="space-y-12 lg:px-5">
 
-            @include(
-                           $pageSection->section->component,
-                           [
-                               'data' => $pageSection->data,
-                              'images' => $pageSection->media
-                                       ->mapWithKeys(function ($media) {
-                                           return [
-                                               $media->collection => asset('/storage/'.$media->file_path)
-                                           ];
-                                       })
-                                       ->toArray(),
+        @foreach($page->rows as $row)
 
-                           ]
-                       )
+            <section class="{{ $row->classes() }} transition-colors duration-500">
 
-        @endif
+                <div class="grid grid-cols-12 {{ $row->gapClass() }}">
 
-    @endforeach
+                    @foreach($row->sections as $pageSection)
 
+                        <div class="{{ $pageSection->classes() }} ">
+
+                            @if($pageSection->section?->is_livewire)
+                                <livewire:is
+                                    :component="$pageSection->section->component"
+                                    :data="$pageSection->data"
+                                    :media="$pageSection->media"
+                                />
+
+                            @else
+
+                                @include($pageSection->section->component, [
+                                    'data' => $pageSection->data,
+                                ])
+
+                            @endif
+
+                        </div>
+
+                    @endforeach
+
+                </div>
+
+            </section>
+
+        @endforeach
+
+    </main>
 </div>

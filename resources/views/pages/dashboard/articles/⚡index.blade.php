@@ -70,6 +70,10 @@ new class extends Component
             text: 'مقاله با موفقیت آپدیت شد.'
         );
     }
+    public function updatedTitle()
+    {
+        $this->slug = preg_replace('/\s+/', '-', trim($this->title));
+    }
     public function delete()
     {
         abort_if(!auth()->user()->can('articles.delete'), 403);
@@ -98,7 +102,7 @@ new class extends Component
                     ->orWhere('description', 'LIKE', '%' . $this->search . '%')
                     ->orWhere('short_description', 'LIKE', '%' . $this->search . '%')
                     ->orWhereHas('tags', function ($q) {
-                        $q->where('name', 'LIKE', '%' . $this->search . '%');
+                        $q->where('title', 'LIKE', '%' . $this->search . '%');
                     });
             });
 
@@ -381,12 +385,12 @@ new class extends Component
                                         {{$item->title}}
                                     </td>
                                     <td>
-                                        {{$item->category?->name}}
+                                        {{$item->category?->title}}
                                     </td>
                                     <td>
                                         @forelse($item->tags as $tag)
                                             <span class="badge bg-primary-transparent me-1 mb-1">
-                                                {{ $tag->name }}
+                                                {{ $tag->title }}
                                             </span>
                                         @empty
                                             <span class="text-muted">—</span>
@@ -502,7 +506,7 @@ new class extends Component
                                         دسته بندی را انتخاب کنید
                                     </option>
 
-                                    @foreach(\App\Models\Category::pluck('name','id') as $key => $category)
+                                    @foreach(\App\Models\Category::pluck('title','id') as $key => $category)
                                         <option value="{{ $key }}">
                                             {{ $category }}
                                         </option>
@@ -529,9 +533,9 @@ new class extends Component
                                     size="4"
                                     class="form-control @error('tag_ids') is-invalid @enderror @error('tag_ids.*') is-invalid @enderror">
 
-                                    @foreach(Tag::orderBy('name')->pluck('name', 'id') as $id => $name)
+                                    @foreach(Tag::orderBy('title')->pluck('title', 'id') as $id => $title)
                                         <option value="{{ $id }}">
-                                            {{ $name }}
+                                            {{ $title }}
                                         </option>
                                     @endforeach
 
@@ -698,7 +702,7 @@ new class extends Component
         <div class="modal-dialog modal-dialog-centered text-center " role="document">
             <div class="modal-content modal-content-demo">
                 <div class="modal-header">
-                    <h6 class="modal-title">{{$info['delete'] .' ' .$selectItem?->name}}</h6><button aria-label="Close" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h6 class="modal-title">{{$info['delete'] .' ' .$selectItem?->title}}</h6><button aria-label="Close" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-start">
 
