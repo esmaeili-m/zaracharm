@@ -111,6 +111,13 @@ class User extends Authenticatable
                 : asset('main/images/panel/default-avatar.png')
         );
     }
+    protected function fullName(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->first_name.' '.$this->last_name
+
+        );
+    }
     public function tickets()
     {
         return $this->hasMany(Ticket::class);

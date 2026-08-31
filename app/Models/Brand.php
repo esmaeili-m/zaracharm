@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Models\DiscountTarget;
 
 class Brand extends Model
 {
@@ -34,6 +35,13 @@ class Brand extends Model
     |--------------------------------------------------------------------------
     */
 
+    public function discountTargets()
+    {
+        return $this->morphMany(
+            DiscountTarget::class,
+            'target'
+        );
+    }
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);

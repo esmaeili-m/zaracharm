@@ -29,4 +29,5 @@ class DiscountTarget extends Model
     {
         return $this->morphTo();
     }
+
 }

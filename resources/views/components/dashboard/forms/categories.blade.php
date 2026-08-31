@@ -28,6 +28,9 @@
             <option value="views">
                 بر اساس بیشترین بازدید
             </option>
+            <option value="all">
+                همه
+            </option>
 
         </select>
 

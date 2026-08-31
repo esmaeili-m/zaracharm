@@ -27,8 +27,8 @@ class PageTableSeeder extends Seeder
                 'slug'=>'categories',
             ],
             [
-                'title'=>'دوره ها',
-                'slug'=>'courses',
+                'title'=>'شگفت انگیزها',
+                'slug'=>'special-offers',
             ],
             [
                 'title'=>'درباره ما',
@@ -39,12 +39,11 @@ class PageTableSeeder extends Seeder
                 'slug'=>'contact-us',
             ],
             [
-                'title'=>'خدمات ما',
-                'slug'=>'services',
-            ],
-            [
                 'title'=>'مقالات ما',
                 'slug'=>'articles',
+            ],[
+                'title'=>'محصولات',
+                'slug'=>'products',
             ],
 
         ];

@@ -184,7 +184,18 @@ new class extends Component
                             </tr>
                             </thead>
                             <tbody>
-                            @php($counter=1)
+                            @php
+                                    $counter=1;
+                                    $protectedPages = [
+                                        'home',
+                                        'categories',
+                                        'special-offers',
+                                        'about-us',
+                                        'contact-us',
+                                        'articles',
+                                        'products',
+                                    ];
+                            @endphp
                             @foreach($data ?? [] as $item)
                                 <tr wire:key="{{$item->id}}">
                                     <th scope="row">
@@ -200,18 +211,30 @@ new class extends Component
                                     <td>
 
                                         <div class="hstack gap-2 flex-wrap">
-                                            @can('pages.edit')
-                                                <a data-bs-toggle="modal" href="#create" wire:click="get_data({{$item->id}})"  class="text-info fs-14 lh-1"><i
-                                                        class="ri-edit-line"></i></a>
-                                            @endcan
-                                                @can('sections.view')
-                                                <a  href="{{route('pages.rows',$item->id)}}" class="text-warning fs-14 lh-1"><i
-                                                        class="ri-list-view"></i></a>
-                                                @endcan
-                                                 @can('pages.delete')
-                                                <a  data-bs-toggle="modal" href="#delete" wire:click="get_data({{$item->id}})"  class="text-danger fs-14 lh-1"><i
-                                                        class="ri-delete-bin-5-line"></i></a>
-                                                @endcan
+                                                    @can('sections.view')
+                                                        <a
+                                                           data-bs-toggle="tooltip"
+                                                           data-bs-placement="top"
+                                                           title="افزودن سطر"
+                                                           href="{{route('pages.rows',$item->id)}}"
+                                                           class="text-warning fs-14 lh-1">
+                                                                <i
+                                                                    class="ri-list-view">
+
+                                                                </i>
+                                                        </a>
+                                                    @endcan
+                                                    @if(!in_array($item->slug, $protectedPages))
+                                                        @can('pages.edit')
+                                                            <a data-bs-toggle="modal" href="#create" wire:click="get_data({{$item->id}})"  class="text-info fs-14 lh-1"><i
+                                                                    class="ri-edit-line"></i></a>
+                                                        @endcan
+
+                                                         @can('pages.delete')
+                                                        <a  data-bs-toggle="modal" href="#delete" wire:click="get_data({{$item->id}})"  class="text-danger fs-14 lh-1"><i
+                                                                class="ri-delete-bin-5-line"></i></a>
+                                                        @endcan
+                                                    @endif
                                         </div>
                                     </td>
                                 </tr>

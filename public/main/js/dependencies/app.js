@@ -366,59 +366,7 @@ function updateCartUI() {
 /**
  * Initializes cart drawer functionality
  */
-function initCartSystem() {
-    const cartBtn = document.getElementById('cart-btn');
-    const cartDrawer = document.getElementById('cart-drawer');
-    const closeBtn = document.querySelector('.close-cart');
-    const overlay = document.querySelector('.drawer-overlay');
 
-    // Manage drawer open/close functionality
-    if (cartBtn && cartDrawer) {
-        cartBtn.addEventListener('click', () => {
-            cartDrawer.classList.remove('pointer-events-none');
-            overlay.classList.replace('opacity-0', 'opacity-100');
-            cartDrawer.querySelector('.transform').classList.replace('-translate-x-full', 'translate-x-0');
-        });
-
-        const hideDrawer = () => {
-            overlay.classList.replace('opacity-100', 'opacity-0');
-            cartDrawer.querySelector('.transform').classList.replace('translate-x-0', '-translate-x-full');
-            setTimeout(() => cartDrawer.classList.add('pointer-events-none'), 500);
-        };
-
-        closeBtn.addEventListener('click', hideDrawer);
-        overlay.addEventListener('click', hideDrawer);
-    }
-
-    // Manage cart interactions (increase, decrease, remove)
-    document.addEventListener('click', e => {
-        // Counter buttons
-        const counterBtn = e.target.closest('.cart-counter-btn');
-        if (counterBtn) {
-            const countEl = counterBtn.parentElement.querySelector('.item-count');
-            let count = parseInt(countEl.textContent);
-
-            if (counterBtn.dataset.action === 'increase') count++;
-            else if (counterBtn.dataset.action === 'decrease' && count > 1) count--;
-
-            countEl.textContent = count;
-            updateCartUI();
-            return;
-        }
-
-        // Remove item button
-        const removeBtn = e.target.closest('.remove-item-btn');
-        if (removeBtn) {
-            const row = removeBtn.closest('.product-row');
-            row.style.transform = 'scale(0.9)';
-            row.style.opacity = '0';
-            setTimeout(() => {
-                row.remove();
-                updateCartUI();
-            }, 300);
-        }
-    });
-}
 
 /* =========================================================
    5. NAVIGATION & MENU SYSTEMS
@@ -718,6 +666,7 @@ function initDarkMode() {
 
     if (toggleButton) {
         toggleButton.addEventListener("click", () => {
+
             if (htmlElement.classList.contains("dark")) {
                 htmlElement.classList.remove("dark");
                 localStorage.setItem("theme", "light");
@@ -2083,7 +2032,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Initialize all core modules
     initQuickViewModal();
-    initCartSystem();
     initMegaMenu();
     initMobileMenu();
     initEnhancedMobileMenu();

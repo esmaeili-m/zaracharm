@@ -14,6 +14,7 @@ class Address extends Model
         'receiver_name',
         'receiver_phone',
         'province',
+        'phone',
         'city',
         'address',
         'plate',

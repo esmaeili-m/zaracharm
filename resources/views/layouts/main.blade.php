@@ -6,7 +6,7 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>قالب فرشگاهی مانا</title>
+    <title>کیف و کفش زاراچرم</title>
     <meta name="description"
           content="قالب فرشگاهی دیارا، بهترین قالب برای فروشگاه‌های اینترنتی با طراحی مدرن و واکنش‌گرا.">
     <meta name="keywords" content="قالب فروشگاهی, قالب مانا, فروشگاه اینترنتی, طراحی واکنش‌گرا">
@@ -19,12 +19,19 @@
     <link rel="stylesheet" href="{{asset('main/js/plugin/story-player/styles.css')}}">
     <link rel="stylesheet" href="{{asset('main/js/plugin/swiper/swiper-bundle.min.css')}}">
     <link rel="stylesheet" href="{{asset('main/css/app.css')}}">
+    <style>
+        @media (max-width: 767px) {
+            .mainHeroSwiper .swiper-pagination {
+                display: none !important;
+            }
+        }
+    </style>
     @stack('styles')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
 
-<body class="bg-gray-100 dark:bg-[#050505] min-h-screen transition-colors duration-700 selection:bg-blue-500/30 selection:text-blue-600 overflow-x-hidden">
+<body class="bg-gray-100 dark:bg-[#050505] min-h-screen transition-colors duration-700 selection:bg-brown-500/30 selection:text-brown-600 overflow-x-hidden">
 
 <!-- HEADER -->
 <header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
@@ -178,18 +185,12 @@
                        href="{{ auth()->check() ? route('user.dashboard') : route('login')}}"
                             class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-md hover:border-primary-500/50 hover:bg-primary-50/50 dark:hover:bg-primary-500/10 transition-all duration-300 group shadow-sm">
                         <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-primary-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                        <span class="text-xs font-black text-gray-700 dark:text-gray-200 hidden lg:block uppercase tracking-tighter">ورود یا ثبت‌نام</span>
+                        <span class="text-xs font-black text-gray-700 dark:text-gray-200 hidden lg:block uppercase tracking-tighter">{{auth()->check() ? (auth()->user()->fullname ?? auth()->user()->mobile) : 'ورود یا ثبت ‌نام'}}</span>
                     </a>
                 </div>
-
-                <button id="cart-btn"
-                        class="relative p-2.5 rounded-xl border border-secondary-500/20 bg-secondary-500/10 dark:bg-secondary-500/20 backdrop-blur-md hover:bg-secondary-500 hover:text-white transition-all duration-300 group shadow-lg shadow-secondary-500/10">
-                    <svg class="w-6 h-6 text-secondary-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-
-                    <span class="absolute -top-1.5 -right-1.5 bg-primary-600 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-lg border-2 border-white dark:border-gray-950 shadow-sm">
-                        2
-                    </span>
-                </button>
+                @auth
+                    <livewire:main.cart />
+                @endauth
             </div>
 
         </div>
@@ -211,7 +212,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-24">
             <div class="contact-tile">
-                <div class="icon-box bg-blue-500/10 text-blue-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" stroke-width="2"/></svg></div>
+                <div class="icon-box bg-brown-500/10 text-brown-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" stroke-width="2"/></svg></div>
                 <div><h4 class="text-xs font-bold text-gray-400 mb-1">شماره تماس</h4><p class="text-sm font-black dark:text-white">۰۲۱-۹۱۰۰XXXX</p></div>
             </div>
             <div class="contact-tile">
@@ -232,18 +233,17 @@
 
             <div class="xl:col-span-2 space-y-8">
                 <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/30">
-                        <span class="text-white text-2xl font-black">M</span>
+                    <div class="w-14 h-14 bg-brown-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brown-600/30">
+                        <span class="text-white text-2xl font-black">Z</span>
                     </div>
-                    <span class="text-2xl font-black text-gray-900 dark:text-white uppercase">Mana<span class="text-blue-600">Shop</span></span>
+                    <span class="text-2xl font-black text-gray-900 dark:text-white uppercase">ZARA<span class="text-brown-600">CHARM</span></span>
                 </div>
                 <p class="text-sm text-gray-500 dark:text-gray-400 leading-8 text-justify font-medium max-w-md">
-                    ماناشاپ فراتر از یک فروشگاه، یک اکوسیستم هوشمند است. ما با حذف واسطه‌ها، جدیدترین‌های تکنولوژی را با گارانتی معتبر و قیمتی رقابتی به خانه‌های شما می‌آوریم. شفافیت، اصالت و سرعت، سه رکن اصلی ماست.
-                </p>
+                    کیف و کفش زارا چرم؛ ترکیبی از اصالت، کیفیت و استایل. ما با ارائه محصولات چرمی باکیفیت و طراحی‌های به‌روز، انتخابی مطمئن برای کسانی هستیم که به جزئیات و ماندگاری اهمیت می‌دهند. اصالت، کیفیت و رضایت شما، سه اصل اصلی ماست.                </p>
                 <div class="flex gap-4">
-                    <a href="#" class=" w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-600 hover:text-white hover:scale-110 transition-all duration-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"></path></svg></a>
-                    <a href="#" class=" w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-600 hover:text-white hover:scale-110 transition-all duration-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"></path></svg></a>
-                    <a href="#" class=" w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-blue-600 hover:text-white hover:scale-110 transition-all duration-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 22.954 24 17.99 24 12z"/></svg></a>
+                    <a href="#" class=" w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-brown-600 hover:text-white hover:scale-110 transition-all duration-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"></path></svg></a>
+                    <a href="#" class=" w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-brown-600 hover:text-white hover:scale-110 transition-all duration-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"></path></svg></a>
+                    <a href="#" class=" w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-brown-600 hover:text-white hover:scale-110 transition-all duration-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 22.954 24 17.99 24 12z"/></svg></a>
                 </div>
             </div>
 
@@ -270,13 +270,13 @@
             <div class="flex flex-col gap-6 items-center lg:items-end">
                 <h3 class="footer-title">مجوزهای قانونی</h3>
                 <div class="flex gap-4">
-                    <div class="w-28 h-36 bg-white/30 dark:bg-white/[0.02] backdrop-blur-md rounded-2xl border border-gray-200 dark:border-white/10 flex flex-col items-center justify-center p-4 transition-all duration-500 hover:shadow-lg hover:border-blue-500/30 group">
+                    <div class="w-28 h-36 bg-white/30 dark:bg-white/[0.02] backdrop-blur-md rounded-2xl border border-gray-200 dark:border-white/10 flex flex-col items-center justify-center p-4 transition-all duration-500 hover:shadow-lg hover:border-brown-500/30 group">
                         <div class="w-14 h-14 bg-gray-100 dark:bg-white/5 rounded-lg mb-4 flex items-center justify-center transition-all duration-500">
                             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-width="2"/></svg>
                         </div>
                         <span class="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">Enamad</span>
                     </div>
-                    <div class="w-28 h-36 bg-white/30 dark:bg-white/[0.02] backdrop-blur-md rounded-2xl border border-gray-200 dark:border-white/10 flex flex-col items-center justify-center p-4 transition-all duration-500 hover:shadow-lg hover:border-blue-500/30 group">
+                    <div class="w-28 h-36 bg-white/30 dark:bg-white/[0.02] backdrop-blur-md rounded-2xl border border-gray-200 dark:border-white/10 flex flex-col items-center justify-center p-4 transition-all duration-500 hover:shadow-lg hover:border-brown-500/30 group">
                         <div class="w-14 h-14 bg-gray-100 dark:bg-white/5 rounded-lg mb-4 flex items-center justify-center transition-all duration-500">
                             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" stroke-width="2"/></svg>
                         </div>
@@ -288,7 +288,7 @@
 
         <div class="pt-10 border-t border-black/5 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
             <div class="flex items-center gap-4">
-                <p class="text-[11px] text-gray-500 font-bold">© ۲۰۲۵ طراحی و توسعه توسط <span class="text-gray-900 dark:text-white font-black underline decoration-blue-500/30 decoration-4">ManaTeam</span>.</p>
+                <p class="text-[11px] text-gray-500 font-bold">© ۲۰۲۵ طراحی و توسعه توسط <span class="text-gray-900 dark:text-white font-black underline decoration-brown-500/30 decoration-4">ManaTeam</span>.</p>
             </div>
             <div class="flex flex-wrap justify-center gap-8">
                 <a href="#" class="legal-link">شرایط خدمات</a>
@@ -310,7 +310,7 @@
 
             <!-- Home -->
             <li>
-                <a href="#" class="flex flex-col items-center gap-1 px-4 py-1 text-blue-600 dark:text-blue-400">
+                <a href="#" class="flex flex-col items-center gap-1 px-4 py-1 text-brown-600 dark:text-brown-400">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                     </svg>
@@ -336,7 +336,7 @@
 
             <!-- Cart -->
             <li class="-mt-8">
-                <a href="#" class="relative flex items-center justify-center w-14 h-14 bg-blue-600 rounded-2xl text-white">
+                <a href="#" class="relative flex items-center justify-center w-14 h-14 bg-brown-600 rounded-2xl text-white">
 
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
@@ -481,7 +481,7 @@
 <!-- END SEARCH MODAL -->
 
 <!--QUICK MODAL-->
-<div id="quick-view-modal" class="fixed inset-0 bg-blue-900/20 dark:bg-black/70 backdrop-blur-md flex items-center justify-center z-[999] opacity-0 pointer-events-none transition-all duration-500">
+<div id="quick-view-modal" class="fixed inset-0 bg-brown-900/20 dark:bg-black/70 backdrop-blur-md flex items-center justify-center z-[999] opacity-0 pointer-events-none transition-all duration-500">
 
     <div class="bg-white/80 dark:bg-gray-900/85 backdrop-blur-md rounded-[3.5rem] p-6 md:p-10 w-11/12 lg:w-3/4 max-w-5xl max-h-[92vh] overflow-y-auto transform scale-95 opacity-0 transition-all duration-500 relative border border-white dark:border-gray-700/50 shadow-2xl" dir="rtl">
 
@@ -557,16 +557,16 @@
 
 
                 <div class="grid grid-cols-3 gap-3 mt-2">
-                    <div class="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-[1.5rem] text-center border border-blue-100/50 dark:border-blue-500/10">
-                        <span class="block text-[10px] text-blue-500 dark:text-blue-400 font-black mb-1">پردازنده</span>
+                    <div class="bg-brown-50/50 dark:bg-brown-900/10 p-4 rounded-[1.5rem] text-center border border-brown-100/50 dark:border-brown-500/10">
+                        <span class="block text-[10px] text-brown-500 dark:text-brown-400 font-black mb-1">پردازنده</span>
                         <span class="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase">Core i9</span>
                     </div>
-                    <div class="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-[1.5rem] text-center border border-blue-100/50 dark:border-blue-500/10">
-                        <span class="block text-[10px] text-blue-500 dark:text-blue-400 font-black mb-1">رم</span>
+                    <div class="bg-brown-50/50 dark:bg-brown-900/10 p-4 rounded-[1.5rem] text-center border border-brown-100/50 dark:border-brown-500/10">
+                        <span class="block text-[10px] text-brown-500 dark:text-brown-400 font-black mb-1">رم</span>
                         <span class="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase">32GB DDR5</span>
                     </div>
-                    <div class="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-[1.5rem] text-center border border-blue-100/50 dark:border-blue-500/10">
-                        <span class="block text-[10px] text-blue-500 dark:text-blue-400 font-black mb-1">حافظه</span>
+                    <div class="bg-brown-50/50 dark:bg-brown-900/10 p-4 rounded-[1.5rem] text-center border border-brown-100/50 dark:border-brown-500/10">
+                        <span class="block text-[10px] text-brown-500 dark:text-brown-400 font-black mb-1">حافظه</span>
                         <span class="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase">1TB SSD</span>
                     </div>
 
@@ -577,7 +577,7 @@
                 <div class="mb-6">
                     <h3 class="text-3xl font-black text-gray-900 dark:text-white mb-3 leading-tight tracking-tight">لپ‌تاپ ۱۶ اینچی ایسوس مدل ROG Zephyrus M16</h3>
                     <div class="flex items-center gap-4 text-xs">
-                        <span class="text-gray-400">شناسه کالا: <span class="text-blue-600 font-bold">DKP-88231</span></span>
+                        <span class="text-gray-400">شناسه کالا: <span class="text-brown-600 font-bold">DKP-88231</span></span>
                         <div class="flex items-center gap-1 text-secondary-500 bg-secondary-500/10 px-3 py-1 rounded-full font-black">
                             <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                             <span>۴.۸</span>
@@ -595,7 +595,7 @@
                 <div class="mb-8">
                     <span class="text-sm font-black text-gray-800 dark:text-gray-200 block mb-4">انتخاب رنگ:</span>
                     <div class="flex gap-3">
-                        <button class="color-option active w-10 h-10 rounded-2xl flex items-center justify-center border-2 border-transparent transition-all bg-black shadow-lg ring-4 ring-blue-500/20 group" data-color="مشکی">
+                        <button class="color-option active w-10 h-10 rounded-2xl flex items-center justify-center border-2 border-transparent transition-all bg-black shadow-lg ring-4 ring-brown-500/20 group" data-color="مشکی">
                             <svg class="w-5 h-5 text-white opacity-0 group-[.active]:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                         </button>
                         <button class="color-option w-10 h-10 rounded-2xl flex items-center justify-center border-2 border-transparent transition-all bg-gray-400 group opacity-50" data-color="طوسی">
@@ -614,25 +614,25 @@
                     </div>
                 </div>
 
-                <div class="mt-auto p-6 lg:p-8 rounded-[2.5rem] bg-blue-50/30 dark:bg-blue-500/5 border border-blue-200/50 dark:border-blue-500/20 relative overflow-hidden backdrop-blur-sm">
+                <div class="mt-auto p-6 lg:p-8 rounded-[2.5rem] bg-brown-50/30 dark:bg-brown-500/5 border border-brown-200/50 dark:border-brown-500/20 relative overflow-hidden backdrop-blur-sm">
 
                     <div class="flex justify-between items-center relative z-10">
                         <div class="flex flex-col">
                             <span class="text-gray-400 dark:text-gray-500 line-through text-xs font-bold mb-1">۴۵,۰۰۰,۰۰۰</span>
                             <div class="flex items-center gap-2">
-                                <span class="text-4xl font-black text-blue-600 dark:text-blue-400 tracking-tight">۳۸,۵۰۰,۰۰۰</span>
+                                <span class="text-4xl font-black text-brown-600 dark:text-brown-400 tracking-tight">۳۸,۵۰۰,۰۰۰</span>
                                 <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400">تومان</span>
                             </div>
                         </div>
 
                         <div class="flex items-center bg-white dark:bg-gray-800/80 rounded-2xl p-1 shadow-sm border border-gray-100 dark:border-gray-700">
-                            <button onclick="changeQty(1)" class="w-9 h-9 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all font-black text-xl">+</button>
+                            <button onclick="changeQty(1)" class="w-9 h-9 flex items-center justify-center text-brown-600 dark:text-brown-400 hover:bg-brown-50 dark:hover:bg-brown-900/30 rounded-xl transition-all font-black text-xl">+</button>
                             <input type="number" id="modalQty" value="1" readonly class="w-10 bg-transparent text-center font-black text-gray-800 dark:text-white outline-none border-none text-sm" />
                             <button onclick="changeQty(-1)" class="w-9 h-9 flex items-center justify-center text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all font-black text-xl">-</button>
                         </div>
                     </div>
 
-                    <button class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-[1.8rem] shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-3 active:scale-95 group">
+                    <button class="w-full mt-6 bg-brown-600 hover:bg-brown-700 text-white font-black py-5 rounded-[1.8rem] shadow-lg shadow-brown-500/20 transition-all flex items-center justify-center gap-3 active:scale-95 group">
                         <svg class="w-6 h-6 group-hover:animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                         </svg>
@@ -650,11 +650,11 @@
 
     <div class="relative w-[92%] max-w-[430px] transform scale-95 translate-y-10 transition-all duration-500 my-auto h-fit">
 
-        <div class="absolute -inset-4 bg-blue-500/20 blur-[50px] rounded-[4rem] -z-10"></div>
+        <div class="absolute -inset-4 bg-brown-500/20 blur-[50px] rounded-[4rem] -z-10"></div>
 
         <div class="relative bg-white/80 dark:bg-gray-950/85 backdrop-blur-md rounded-[3.5rem] border border-white dark:border-white/10 shadow-[0_32px_64px_-15px_rgba(0,0,0,0.2)] overflow-y-auto max-h-[92vh] scroll-smooth scrollbar-hide">
 
-            <button onclick="closeLoginModal()" class="close-login absolute top-6 left-6 w-11 h-11 flex items-center justify-center rounded-2xl bg-white/50 dark:bg-white/5 text-gray-400 hover:text-blue-600 hover:scale-110 transition-all border border-white/80 dark:border-white/5 shadow-sm z-50">
+            <button onclick="closeLoginModal()" class="close-login absolute top-6 left-6 w-11 h-11 flex items-center justify-center rounded-2xl bg-white/50 dark:bg-white/5 text-gray-400 hover:text-brown-600 hover:scale-110 transition-all border border-white/80 dark:border-white/5 shadow-sm z-50">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
 
@@ -664,14 +664,14 @@
                     <div id="step-1" class="auth-step transition-all duration-300">
                         <div class="text-center mb-10">
                             <div class="relative w-20 h-20 lg:w-24 lg:h-24 mx-auto mb-8">
-                                <div class="absolute inset-0 bg-blue-500/20 rounded-[2.5rem] rotate-12 animate-pulse"></div>
-                                <div class="relative w-full h-full bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-[2.5rem] flex items-center justify-center text-blue-600 shadow-lg border border-white dark:border-gray-700">
+                                <div class="absolute inset-0 bg-brown-500/20 rounded-[2.5rem] rotate-12 animate-pulse"></div>
+                                <div class="relative w-full h-full bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-[2.5rem] flex items-center justify-center text-brown-600 shadow-lg border border-white dark:border-gray-700">
                                     <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                                 </div>
                             </div>
                             <h3 class="text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight">خوش آمدید</h3>
                             <div class="flex items-center justify-center gap-2 mt-3">
-                                <span class="w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
+                                <span class="w-2 h-2 bg-brown-500 rounded-full animate-ping"></span>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 font-bold">ورود یا ثبت‌نام در سایت</p>
                             </div>
                         </div>
@@ -680,15 +680,15 @@
                             <div class="space-y-2 text-right">
                                 <label class="text-[12px] font-black text-gray-400 dark:text-gray-500 mr-2 uppercase">شماره موبایل</label>
                                 <div class="relative group">
-                                    <div class="absolute inset-y-0 right-5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-500 transition-colors">
+                                    <div class="absolute inset-y-0 right-5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brown-500 transition-colors">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                                     </div>
                                     <input type="tel" id="phoneInput" dir="ltr" maxlength="11" placeholder="09123456789"
-                                           class="w-full bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-blue-500/30 focus:bg-white dark:focus:bg-gray-900 rounded-[2rem] p-5 pr-14 outline-none font-black text-xl sm:text-2xl tracking-[0.1em] text-gray-900 dark:text-white transition-all shadow-inner">
+                                           class="w-full bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-brown-500/30 focus:bg-white dark:focus:bg-gray-900 rounded-[2rem] p-5 pr-14 outline-none font-black text-xl sm:text-2xl tracking-[0.1em] text-gray-900 dark:text-white transition-all shadow-inner">
                                 </div>
                             </div>
 
-                            <button onclick="goToStep(2)" class="group relative w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-[2rem] transition-all active:scale-[0.97] overflow-hidden shadow-lg shadow-blue-500/25">
+                            <button onclick="goToStep(2)" class="group relative w-full bg-brown-600 hover:bg-brown-700 text-white font-black py-5 rounded-[2rem] transition-all active:scale-[0.97] overflow-hidden shadow-lg shadow-brown-500/25">
                                 <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
                                 <span class="relative flex items-center justify-center gap-3 text-lg">تایید و دریافت کد</span>
                             </button>
@@ -715,20 +715,20 @@
                                 </div>
                             </div>
                             <h3 class="text-2xl font-black text-gray-900 dark:text-white">تایید شماره</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-3 font-bold">کد ۵ رقمی به شماره <span class="text-blue-600 dark:text-blue-400" dir="ltr" id="displayPhone">0912***45</span> ارسال شد</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-3 font-bold">کد ۵ رقمی به شماره <span class="text-brown-600 dark:text-brown-400" dir="ltr" id="displayPhone">0912***45</span> ارسال شد</p>
                         </div>
 
                         <div class="space-y-8">
                             <div id="otp-container" class="flex flex-row justify-center gap-2 lg:gap-3" dir="ltr">
-                                <input type="text" inputmode="numeric" maxlength="1" class="otp-field w-11 lg:w-12 h-16 bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-blue-500/40 focus:bg-white dark:focus:bg-gray-900 rounded-2xl text-center font-black text-2xl outline-none text-gray-900 dark:text-white transition-all shadow-inner">
-                                <input type="text" inputmode="numeric" maxlength="1" class="otp-field w-11 lg:w-12 h-16 bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-blue-500/40 focus:bg-white dark:focus:bg-gray-900 rounded-2xl text-center font-black text-2xl outline-none text-gray-900 dark:text-white transition-all shadow-inner">
-                                <input type="text" inputmode="numeric" maxlength="1" class="otp-field w-11 lg:w-12 h-16 bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-blue-500/40 focus:bg-white dark:focus:bg-gray-900 rounded-2xl text-center font-black text-2xl outline-none text-gray-900 dark:text-white transition-all shadow-inner">
-                                <input type="text" inputmode="numeric" maxlength="1" class="otp-field w-11 lg:w-12 h-16 bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-blue-500/40 focus:bg-white dark:focus:bg-gray-900 rounded-2xl text-center font-black text-2xl outline-none text-gray-900 dark:text-white transition-all shadow-inner">
-                                <input type="text" inputmode="numeric" maxlength="1" class="otp-field w-11 lg:w-12 h-16 bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-blue-500/40 focus:bg-white dark:focus:bg-gray-900 rounded-2xl text-center font-black text-2xl outline-none text-gray-900 dark:text-white transition-all shadow-inner">
+                                <input type="text" inputmode="numeric" maxlength="1" class="otp-field w-11 lg:w-12 h-16 bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-brown-500/40 focus:bg-white dark:focus:bg-gray-900 rounded-2xl text-center font-black text-2xl outline-none text-gray-900 dark:text-white transition-all shadow-inner">
+                                <input type="text" inputmode="numeric" maxlength="1" class="otp-field w-11 lg:w-12 h-16 bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-brown-500/40 focus:bg-white dark:focus:bg-gray-900 rounded-2xl text-center font-black text-2xl outline-none text-gray-900 dark:text-white transition-all shadow-inner">
+                                <input type="text" inputmode="numeric" maxlength="1" class="otp-field w-11 lg:w-12 h-16 bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-brown-500/40 focus:bg-white dark:focus:bg-gray-900 rounded-2xl text-center font-black text-2xl outline-none text-gray-900 dark:text-white transition-all shadow-inner">
+                                <input type="text" inputmode="numeric" maxlength="1" class="otp-field w-11 lg:w-12 h-16 bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-brown-500/40 focus:bg-white dark:focus:bg-gray-900 rounded-2xl text-center font-black text-2xl outline-none text-gray-900 dark:text-white transition-all shadow-inner">
+                                <input type="text" inputmode="numeric" maxlength="1" class="otp-field w-11 lg:w-12 h-16 bg-gray-100/50 dark:bg-white/5 border-2 border-transparent focus:border-brown-500/40 focus:bg-white dark:focus:bg-gray-900 rounded-2xl text-center font-black text-2xl outline-none text-gray-900 dark:text-white transition-all shadow-inner">
                             </div>
 
                             <div class="space-y-4">
-                                <button class="group relative w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-[2rem] transition-all active:scale-[0.97] overflow-hidden shadow-lg shadow-blue-500/25">
+                                <button class="group relative w-full bg-brown-600 hover:bg-brown-700 text-white font-black py-5 rounded-[2rem] transition-all active:scale-[0.97] overflow-hidden shadow-lg shadow-brown-500/25">
                                     <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
                                     <span class="relative text-lg">ورود به حساب کاربری</span>
                                 </button>
@@ -745,7 +745,7 @@
                 </div>
 
                 <div class="mt-10 text-center">
-                    <p class="text-[11px] text-gray-400 font-bold">با ورود به سایت، تمامی <a href="#" class="text-blue-500 font-black border-b border-blue-500/20 pb-0.5">شرایط و قوانین</a> مانا را می‌پذیرم.</p>
+                    <p class="text-[11px] text-gray-400 font-bold">با ورود به سایت، تمامی <a href="#" class="text-brown-500 font-black border-b border-brown-500/20 pb-0.5">شرایط و قوانین</a> مانا را می‌پذیرم.</p>
                 </div>
             </div>
         </div>
@@ -754,92 +754,7 @@
 <!--END LOGIN MODAL-->
 
 <!--CART DRAWER-->
-<div id="cart-drawer" class="fixed inset-0 z-[1100] pointer-events-none">
-    <div class="absolute inset-0 bg-black/60 dark:bg-black/80 opacity-0 transition-opacity duration-500 backdrop-blur-sm drawer-overlay cursor-pointer"></div>
-
-    <div class="absolute left-0 top-0 h-full w-full max-w-[420px] bg-white/70 dark:bg-gray-950/80 backdrop-blur-md shadow-lg transform -translate-x-full transition-transform duration-500 pointer-events-auto flex flex-col border-r border-white/20 dark:border-white/5">
-
-        <div class="p-6 border-b border-gray-200/50 dark:border-white/5 flex justify-between items-center bg-white/30 dark:bg-white/5">
-            <h3 class="font-black text-lg dark:text-white flex items-center gap-2">
-                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                سبد خرید <span id="cart-header-count" class="text-xs font-normal text-gray-400 dark:text-gray-500">(۰ کالا)</span>
-            </h3>
-            <button class="close-cart p-2 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-all dark:text-white">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-        </div>
-
-        <div id="cart-items-container" class="flex-1 overflow-y-auto p-5 flex flex-col" dir="rtl">
-
-            <div id="empty-cart-msg" class="hidden flex-1 flex-col items-center justify-center text-center animate-fadeIn">
-                <div class="w-24 h-24 bg-gray-100/50 dark:bg-white/5 rounded-full flex items-center justify-center mb-6 border border-dashed border-gray-300 dark:border-white/10 shadow-inner">
-                    <svg class="w-10 h-10 text-gray-400 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                </div>
-                <h4 class="text-gray-800 dark:text-gray-200 font-black text-lg mb-2">سبد خرید شما خالی است!</h4>
-                <p class="text-sm text-gray-500 dark:text-gray-400 max-w-[250px] leading-6 mb-8">به‌نظر می‌رسد هنوز هیچ محصولی را به سبد خرید خود اضافه نکرده‌اید.</p>
-                <button onclick="document.querySelector('.close-cart').click()" class="px-6 py-2.5 rounded-xl border border-blue-500/30 text-blue-600 dark:text-blue-400 font-bold text-sm hover:bg-blue-500 hover:text-white transition-all duration-300">شروع خرید از فروشگاه</button>
-            </div>
-
-            <div id="actual-items-list" class="space-y-4">
-                <div class="product-row group relative flex gap-4 p-3 rounded-[1.8rem] bg-white/50 dark:bg-white/[0.03] border border-white/60 dark:border-white/5 shadow-sm transition-all duration-500 hover:bg-white dark:hover:bg-white/[0.08]">
-                    <div class="relative w-24 h-24 bg-white dark:bg-gray-800 rounded-[1.4rem] flex-shrink-0 p-3 shadow-inner border border-gray-100 dark:border-white/5">
-                        <img src="assets/images/product/laptop-3.png" class="w-full h-full object-contain">
-                    </div>
-                    <div class="flex flex-col justify-between flex-1 py-1">
-                        <div class="flex justify-between items-start">
-                            <h4 class="text-[13px] font-black text-gray-800 dark:text-gray-100 line-clamp-2">لپ‌تاپ ایسوس ROG Zephyrus G14</h4>
-                            <button class="remove-item-btn text-gray-400 hover:text-red-500 transition-colors p-1">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/></svg>
-                            </button>
-                        </div>
-                        <div class="flex justify-between items-end mt-2">
-                            <span class="unit-price text-blue-600 dark:text-blue-400 font-black text-sm" data-price="38500000">۳۸,۵۰۰,۰۰۰ <span class="text-[10px]">تومان</span></span>
-                            <div class="flex items-center gap-2 bg-gray-100/80 dark:bg-[#0a0a0a]/40 backdrop-blur-md rounded-xl p-1 border border-gray-200/50 dark:border-white/5">
-                                <button class="cart-counter-btn w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-800 rounded-lg shadow-sm" data-action="increase">+</button>
-                                <span class="item-count w-6 text-center text-xs font-black dark:text-white">1</span>
-                                <button class="cart-counter-btn w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-800 rounded-lg shadow-sm" data-action="decrease">-</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="product-row group relative flex gap-4 p-3 rounded-[1.8rem] bg-white/50 dark:bg-white/[0.03] border border-white/60 dark:border-white/5 shadow-sm transition-all duration-500 hover:bg-white dark:hover:bg-white/[0.08]">
-                    <div class="relative w-24 h-24 bg-white dark:bg-gray-800 rounded-[1.4rem] flex-shrink-0 p-3 shadow-inner border border-gray-100 dark:border-white/5">
-                        <img src="assets/images/product/mobile-4.png" class="w-full h-full object-contain">
-                    </div>
-                    <div class="flex flex-col justify-between flex-1 py-1">
-                        <div class="flex justify-between items-start">
-                            <h4 class="text-[13px] font-black text-gray-800 dark:text-gray-100 line-clamp-2">گوشی موبایل iPhone 15 Pro</h4>
-                            <button class="remove-item-btn text-gray-400 hover:text-red-500 transition-colors p-1">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/></svg>
-                            </button>
-                        </div>
-                        <div class="flex justify-between items-end mt-2">
-                            <span class="unit-price text-blue-600 dark:text-blue-400 font-black text-sm" data-price="62000000">۶۲,۰۰۰,۰۰۰ <span class="text-[10px]">تومان</span></span>
-                            <div class="flex items-center gap-2 bg-gray-100/80 dark:bg-[#0a0a0a]/40 backdrop-blur-md rounded-xl p-1 border border-gray-200/50 dark:border-white/5">
-                                <button class="cart-counter-btn w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-800 rounded-lg shadow-sm" data-action="increase">+</button>
-                                <span class="item-count w-6 text-center text-xs font-black dark:text-white">1</span>
-                                <button class="cart-counter-btn w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-800 rounded-lg shadow-sm" data-action="decrease">-</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="cart-footer" class="p-8 border-t border-gray-200/50 dark:border-white/5 space-y-5 bg-white/40 dark:bg-gray-950/40 backdrop-blur-md">
-            <div class="flex justify-between items-center text-sm">
-                <span class="text-gray-500 dark:text-gray-400 font-bold">مجموع سبد خرید:</span>
-                <span id="total-price-display" class="font-black text-xl dark:text-white text-blue-600 dark:text-blue-400">۰ <span class="text-[10px]">تومان</span></span>
-            </div>
-            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-[2rem] shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-3 group relative overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-                ثبت سفارش نهایی
-                <svg class="w-5 h-5 group-hover:translate-x-[-4px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-            </button>
-        </div>
-    </div>
-</div>
+<livewire:layout.cart />
 <!--END CART DRAWER-->
 
 <!--Mobile Menu-->
@@ -850,7 +765,7 @@
 
         <div class="p-5 border-b border-white/40 dark:border-gray-800 flex justify-between items-center bg-white/30 dark:bg-gray-900/30">
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/40">
+                <div class="w-8 h-8 bg-brown-600 rounded-lg flex items-center justify-center shadow-lg shadow-brown-500/40">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M4 6h16M4 12h16m-7 6h7" stroke-width="2.5" stroke-linecap="round"/>
                     </svg>
@@ -867,7 +782,7 @@
         <div class="flex-1 overflow-y-auto custom-scrollbar pt-2">
 
             <div class="px-4 mb-6">
-                <div onclick="openLoginModal()" class="p-4 rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-500/20 flex items-center justify-between cursor-pointer group transition-all active:scale-95">
+                <div onclick="openLoginModal()" class="p-4 rounded-[2rem] bg-gradient-to-br from-brown-600 to-indigo-700 text-white shadow-lg shadow-brown-500/20 flex items-center justify-between cursor-pointer group transition-all active:scale-95">
                     <div class="flex items-center gap-3">
                         <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
                             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -888,7 +803,7 @@
             <nav class="px-3 pb-20">
                 <!--Product classification-->
                 <div class="flex items-center gap-2 px-3 mb-3">
-                    <span class="w-1 h-4 bg-blue-600 rounded-full"></span>
+                    <span class="w-1 h-4 bg-brown-600 rounded-full"></span>
                     <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest">دسته‌بندی کالاها</span>
                 </div>
 
@@ -897,7 +812,7 @@
                     <li class="menu-item">
                         <button class="layer-btn w-full flex items-center justify-between p-4 rounded-2xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 shadow-sm transition-all hover:bg-white/60">
                             <div class="flex items-center gap-3 text-gray-800 dark:text-gray-200">
-                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-5 h-5 text-brown-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="1.5"/>
                                 </svg>
                                 <span class="font-black text-sm">کالای دیجیتال</span>
@@ -907,9 +822,9 @@
                             </svg>
                         </button>
 
-                        <ul class="hidden submenu mt-2 mr-2 space-y-2 border-r-2 border-blue-500/20 pr-2 overflow-hidden transition-all duration-300">
+                        <ul class="hidden submenu mt-2 mr-2 space-y-2 border-r-2 border-brown-500/20 pr-2 overflow-hidden transition-all duration-300">
                             <li>
-                                <button class="layer-btn w-full flex items-center justify-between p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-white/40 hover:bg-blue-50/50">
+                                <button class="layer-btn w-full flex items-center justify-between p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-white/40 hover:bg-brown-50/50">
                                     <span class="font-bold text-xs text-gray-700 dark:text-gray-300">گوشی موبایل</span>
                                     <svg class="w-3 h-3 text-gray-400 arrow-icon transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path d="M19 9l-7 7-7-7" stroke-width="3"/>
@@ -926,11 +841,11 @@
                                         </button>
 
                                         <ul class="hidden submenu mt-1 mr-2 space-y-1 pr-4 bg-gray-50/50 dark:bg-black/20 rounded-lg">
-                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">سری iPhone 15</a></li>
-                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">سری iPhone 14</a></li>
-                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">سری iPhone 13</a></li>
-                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">سری iPhone 12</a></li>
-                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">سری iPhone SE</a></li>
+                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">سری iPhone 15</a></li>
+                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">سری iPhone 14</a></li>
+                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">سری iPhone 13</a></li>
+                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">سری iPhone 12</a></li>
+                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">سری iPhone SE</a></li>
                                         </ul>
                                     </li>
                                     <li>
@@ -942,24 +857,24 @@
                                         </button>
 
                                         <ul class="hidden submenu mt-1 mr-2 space-y-1 pr-4 bg-gray-50/50 dark:bg-black/20 rounded-lg">
-                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">سری Galaxy S</a></li>
-                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">سری Galaxy A</a></li>
-                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">سری Galaxy Z</a></li>
+                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">سری Galaxy S</a></li>
+                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">سری Galaxy A</a></li>
+                                            <li><a href="#" class="block p-3 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">سری Galaxy Z</a></li>
                                         </ul>
                                     </li>
                                     <li>
-                                        <a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">گوشی شیائومی</a>
+                                        <a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">گوشی شیائومی</a>
                                     </li>
                                     <li>
-                                        <a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">گوشی هوآوی</a>
+                                        <a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">گوشی هوآوی</a>
                                     </li>
                                     <li>
-                                        <a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">گوشی انارد</a>
+                                        <a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">گوشی انارد</a>
                                     </li>
                                 </ul>
                             </li>
                             <li>
-                                <button class="layer-btn w-full flex items-center justify-between p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-white/40 hover:bg-blue-50/50">
+                                <button class="layer-btn w-full flex items-center justify-between p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-white/40 hover:bg-brown-50/50">
                                     <span class="font-bold text-xs text-gray-700 dark:text-gray-300">لپ‌تاپ و کامپیوتر</span>
                                     <svg class="w-3 h-3 text-gray-400 arrow-icon transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path d="M19 9l-7 7-7-7" stroke-width="3"/>
@@ -967,24 +882,24 @@
                                 </button>
 
                                 <ul class="hidden submenu mt-2 mr-2 space-y-2 border-r-2 border-gray-400/20 pr-2">
-                                    <li><a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">لپ‌تاپ گیمینگ</a></li>
-                                    <li><a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">لپ‌تاپ تجاری</a></li>
-                                    <li><a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">مک‌بوک اپل</a></li>
-                                    <li><a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-colors">قطعات کامپیوتر</a></li>
+                                    <li><a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">لپ‌تاپ گیمینگ</a></li>
+                                    <li><a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">لپ‌تاپ تجاری</a></li>
+                                    <li><a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">مک‌بوک اپل</a></li>
+                                    <li><a href="#" class="block p-2 pl-4 text-[10px] text-gray-500 dark:text-gray-400 hover:text-brown-600 transition-colors">قطعات کامپیوتر</a></li>
                                 </ul>
                             </li>
                             <li>
-                                <a href="#" class="flex items-center justify-between p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-white/40 hover:bg-blue-50/50">
+                                <a href="#" class="flex items-center justify-between p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-white/40 hover:bg-brown-50/50">
                                     <span class="font-bold text-xs text-gray-700 dark:text-gray-300">هدفون و هندزفری</span>
                                 </a>
                             </li>
                             <li>
-                                <a href="#" class="flex items-center justify-between p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-white/40 hover:bg-blue-50/50">
+                                <a href="#" class="flex items-center justify-between p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-white/40 hover:bg-brown-50/50">
                                     <span class="font-bold text-xs text-gray-700 dark:text-gray-300">ساعت هوشمند</span>
                                 </a>
                             </li>
                             <li>
-                                <a href="#" class="flex items-center justify-between p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-white/40 hover:bg-blue-50/50">
+                                <a href="#" class="flex items-center justify-between p-3 rounded-xl bg-white/30 dark:bg-white/5 border border-white/40 hover:bg-brown-50/50">
                                     <span class="font-bold text-xs text-gray-700 dark:text-gray-300">کنسول بازی</span>
                                 </a>
                             </li>
@@ -1090,14 +1005,14 @@
 
                 <!--Customer service-->
                 <div class="flex items-center gap-2 px-3 mt-8 mb-3">
-                    <span class="w-1 h-4 bg-blue-600 rounded-full"></span>
+                    <span class="w-1 h-4 bg-brown-600 rounded-full"></span>
                     <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest">خدمات مشتریان</span>
                 </div>
 
                 <ul class="space-y-3 mb-6">
                     <li>
                         <a href="#" class="flex items-center gap-3 p-3 rounded-xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs">
-                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-brown-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" stroke-width="1.5"/>
                             </svg>
                             پشتیبانی 24 ساعته
@@ -1148,22 +1063,22 @@
 
                     <!-- شبکه‌های اجتماعی -->
                     <div class="flex gap-4">
-                        <a href="#" class="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-600 transition-all group">
+                        <a href="#" class="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex items-center justify-center text-gray-400 hover:text-brown-600 hover:border-brown-600 transition-all group">
                             <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"></path>
                             </svg>
                         </a>
-                        <a href="#" class="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex items-center justify-center text-gray-400 hover:text-blue-400 hover:border-blue-400 transition-all group">
+                        <a href="#" class="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex items-center justify-center text-gray-400 hover:text-brown-400 hover:border-brown-400 transition-all group">
                             <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"></path>
                             </svg>
                         </a>
-                        <a href="#" class="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex items-center justify-center text-gray-400 hover:text-blue-400 hover:border-blue-400 transition-all group">
+                        <a href="#" class="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex items-center justify-center text-gray-400 hover:text-brown-400 hover:border-brown-400 transition-all group">
                             <svg class="w-5 h-5 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 64 64">
                                 <path fill="currentColor" d="m62.8 10.8l-9.4 44c-.7 3.1-2.5 3.8-5.1 2.4L34.2 46.8l-6.9 6.6c-.7.7-1.4 1.4-3 1.4l1.1-14.5l26.3-23.9c1.1-1.1-.3-1.5-1.7-.6L17.3 36.4L3.2 32.1c-3.1-1-3.1-3.1.7-4.5L58.7 6.3c2.7-.8 5 .6 4.1 4.5"/>
                             </svg>
                         </a>
-                        <a href="#" class="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex items-center justify-center text-gray-400 hover:text-blue-400 hover:border-blue-400 transition-all group">
+                        <a href="#" class="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex items-center justify-center text-gray-400 hover:text-brown-400 hover:border-brown-400 transition-all group">
                             <svg class="w-5 h-5 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
                                 <!-- Icon from Tabler Icons by Paweł Kuna - https://github.com/tabler/tabler-icons/blob/master/LICENSE -->
                                 <path fill="currentColor" d="M18 3a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5H6a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5zM9 9v6a1 1 0 0 0 1.514.857l5-3a1 1 0 0 0 0-1.714l-5-3A1 1 0 0 0 9 9"/>
@@ -1182,12 +1097,35 @@
 <script src="{{asset('main/js/plugin/sweetalert/sweetalert.min.js')}}"></script>
 
 <script src="{{asset('main/js/dependencies/app.js')}}"></script>
+<script src="{{asset('dashboard')}}/libs/sweetalert2/sweetalert2@11"></script>
 
 <!-- INITIAL STORY SECTION -->
-@stack('scripts')
-
 @livewireScripts
 @stack('scripts')
+<script>
+    document.addEventListener('livewire:init', () => {
+
+        Livewire.on('alert', (event) => {
+
+            Swal.fire({
+                position: 'top-end',
+                icon: event.type ?? 'success',
+                title: event.title ?? '',
+                text: event.message ?? '',
+
+                showConfirmButton: false,
+                customClass: {
+                    popup: 'my-swal-popup'
+                },
+                timer: 2000,
+                toast: true
+            });
+
+        });
+
+    });
+</script>
+
 </body>
 
 </html>

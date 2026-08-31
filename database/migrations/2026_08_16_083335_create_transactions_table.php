@@ -84,7 +84,7 @@ return new class extends Migration
             |
             */
 
-            $table->unsignedBigInteger('balance_after');
+            $table->unsignedBigInteger('balance_after')->nullable();
 
 
             /*

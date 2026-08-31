@@ -235,15 +235,16 @@ new class extends Component
                                     <td>
 
                                         <div class="hstack gap-2 flex-wrap">
+                                            @can('sections.view')
+                                                <a title="افزودن ایتم" href="{{route('pages.rows.sections',$item->id)}}" class="text-warning fs-14 lh-1"><i
+                                                        class="ri-list-view"></i></a>
+                                            @endcan
                                             @can('sections.edit')
 
                                                 <a data-bs-toggle="modal" href="#create" wire:click="get_data({{$item->id}})"  class="text-info fs-14 lh-1"><i
                                                         class="ri-edit-line"></i></a>
                                             @endcan
-                                           @can('sections.view')
-                                                    <a  href="{{route('pages.rows.sections',$item->id)}}" class="text-warning fs-14 lh-1"><i
-                                                            class="ri-list-view"></i></a>
-                                            @endcan
+
                                             @can('sections.delete')
 
                                                 <a  data-bs-toggle="modal" href="#delete" wire:click="get_data({{$item->id}})"  class="text-danger fs-14 lh-1"><i

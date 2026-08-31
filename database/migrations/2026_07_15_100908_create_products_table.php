@@ -23,6 +23,7 @@ return new class extends Migration
 
             // Product title
             $table->string('title');
+            $table->string('barcode')->nullable();
 
             // SEO friendly url
             $table->string('slug')->unique();

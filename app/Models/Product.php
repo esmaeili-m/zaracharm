@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use App\Models\ProductSpecification;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Morilog\Jalali\Jalalian;
+use App\Models\DiscountTarget;
 
 class Product extends Model
 {
@@ -67,19 +68,41 @@ class Product extends Model
             ? url('/storage/' . $this->featuredImage->file_path)
             : null;
     }
+    public function views(): MorphMany
+    {
+        return $this->morphMany(View::class, 'viewable');
+    }
+    public function ratings()
+    {
+        return $this->morphMany(Rating::class, 'rateable');
+    }
 
     public function productSpecifications()
     {
         return $this->hasMany(ProductSpecification::class);
     }
-
-    public function specifications(): BelongsToMany
+    public function specifications()
     {
         return $this->belongsToMany(
             Specification::class,
-            'product_specifications',
+            'product_specifications'
+        )->withPivot([
+            'text_value',
+            'number_value',
+            'decimal_value',
+            'boolean_value',
+            'date_value',
+            'status',
+        ]);
+    }
+
+    public function options()
+    {
+        return $this->belongsToMany(
+            Option::class,
+            'product_options',
             'product_id',
-            'specification_id'
+            'option_id'
         );
     }
     public function featuredImage()
@@ -97,8 +120,15 @@ class Product extends Model
     {
         return $this->belongsToMany(Category::class);
     }
+    public function primaryCategory()
+    {
+        return $this->belongsTo(Category::class, 'primary_category_id');
+    }
 
-
+    public function comments(): MorphMany
+    {
+        return $this->morphMany(Comment::class, 'commentable')->where('is_approved', 1);;
+    }
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class);
@@ -143,6 +173,19 @@ class Product extends Model
                 : Jalalian::fromFormat('Y/m/d', $value)->toCarbon(),
         );
     }
+
+    public function mainProduct()
+    {
+        return $this->hasOne(ProductVariant::class)
+            ->where('status', 1)->where('is_default',1);
+    }
+    public function discountTargets()
+    {
+        return $this->morphMany(
+            DiscountTarget::class,
+            'target'
+        );
+    }
     public function displayVariant()
     {
         return $this->hasOne(ProductVariant::class)
@@ -168,4 +211,9 @@ class Product extends Model
         return $this->morphToMany(Tag::class, 'taggable');
     }
 
+    public function cheapestVariant()
+    {
+        return $this->hasOne(ProductVariant::class)
+            ->orderBy('price', 'asc');
+    }
 }

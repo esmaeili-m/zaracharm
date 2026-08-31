@@ -30,6 +30,7 @@ new class extends Component
     {
         abort_if(!auth()->user()->can('categories.view'), 403);
         $this->model=$model;
+        $this->discount=$discount;
         $this->info['header']='لیست اقلام تخفیف خورده';
         $this->info['create']='افزودن تخفیف';
         $this->info['delete']='حذف تخفیف';
@@ -283,7 +284,7 @@ new class extends Component
 
                                     {{-- نام تخفیف --}}
                                     <td>
-                                        {{ $item->discount->title }}
+                                        {{ $this->discount?->title }}
                                     </td>
 
 
@@ -338,7 +339,7 @@ new class extends Component
                                     {{-- وضعیت تخفیف --}}
                                     <td>
 
-                                        @if($item->discount->status)
+                                        @if($this->discount->status)
 
                                             <span class="badge bg-outline-success">
                 فعال

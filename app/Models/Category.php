@@ -38,6 +38,13 @@ class Category extends Model
 
         return $ids;
     }
+    public function discountTargets()
+    {
+        return $this->morphMany(
+            DiscountTarget::class,
+            'target'
+        );
+    }
     public function featuredImage()
     {
         return $this->morphOne(Media::class, 'mediable')
@@ -68,5 +75,9 @@ class Category extends Model
         public function scopeActive($query)
     {
         return $query->where('status', true);
+    }
+    public function views(): MorphMany
+    {
+        return $this->morphMany(View::class, 'viewable');
     }
 }

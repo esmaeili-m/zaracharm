@@ -26,12 +26,22 @@ return new class extends Migration
             $table->string('order_number')
                 ->unique();
 
+            $table->foreignId('coupon_id')
+                ->nullable()
+                ->constrained('coupons')
+                ->nullOnDelete();
 
 
             $table->foreignId('address_id')
                 ->nullable()
                 ->constrained()
                 ->nullOnDelete();
+
+            $table->unsignedBigInteger('tax_amount')
+                ->default(0);
+
+
+
 
 
 

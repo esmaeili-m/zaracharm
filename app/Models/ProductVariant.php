@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Services\Pricing\ProductPriceService;
 class ProductVariant extends Model
 {
     use SoftDeletes;
@@ -29,12 +30,19 @@ class ProductVariant extends Model
             'status' => 'boolean',
         ];
     }
-
+    public function priceData(): array
+    {
+        return app(ProductPriceService::class)
+            ->calculate($this);
+    }
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
-
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class, 'variant_id');
+    }
     public function inventoryItems()
     {
         return $this->hasMany(InventoryItem::class, 'product_variant_id');

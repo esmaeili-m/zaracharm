@@ -13623,7 +13623,7 @@
     --tw-translate-y: calc(calc(1 / 2 * 100%) * -1);
     translate: var(--tw-translate-x) var(--tw-translate-y);
     border-radius: calc(infinity * 1px);
-    background-color: var(--color-blue-600);
+    background-color: var(--color-brown-600);
     --tw-shadow: 0 0 15px var(--tw-shadow-color, rgba(37,99,235,0.6));
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }

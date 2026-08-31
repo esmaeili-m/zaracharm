@@ -377,7 +377,7 @@ new class extends Component {
 
                     'formData.mode' => [
                         'required',
-                        'in:latest,sales,views,random,manual'
+                        'in:latest,sales,views,random,manual,all'
                     ],
 
                     'formData.limit' => [

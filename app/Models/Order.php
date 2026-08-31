@@ -22,13 +22,18 @@ class Order extends Model
 
     ];
 
-
+    protected $casts = [
+        'expires_at' => 'datetime',
+    ];
     public function items()
     {
         return $this->hasMany(OrderItem::class);
     }
 
-
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class);
+    }
 
     public function payment()
     {

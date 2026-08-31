@@ -12,7 +12,12 @@ Route::post('/logout', function () {
 
 Route::livewire('/login', 'pages::auth.login')->name('login');
 Route::livewire('/user/dashboard', 'pages::main.user.dashboard')->name('user.dashboard');
-
+Route::livewire('/product', 'pages::main.user.dashboard')->name('product.show');
+Route::livewire('/products/{product}', 'pages::main.products.show')->name('products.show');
+Route::livewire('/cartItem', 'pages::main.cart.cart-item')->name('cartItem');
+Route::livewire('/checkout/{code}', 'pages::main.cart.checkout')->name('checkout');
+Route::livewire('/order/{code}/payment', 'pages::main.cart.payment')
+    ->name('order.payment.result');
 // ─── Static Pages ────────────────────────────────────────
 Route::livewire('/cart', 'pages::main.cart.index')->name('cart.index');
 Route::livewire('/search', 'pages::main.search.index')->name('search');

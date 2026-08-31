@@ -1,94 +1,75 @@
 <?php
 
 use Livewire\Component;
+use Livewire\WithPagination;
+use Livewire\Attributes\Computed;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Brand;
+use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Carbon\Carbon;
 
 new class extends Component
 {
-    public $category,$products,$categories;
-    public $sort = 'latest';
-    public $categoryIds = [];
+    use WithPagination;
+
+    /*
+    |--------------------------------------------------------------------
+    | نکته مهم درباره منطق تخفیف (برای خودتان که بعداً برمی‌گردید سراغ این فایل)
+    |--------------------------------------------------------------------
+    | 1) product_variants.price  = قیمت فعلی فروش واریانت.
+    |    product_variants.compare_price = قیمت قبل از تخفیفِ خودِ محصول (فقط برای خط‌خورده نمایش داده می‌شود).
+    |    یعنی تخفیفِ «خودِ محصول» از قبل توی price اعمال شده و دوباره چیزی از آن کم نمی‌کنیم.
+    |
+    | 2) discounts + discount_targets: یک لایه‌ی تخفیفِ *اضافه* هستند که می‌توانند هدف‌گذاری شوند روی
+    |    محصول خاص / برند / دسته‌بندی، با بازه زمانی و سقف تخفیف. اگر چند تخفیف روی یک محصول match شوند،
+    |    آن‌ها را روی هم جمع نمی‌زنیم؛ فقط تخفیفی که کمترین قیمت نهایی را نتیجه می‌دهد اعمال می‌شود.
+    |
+    | 3) campaigns سطحش سبد خرید است (شرط روی جمع سبد + پاداش کلی)، نه قیمت تک‌محصول؛
+    |    بنابراین در این صفحه (لیست محصولات) اعمال نمی‌شود.
+    |
+    | 4) type روی جدول discounts فرض شده: 1 = درصدی، 2 = مبلغ ثابت (تومان).
+    |    اگر enum واقعی پروژه فرق دارد، فقط همین دو ثابت پایین را عوض کنید.
+    |
+    |--------------------------------------------------------------------
+    | چرا render() نداریم
+    |--------------------------------------------------------------------
+    | این کامپوننت به‌جای متد render() از پراپرتی‌های #[Computed] استفاده می‌کند. هر پراپرتی
+    | Computed (مثل paginator و viewProducts) فقط وقتی که در تمپلیت صدا زده می‌شود (به‌صورت
+    | $this->paginator یا $this->viewProducts) اجرا و در همان درخواست کش می‌شود، بدون این‌که
+    | لازم باشد state سنگین (کالکشن محصولات و...) به‌عنوان پراپرتی عمومی بین درخواست‌ها ذخیره و
+    | هیدریت شود. Livewire به‌صورت خودکار، بعد از هر اکشن، تمپلیت را با همین پراپرتی‌های Computed
+    | تازه دوباره رندر می‌کند؛ پس نیازی به render() صریح نیست.
+    */
+    private const DISCOUNT_TYPE_PERCENT = 1;
+    private const DISCOUNT_TYPE_FIXED   = 2;
+
+    public Category $category;
+    public Collection $childCategories;
+    public Collection $brands;
+
+    public array $categoryIds = [];
+
+    // فیلترها و مرتب‌سازی
+    public string $sort = 'latest';
     public array $selectedCategories = [];
-    public function sortBy($sort)
-    {
-        $this->sort = $sort;
+    public array $selectedBrands = [];
 
-        $query = Product::query()
-            ->whereHas('categories', function ($query) {
-                $query->whereIn('categories.id', $this->categoryIds);
-            });
+    public int $priceFloor = 0;
+    public int $priceCeil = 0;
+    public ?int $minPrice = null;
+    public ?int $maxPrice = null;
 
-        if (!empty($this->selectedCategories)) {
+    public bool $onlyInStock = false;
+    public bool $onlyDiscounted = false;
+    public bool $onlyNew = false;
 
-            $query->whereHas('categories', function ($query) {
-                $query->whereIn('categories.id', $this->selectedCategories);
-            });
+    protected $paginationTheme = 'tailwind';
 
-        }
-        switch ($this->sort) {
-
-            case 'sales':
-
-                $salesQuery = DB::table('product_variants')
-                    ->join('order_items', 'product_variants.id', '=', 'order_items.variant_id')
-                    ->join('orders', 'order_items.order_id', '=', 'orders.id')
-                    ->whereNotIn('orders.status', ['cancelled'])
-                    ->select(
-                        'product_variants.product_id',
-                        DB::raw('SUM(order_items.quantity) as total_sales')
-                    )
-                    ->groupBy('product_variants.product_id');
-
-                $query
-                    ->leftJoinSub(
-                        $salesQuery,
-                        'sales',
-                        function ($join) {
-                            $join->on('products.id', '=', 'sales.product_id');
-                        }
-                    )
-                    ->select('products.*')
-                    ->selectRaw('COALESCE(sales.total_sales, 0) as total_sales')
-                    ->orderByDesc('total_sales');
-
-                break;
-
-            case 'cheap':
-
-                $priceQuery = DB::table('product_variants')
-                    ->where('status', 1)
-                    ->whereNull('deleted_at')
-                    ->select(
-                        'product_id',
-                        DB::raw('MIN(price) as min_price')
-                    )
-                    ->groupBy('product_id');
-
-                $query
-                    ->joinSub(
-                        $priceQuery,
-                        'prices',
-                        function ($join) {
-                            $join->on('products.id', '=', 'prices.product_id');
-                        }
-                    )
-                    ->select('products.*')
-                    ->selectRaw('prices.min_price')
-                    ->orderBy('prices.min_price', 'asc');
-
-                break;
-
-            default:
-
-                $query->latest('products.created_at');
-
-                break;
-        }
-
-        $this->products = $query->get();
-    }
     public function mount($slug)
     {
         $this->category = Category::query()
@@ -96,23 +77,470 @@ new class extends Component
             ->where('slug', $slug)
             ->firstOrFail();
 
-        $this->categories = $this->category
+        $this->childCategories = $this->category
             ->children()
             ->active()
             ->orderBy('title')
             ->get();
+
         $this->categoryIds = $this->category
             ->getAllDescendantIds()
             ->push($this->category->id)
             ->unique()
             ->values()
             ->toArray();
-        $categoryIds = $this->categoryIds;
-        $this->products = Product::query()
-            ->whereHas('categories', function ($query) use ($categoryIds) {
-                $query->whereIn('categories.id', $categoryIds);
+
+        // برندهایی که واقعاً محصولی در این دسته‌بندی دارند (برای فیلتر برند، به‌جای لیست ثابت)
+        $this->brands = Brand::query()
+            ->where('status', 1)
+            ->whereNull('deleted_at')
+            ->whereHas('products', function ($q) {
+                $q->whereHas('categories', fn ($q2) => $q2->whereIn('categories.id', $this->categoryIds));
             })
+            ->orderBy('title')
             ->get();
+
+        // بازه‌ی واقعی قیمت بر اساس واریانت‌های محصولاتِ همین دسته (برای تنظیم اسلایدر قیمت)
+        $bounds = DB::table('product_variants')
+            ->join('category_product', 'product_variants.product_id', '=', 'category_product.product_id')
+            ->whereIn('category_product.category_id', $this->categoryIds)
+            ->where('product_variants.status', 1)
+            ->whereNull('product_variants.deleted_at')
+            ->selectRaw('MIN(price) as min_price, MAX(price) as max_price')
+            ->first();
+
+        $this->priceFloor = (int) ($bounds->min_price ?? 0);
+        $this->priceCeil  = (int) ($bounds->max_price ?? 0);
+        $this->minPrice   = $this->priceFloor;
+        $this->maxPrice   = $this->priceCeil;
+    }
+
+    /**
+     * تخفیف‌های فعالِ همین لحظه (status=1 و داخل بازه‌ی زمانی starts_at/ends_at).
+     * Computed یعنی: در یک درخواست فقط یک‌بار اجرا و کش می‌شود، نیازی به نگه‌داشتنش بین درخواست‌ها نیست.
+     */
+    #[Computed]
+    public function activeDiscounts(): Collection
+    {
+        $now = Carbon::now();
+
+        return collect(
+            DB::table('discounts')
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+                })
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('ends_at')->orWhere('ends_at', '>=', $now);
+                })
+                ->get()
+        );
+    }
+
+    /**
+     * هدف‌های همان تخفیف‌های فعال، گروه‌بندی‌شده بر اساس discount_id.
+     */
+    #[Computed]
+    public function discountTargetsByDiscount(): Collection
+    {
+        $discountIds = $this->activeDiscounts->pluck('id');
+
+        if ($discountIds->isEmpty()) {
+            return collect();
+        }
+
+        return collect(
+            DB::table('discount_targets')->whereIn('discount_id', $discountIds)->get()
+        )->groupBy('discount_id');
+    }
+
+    public function setSort(string $sort): void
+    {
+        $this->sort = $sort;
+        $this->resetPage();
+    }
+
+    public function applyPriceRange(): void
+    {
+        // مقادیر minPrice/maxPrice همراه همین درخواست از طریق wire:model سینک شده‌اند
+        $this->resetPage();
+    }
+
+    public function updatedSelectedCategories(): void { $this->resetPage(); }
+    public function updatedSelectedBrands(): void { $this->resetPage(); }
+    public function updatedOnlyInStock(): void { $this->resetPage(); }
+    public function updatedOnlyDiscounted(): void { $this->resetPage(); }
+    public function updatedOnlyNew(): void { $this->resetPage(); }
+
+    public function toggleFavorite(int $productId): void
+    {
+        if (! Auth::check()) {
+            $this->dispatch('notify', type: 'error', message: 'برای افزودن به علاقه‌مندی ابتدا وارد شوید.');
+            return;
+        }
+
+        $existing = DB::table('likes')
+            ->where('user_id', Auth::id())
+            ->where('likeable_type', Product::class)
+            ->where('likeable_id', $productId)
+            ->first();
+
+        if ($existing) {
+            DB::table('likes')->where('id', $existing->id)->delete();
+        } else {
+            DB::table('likes')->insert([
+                'user_id' => Auth::id(),
+                'likeable_type' => Product::class,
+                'likeable_id' => $productId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // چون likes روی favorites تأثیر می‌گذارد و آن پراپرتی هم Computed و کش‌شده در همین درخواست است، پاکش می‌کنیم
+        unset($this->favoriteProductIds);
+    }
+
+    /**
+     * افزودن به سبد خرید.
+     * توجه: جدول cart_items ستون variant_id ندارد (فقط product_id). چون این صفحه واریانت مشخصی را
+     * پیشنهاد می‌دهد (دیفالت/ارزان‌ترین موجود)، شناسه‌ی واریانت را داخل ستون JSON با نام attributes
+     * ذخیره می‌کنیم. اگر بعداً بخواهید محصولاتِ چند-واریانته را درست جمع بزنید، پیشنهادم اضافه‌کردن
+     * ستون variant_id به cart_items است.
+     */
+    public function addToCart(int $variantId): void
+    {
+        if (! Auth::check()) {
+            $this->dispatch('alert', type: 'error', message: 'برای خرید ابتدا وارد شوید.');
+            return;
+        }
+
+        $variant = ProductVariant::query()->find($variantId);
+
+        if (! $variant) {
+            $this->dispatch('alert', type: 'error', message: 'این کالا در دسترس نیست.');
+            return;
+        }
+
+        $stock = $this->stockForVariant($variant->id);
+        if ($stock <= 0) {
+            $this->dispatch('alert', type: 'error', message: 'موجودی این کالا تمام شده است.');
+            return;
+        }
+
+        $cartId = DB::table('carts')
+            ->where('user_id', Auth::id())
+            ->where('status', 'active')
+            ->value('id');
+
+        if (! $cartId) {
+            $cartId = DB::table('carts')->insertGetId([
+                'user_id' => Auth::id(),
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        [$finalPrice] = $this->finalPriceForVariant($variant->id, $variant->price, $variant->product_id, $variant->product->brand_id ?? null);
+
+        DB::table('cart_items')->insert([
+            'cart_id' => $cartId,
+            'product_id' => $variant->product_id,
+            'quantity' => 1,
+            'price' => $finalPrice,
+            'attributes' => json_encode(['variant_id' => $variant->id]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->dispatch('cart-updated');
+        $this->dispatch('alert', type: 'success', message: 'به سبد خرید اضافه شد.');
+    }
+
+    /**
+     * موجودی واقعی یک واریانت = مجموع (quantity - reserved_quantity) در انبارهای فعال.
+     */
+    private function stockForVariant(int $variantId): int
+    {
+        return (int) DB::table('inventory_items')
+            ->where('product_variant_id', $variantId)
+            ->where('status', 1)
+            ->whereNull('deleted_at')
+            ->selectRaw('SUM(quantity - reserved_quantity) as stock')
+            ->value('stock');
+    }
+
+
+    private function finalPriceForVariant(int $variantId, int $basePrice, int $productId, ?int $brandId): array
+    {
+        if ($basePrice <= 0 || $this->activeDiscounts->isEmpty()) {
+            return [$basePrice, 0];
+        }
+
+        $productCategoryIds = DB::table('category_product')
+            ->where('product_id', $productId)
+            ->pluck('category_id')
+            ->all();
+
+        $bestPrice = $basePrice;
+
+        foreach ($this->activeDiscounts as $discount) {
+            $targets = $this->discountTargetsByDiscount->get($discount->id, collect());
+
+            $matches = $targets->contains(function ($target) use ($productId, $brandId, $productCategoryIds) {
+                return match ($target->target_type) {
+                    'App\\Models\\Product' => (int) $target->target_id === $productId,
+                    'App\\Models\\Brand' => $brandId && (int) $target->target_id === $brandId,
+                    'App\\Models\\Category' => in_array((int) $target->target_id, $productCategoryIds, true),
+                    default => false,
+                };
+            });
+
+            if (! $matches) {
+                continue;
+            }
+
+            $off = $discount->type === self::DISCOUNT_TYPE_PERCENT
+                ? $basePrice * ($discount->value / 100)
+                : $discount->value;
+
+            if ($discount->maximum_discount) {
+                $off = min($off, $discount->maximum_discount);
+            }
+
+            $off = min($off, $basePrice);
+            $candidatePrice = (int) round($basePrice - $off);
+
+            if ($candidatePrice < $bestPrice) {
+                $bestPrice = $candidatePrice;
+            }
+        }
+
+        $percent = $bestPrice < $basePrice
+            ? (int) round((($basePrice - $bestPrice) / $basePrice) * 100)
+            : 0;
+
+        return [$bestPrice, $percent];
+    }
+
+    /**
+     * از میان واریانت‌های یک محصول، واریانتِ پیش‌فرض (is_default) را انتخاب می‌کند؛
+     * اگر پیش‌فرض موجود نبود، ارزان‌ترین واریانتِ موجود در انبار را برمی‌گرداند.
+     */
+    private function pickDisplayVariant(Collection $variants, array $stockByVariant): ?object
+    {
+        $active = $variants->where('status', 1);
+
+        if ($active->isEmpty()) {
+            return null;
+        }
+
+        $default = $active->firstWhere('is_default', 1);
+
+        if ($default && ($stockByVariant[$default->id] ?? 0) > 0) {
+            return $default;
+        }
+
+        $cheapestInStock = $active
+            ->filter(fn ($v) => ($stockByVariant[$v->id] ?? 0) > 0)
+            ->sortBy('price')
+            ->first();
+
+        if ($cheapestInStock) {
+            return $cheapestInStock;
+        }
+
+        // چیزی موجود نیست؛ همان دیفالت (یا ارزان‌ترین) را برای نمایش "ناموجود" برمی‌گردانیم
+        return $default ?? $active->sortBy('price')->first();
+    }
+
+    /**
+     * کوئری اصلی محصولات با اعمال همه‌ی فیلترها و مرتب‌سازی.
+     */
+    private function baseQuery()
+    {
+        $query = Product::query()
+            ->where('status', 1)
+            ->whereNull('deleted_at')
+            ->with(['variants', 'media', 'brand'])
+            ->whereHas('categories', function ($q) {
+                $q->whereIn('categories.id', $this->categoryIds);
+            });
+
+        if (! empty($this->selectedCategories)) {
+            $query->whereHas('categories', function ($q) {
+                $q->whereIn('categories.id', $this->selectedCategories);
+            });
+        }
+
+        if (! empty($this->selectedBrands)) {
+            $query->whereIn('brand_id', $this->selectedBrands);
+        }
+
+        if ($this->onlyNew) {
+            $query->where('created_at', '>=', now()->subDays(7));
+        }
+
+        if ($this->minPrice !== null && $this->maxPrice !== null) {
+            $query->whereHas('variants', function ($q) {
+                $q->where('status', 1)
+                    ->whereNull('deleted_at')
+                    ->whereBetween('price', [$this->minPrice, $this->maxPrice]);
+            });
+        }
+
+        switch ($this->sort) {
+            case 'sales':
+                $salesQuery = DB::table('product_variants')
+                    ->join('order_items', 'product_variants.id', '=', 'order_items.variant_id')
+                    ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                    ->whereNotIn('orders.status', ['cancelled'])
+                    ->select('product_variants.product_id', DB::raw('SUM(order_items.quantity) as total_sales'))
+                    ->groupBy('product_variants.product_id');
+
+                $query->leftJoinSub($salesQuery, 'sales', function ($join) {
+                    $join->on('products.id', '=', 'sales.product_id');
+                })
+                    ->select('products.*')
+                    ->selectRaw('COALESCE(sales.total_sales, 0) as total_sales')
+                    ->orderByDesc('total_sales');
+                break;
+
+            case 'cheap':
+                // توجه: این مرتب‌سازی بر اساس قیمتِ پایه‌ی ارزان‌ترین واریانت است، نه لزوماً قیمت نهایی
+                // بعد از اعمال تخفیف‌های جدول discounts (چون آن محاسبه سطح-SQL نیست). برای دقتِ ۱۰۰٪
+                // پیشنهاد می‌شود یک ستون cached final_price روی product_variants نگه‌داری و در ثبت/ویرایش
+                // تخفیف به‌روزرسانی شود.
+                $priceQuery = DB::table('product_variants')
+                    ->where('status', 1)
+                    ->whereNull('deleted_at')
+                    ->select('product_id', DB::raw('MIN(price) as min_price'))
+                    ->groupBy('product_id');
+
+                $query->joinSub($priceQuery, 'prices', function ($join) {
+                    $join->on('products.id', '=', 'prices.product_id');
+                })
+                    ->select('products.*')
+                    ->selectRaw('prices.min_price')
+                    ->orderBy('prices.min_price', 'asc');
+                break;
+
+            default:
+                $query->latest('products.created_at');
+                break;
+        }
+
+        return $query;
+    }
+
+    /**
+     * صفحه‌ی جاری محصولات (بدون فیلترهای onlyInStock/onlyDiscounted که بعد از محاسبه‌ی
+     * قیمت نهایی اعمال می‌شوند - چون به داده‌ی محاسبه‌شده وابسته‌اند، نه ستون خام دیتابیس).
+     */
+    #[Computed]
+    public function paginator(): LengthAwarePaginator
+    {
+        return $this->baseQuery()->paginate(12);
+    }
+
+    /**
+     * شناسه‌ی محصولاتی که کاربر لاگین‌شده لایک کرده، محدود به محصولات همین صفحه.
+     */
+    #[Computed]
+    public function favoriteProductIds(): array
+    {
+        if (! Auth::check()) {
+            return [];
+        }
+
+        return DB::table('likes')
+            ->where('user_id', Auth::id())
+            ->where('likeable_type', Product::class)
+            ->whereIn('likeable_id', $this->paginator->pluck('id'))
+            ->pluck('likeable_id')
+            ->all();
+    }
+
+    /**
+     * ردیف‌های آماده‌ی نمایش برای صفحه‌ی جاری: واریانت انتخابی، قیمت نهایی، درصد تخفیف،
+     * موجودی واقعی، تصویر و وضعیت علاقه‌مندی هر محصول.
+     */
+    #[Computed]
+    public function viewProducts(): Collection
+    {
+        $paginated = $this->paginator;
+
+        $variantIds = $paginated->flatMap(fn ($p) => $p->variants->pluck('id'))->all();
+
+        $stockByVariant = $variantIds
+            ? DB::table('inventory_items')
+                ->whereIn('product_variant_id', $variantIds)
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->selectRaw('product_variant_id, SUM(quantity - reserved_quantity) as stock')
+                ->groupBy('product_variant_id')
+                ->pluck('stock', 'product_variant_id')
+                ->map(fn ($s) => (int) $s)
+                ->all()
+            : [];
+
+        $rows = $paginated->getCollection()->map(function ($product) use ($stockByVariant) {
+            $variant = $this->pickDisplayVariant($product->variants, $stockByVariant);
+
+            $price = 0;
+            $finalPrice = 0;
+            $discountPercent = 0;
+            $stock = 0;
+
+            if ($variant) {
+                $price = (int) $variant->price;
+                $stock = $stockByVariant[$variant->id] ?? 0;
+
+
+                [$finalPrice, $discountPercent] = $this->finalPriceForVariant(
+                    $variant->id,
+                    $price,
+                    $product->id,
+                    $product->brand_id
+                );
+
+                // اگر خودِ واریانت هم compare_price داشت و از finalPrice پایین‌تر بود، همان compare_price
+                // به‌عنوان «قیمت قبل از تخفیف» برای خط‌خورده نمایش داده می‌شود.
+
+                if ($variant->compare_price && $variant->compare_price > $finalPrice) {
+                    $original = (int) $variant->compare_price;
+                    $discountPercent = max($discountPercent, (int) round((($original - $finalPrice) / $original) * 100));
+
+                }
+            }
+
+            $image = $product->media->firstWhere('collection', 'featured_image');
+            return (object) [
+                'product' => $product,
+                'variant' => $variant,
+                'price' => $price,
+                'compare_price' => $variant->compare_price ?? null,
+                'final_price' => $finalPrice,
+                'discount_percent' => $discountPercent,
+                'stock' => $stock,
+                'image' => $image,
+                'is_favorited' => in_array($product->id, $this->favoriteProductIds, true),
+            ];
+        });
+
+        // فیلترهای «فقط موجود» و «فقط تخفیف‌دار» چون به قیمت/موجودیِ محاسبه‌شده وابسته‌اند،
+        // بعد از map روی همین کالکشن اعمال می‌شوند (نه در کوئری اصلی).
+        if ($this->onlyInStock) {
+            $rows = $rows->filter(fn ($p) => $p->stock > 0);
+        }
+
+        if ($this->onlyDiscounted) {
+            $rows = $rows->filter(fn ($p) => $p->discount_percent > 0);
+        }
+
+        return $rows->values();
     }
 };
 ?>
@@ -192,7 +620,7 @@ new class extends Component
                             <p class="text-xs text-gray-500 dark:text-gray-400 font-bold">
                                 نمایش
                                 <span class="text-gray-800 dark:text-white">
-                        {{ $products->count() }}
+                        {{ $this->paginator->total() }}
                     </span>
                                 محصول موجود
                             </p>
@@ -235,7 +663,7 @@ new class extends Component
 
                             {{-- جدیدترین --}}
                             <button
-                                wire:click="sortBy('latest')"
+                                wire:click="setSort('latest')"
                                 class="px-5 py-2.5 rounded-[1.2rem] text-[11px] font-black
                            transition-all active:scale-95
                            {{ $sort === 'latest'
@@ -249,7 +677,7 @@ new class extends Component
 
                             {{-- پرفروش‌ترین --}}
                             <button
-                                wire:click="sortBy('sales')"
+                                wire:click="setSort('sales')"
                                 class="px-5 py-2.5 rounded-[1.2rem] text-[11px] font-black
                            transition-all active:scale-95
                            {{ $sort === 'sales'
@@ -263,7 +691,7 @@ new class extends Component
 
                             {{-- ارزان‌ترین --}}
                             <button
-                                wire:click="sortBy('cheap')"
+                                wire:click="setSort('cheap')"
                                 class="px-5 py-2.5 rounded-[1.2rem] text-[11px] font-black
                            transition-all active:scale-95
                            {{ $sort === 'cheap'
@@ -283,7 +711,6 @@ new class extends Component
             </div>
 
             <!-- Filter Showing in Responsive Break Point -->
-            <!--Open filters button on mobile-->
             <div class="fixed bottom-28 right-6 z-[95] lg:hidden">
                 <button onclick="toggleFilters(true)" class="flex items-center justify-center w-14 h-14 bg-white/40 dark:bg-white/[0.05] backdrop-blur-md text-blue-600 rounded-2xl shadow-lg border border-white/60 dark:border-white/10 active:scale-90 transition-all">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -292,10 +719,9 @@ new class extends Component
                 </button>
             </div>
 
-            <!--Overlay for mobile-->
             <div id="filter-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-[140] opacity-0 pointer-events-none transition-opacity duration-300 lg:hidden"></div>
 
-            <!--Offcanvas Filters for Mobile-->
+            {{-- Offcanvas + Desktop aside هر دو از یک partial فیلترها استفاده می‌کنند تا کد تکراری نشود --}}
             <div id="filter-offcanvas" class="fixed top-0 right-0 h-full w-[85%] max-w-[380px] bg-white/30 dark:bg-black/40 backdrop-blur-[30px] z-[150] translate-x-full transition-transform duration-500 ease-in-out border-l border-white/40 dark:border-white/10 shadow-lg lg:hidden">
                 <div class="flex flex-col h-full">
                     <div class="p-6 flex items-center justify-between border-b border-white/40 dark:border-white/5 bg-white/20 dark:bg-white/[0.02]">
@@ -306,324 +732,7 @@ new class extends Component
                     </div>
 
                     <div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-                        <!--Category Mobile-->
-                        <div class="relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-lg shadow-gray-200/50 dark:shadow-none transition-all duration-500">
-                            <div class="js-collapse-header flex items-center justify-between p-7 cursor-pointer select-none group/header">
-                                <h3 class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-3">
-                                    <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                                    دسته‌بندی محصولات
-                                </h3>
-                                <div class="flex items-center gap-3">
-                                    <span class="text-[10px] font-black text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full uppercase tracking-widest">دیجیتال</span>
-                                    <svg class="js-collapse-icon w-5 h-5 text-gray-400 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </div>
-                            </div>
-
-                            <div class="js-collapse-content overflow-hidden transition-all duration-500 ease-in-out" style="max-height: 1000px; opacity: 1;">
-                                <ul class="px-7 pb-8 space-y-1">
-                                    <li class="group/brand">
-                                        <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-500 group-hover/brand:bg-blue-500 group-hover/brand:text-white transition-all">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                                                </div>
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">گوشی موبایل</span>
-                                            </div>
-                                            <div class="relative flex items-center">
-                                                <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer" checked>
-                                                <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                                            </div>
-                                        </label>
-                                    </li>
-
-                                    <li class="group/brand">
-                                        <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-500 group-hover/brand:bg-blue-500 group-hover/brand:text-white transition-all">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 21h6l-.75-4M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                                </div>
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">لپ‌تاپ</span>
-                                            </div>
-                                            <div class="relative flex items-center">
-                                                <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                                            </div>
-                                        </label>
-                                    </li>
-
-                                    <li class="group/brand">
-                                        <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-500 group-hover/brand:bg-blue-500 group-hover/brand:text-white transition-all">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                                </div>
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">ساعت هوشمند</span>
-                                            </div>
-                                            <div class="relative flex items-center">
-                                                <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                                            </div>
-                                        </label>
-                                    </li>
-
-                                    <li class="group/brand">
-                                        <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-500 group-hover/brand:bg-blue-500 group-hover/brand:text-white transition-all">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
-                                                </div>
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">هدفون و هندزفری</span>
-                                            </div>
-                                            <div class="relative flex items-center">
-                                                <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                                            </div>
-                                        </label>
-                                    </li>
-
-                                    <li class="group/brand">
-                                        <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-500 group-hover/brand:bg-blue-500 group-hover/brand:text-white transition-all">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"></path></svg>
-                                                </div>
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">تبلت</span>
-                                            </div>
-                                            <div class="relative flex items-center">
-                                                <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                                            </div>
-                                        </label>
-                                    </li>
-
-                                    <li class="group/brand">
-                                        <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-500 group-hover/brand:bg-blue-500 group-hover/brand:text-white transition-all">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
-                                                </div>
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">کنسول بازی</span>
-                                            </div>
-                                            <div class="relative flex items-center">
-                                                <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                                            </div>
-                                        </label>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <!-- Price Range Mobile -->
-                        <div class="js-price-range-container relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-lg shadow-gray-200/50 dark:shadow-none transition-all duration-500">
-                            <div class="js-collapse-header flex items-center justify-between p-7 cursor-pointer select-none group/header">
-                                <h3 class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-3">
-                                    <span class="w-3 h-3 rounded-full bg-secondary-500"></span>
-                                    محدوده قیمت
-                                </h3>
-                                <svg class="js-collapse-icon w-5 h-5 text-gray-400 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </div>
-                            <div class="js-collapse-content overflow-hidden transition-all duration-500 ease-in-out" style="max-height: 1000px; opacity: 1;">
-                                <div class="px-7 pb-8 pt-3">
-                                    <div class="relative w-[92%] mx-auto h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mb-10 mt-4">
-                                        <div class="js-slider-track absolute h-full bg-primary-500 rounded-full"></div>
-                                        <input type="range" class="js-min-range range-input absolute w-full h-1.5 bg-transparent appearance-none pointer-events-none cursor-pointer z-20" min="0" max="100000000" value="0" step="100000">
-                                        <input type="range" class="js-max-range range-input absolute w-full h-1.5 bg-transparent appearance-none pointer-events-none cursor-pointer z-20" min="0" max="100000000" value="100000000" step="100000">
-                                    </div>
-                                    <div class="space-y-4">
-                                        <div class="group/in relative flex items-center bg-gray-50/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[1.25rem] px-4 py-3 transition-all focus-within:border-primary-500/50 focus-within:bg-white dark:focus-within:bg-white/10">
-                                            <span class="text-[11px] font-bold text-gray-400 ml-3">از</span>
-                                            <input type="text" class="js-min-price-input w-full bg-transparent border-none focus:ring-0 text-sm font-black text-gray-700 dark:text-white text-left p-0" value="0">
-                                        </div>
-                                        <div class="group/in relative flex items-center bg-gray-50/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[1.25rem] px-4 py-3 transition-all focus-within:border-primary-500/50 focus-within:bg-white dark:focus-within:bg-white/10">
-                                            <span class="text-[11px] font-bold text-gray-400 ml-3">تا</span>
-                                            <input type="text" class="js-max-price-input w-full bg-transparent border-none focus:ring-0 text-sm font-black text-gray-700 dark:text-white text-left p-0" value="100,000,000">
-                                        </div>
-                                    </div>
-                                    <button class="w-full mt-8 py-4 bg-primary-500 hover:bg-primary-600 text-white rounded-[1.5rem] text-xs font-black transition-all active:scale-95">تایید محدوده قیمت</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Status Product Mobile -->
-                        <div class="relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-lg shadow-gray-200/50 dark:shadow-none transition-all duration-500">
-                            <div class="js-collapse-header flex items-center justify-between p-7 cursor-pointer select-none group/header">
-                                <h3 class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-3">
-                                    <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
-                                    وضعیت کالا
-                                </h3>
-                                <svg class="js-collapse-icon w-5 h-5 text-gray-400 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </div>
-
-                            <div class="js-collapse-content overflow-hidden transition-all duration-500 ease-in-out" style="max-height: 1000px; opacity: 1;">
-                                <div class="px-7 pb-8 space-y-6">
-                                    <label class="flex items-center justify-between cursor-pointer group/sw">
-                                        <div class="flex flex-col gap-1.5">
-                                            <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/sw:text-emerald-500 transition-colors">فقط کالاهای موجود</span>
-                                            <span class="text-[10px] text-gray-400 font-medium">حذف کالاهای ناموجود از لیست</span>
-                                        </div>
-                                        <div class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" class="sr-only peer" checked>
-                                            <div class="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-sm"></div>
-                                        </div>
-                                    </label>
-
-                                    <label class="flex items-center justify-between cursor-pointer group/sw">
-                                        <div class="flex flex-col gap-1.5">
-                                            <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/sw:text-rose-500 transition-colors">فقط کالاهای تخفیف‌دار</span>
-                                            <span class="text-[10px] text-gray-400 font-medium">نمایش پیشنهادات ویژه و شگفت‌انگیز</span>
-                                        </div>
-                                        <div class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" class="sr-only peer">
-                                            <div class="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
-                                        </div>
-                                    </label>
-
-                                    <label class="flex items-center justify-between cursor-pointer group/sw">
-                                        <div class="flex flex-col gap-1.5">
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/sw:text-blue-500 transition-colors">ارسال فوری (مانا جت)</span>
-                                                <span class="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
-                                            </div>
-                                            <span class="text-[10px] text-gray-400 font-medium">تحویل در کمتر از ۳ ساعت در تهران</span>
-                                        </div>
-                                        <div class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" class="sr-only peer">
-                                            <div class="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                        </div>
-                                    </label>
-
-                                    <label class="flex items-center justify-between cursor-pointer group/sw">
-                                        <div class="flex flex-col gap-1.5">
-                                            <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/sw:text-purple-500 transition-colors">کالاهای با گارانتی اصلی</span>
-                                            <span class="text-[10px] text-gray-400 font-medium">فقط محصولات تضمین شده توسط مانا</span>
-                                        </div>
-                                        <div class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" class="sr-only peer">
-                                            <div class="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-                                        </div>
-                                    </label>
-
-                                    <label class="flex items-center justify-between cursor-pointer group/sw">
-                                        <div class="flex flex-col gap-1.5">
-                                            <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/sw:text-secondary-500 transition-colors">جدیدترین محصولات</span>
-                                            <span class="text-[10px] text-gray-400 font-medium">محصولات اضافه شده در ۷ روز اخیر</span>
-                                        </div>
-                                        <div class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" class="sr-only peer">
-                                            <div class="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary-500"></div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Popular Brand Mobile -->
-                        <div class="relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-lg shadow-gray-200/50 dark:shadow-none transition-all duration-500">
-                            <div class="js-collapse-header flex items-center justify-between p-7 cursor-pointer select-none group/header">
-                                <h3 class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-3">
-                                    <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                                    برندهای محبوب
-                                </h3>
-                                <div class="flex items-center gap-3">
-                                    <span class="text-[10px] font-black text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full uppercase tracking-widest">همه</span>
-                                    <svg class="js-collapse-icon w-5 h-5 text-gray-400 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </div>
-                            </div>
-
-                            <div class="js-collapse-content overflow-hidden transition-all duration-500 ease-in-out" style="max-height: 1000px; opacity: 1;">
-                                <div class="px-7 pb-8 space-y-5">
-                                    <div class="relative group/search">
-                                        <input type="text" class="js-brand-search w-full bg-white/60 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-2xl py-3.5 pr-11 pl-4 text-xs font-bold text-gray-800 dark:text-white outline-none transition-all focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5" placeholder="جستجوی برند...">
-                                        <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                                        </div>
-                                    </div>
-
-                                    <ul class="js-brands-list space-y-1 max-h-72 overflow-y-auto custom-scrollbar pl-2">
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">اپل (Apple)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">سامسونگ (Samsung)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer" checked>
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">شیائومی (Xiaomi)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">سونی (Sony)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">هواوی (Huawei)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">مایکروسافت (Microsoft)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
+                        @include('components.main.sections.category-filters')
                     </div>
 
                     <div class="p-6 bg-white/30 dark:bg-black/20 border-t border-white/40 dark:border-white/5">
@@ -631,370 +740,28 @@ new class extends Component
                     </div>
                 </div>
             </div>
-            <!-- End Filter Showing in Responsive Break Point -->
 
 
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
 
                 <aside class="hidden lg:block lg:col-span-1 relative">
                     <div class="sticky top-10 space-y-6">
-                        <!--Category-->
-                        <div class="relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-lg shadow-gray-200/50 dark:shadow-none transition-all duration-500">
-                            <div class="js-collapse-header flex items-center justify-between p-7 cursor-pointer select-none group/header">
-                                <h3 class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-3">
-                                    <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                                    دسته‌بندی محصولات
-                                </h3>
-                                <div class="flex items-center gap-3">
-                                    <span class="text-[10px] font-black text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full uppercase tracking-widest">{{$this->category->title}}</span>
-                                    <svg class="js-collapse-icon w-5 h-5 text-gray-400 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </div>
-                            </div>
-
-                            @if($categories->isNotEmpty())
-
-                                <div class="js-collapse-content overflow-hidden transition-all duration-500 ease-in-out"
-                                     style="max-height: 1000px; opacity: 1;">
-
-                                    <ul class="px-7 pb-8 space-y-1">
-
-                                        @foreach($categories as $child)
-
-                                            <li class="group/category">
-
-                                                <label
-                                                    class="flex items-center justify-between p-3 rounded-2xl
-                               hover:bg-blue-500/5 dark:hover:bg-blue-500/10
-                               cursor-pointer transition-all border border-transparent
-                               hover:border-blue-500/20"
-                                                >
-
-                                                    <div class="flex items-center gap-3">
-
-                                                        <div
-                                                            class="w-8 h-8 rounded-xl
-                                       bg-gray-100 dark:bg-white/5
-                                       flex items-center justify-center
-                                       text-gray-500
-                                       group-hover/category:bg-blue-500
-                                       group-hover/category:text-white
-                                       transition-all"
-                                                        >
-                                                            <svg class="w-4 h-4"
-                                                                 fill="none"
-                                                                 stroke="currentColor"
-                                                                 viewBox="0 0 24 24">
-                                                                <path
-                                                                    stroke-linecap="round"
-                                                                    stroke-linejoin="round"
-                                                                    stroke-width="2"
-                                                                    d="M6 8h12l1 12H5L6 8z
-           M9 8a3 3 0 016 0
-           M9 12h.01
-           M15 12h.01"
-                                                                />
-                                                            </svg>
-                                                        </div>
-
-                                                        <span class="text-xs font-bold text-gray-700 dark:text-gray-300
-                                         group-hover/category:text-blue-600 transition-colors">
-                                {{ $child->title }}
-                            </span>
-
-                                                    </div>
-
-                                                    <div class="relative flex items-center">
-
-                                                        <input
-                                                            type="checkbox"
-                                                            value="{{ $child->id }}"
-                                                            wire:model.live="selectedCategories"
-                                                            class="peer appearance-none w-5 h-5 rounded-lg
-                                       border-2 border-gray-300/70
-                                       dark:border-white/20
-                                       checked:bg-blue-500
-                                       checked:border-blue-500
-                                       transition-all cursor-pointer"
-                                                        >
-
-                                                        <svg
-                                                            class="absolute w-3 h-3 text-white opacity-0
-                                       peer-checked:opacity-100 right-1
-                                       pointer-events-none transition-opacity"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                d="M5 13l4 4L19 7"
-                                                                stroke-width="4"
-                                                                stroke-linecap="round"
-                                                                stroke-linejoin="round"
-                                                            />
-                                                        </svg>
-
-                                                    </div>
-
-                                                </label>
-
-                                            </li>
-
-                                        @endforeach
-
-                                    </ul>
-
-                                </div>
-
-                            @endif
-                        </div>
-
-                        <!-- Price Range Desktop -->
-                        <div class="js-price-range-container relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-lg shadow-gray-200/50 dark:shadow-none transition-all duration-500">
-                            <div class="js-collapse-header flex items-center justify-between p-7 cursor-pointer select-none group/header">
-                                <h3 class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-3">
-                                    <span class="w-3 h-3 rounded-full bg-secondary-500"></span>
-                                    محدوده قیمت
-                                </h3>
-                                <svg class="js-collapse-icon w-5 h-5 text-gray-400 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </div>
-                            <div class="js-collapse-content overflow-hidden transition-all duration-500 ease-in-out" style="max-height: 1000px; opacity: 1;">
-                                <div class="px-7 pb-8 pt-3">
-                                    <div class="relative w-[92%] mx-auto h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mb-10 mt-4">
-                                        <div class="js-slider-track absolute h-full bg-primary-500 rounded-full"></div>
-                                        <input type="range" class="js-min-range range-input absolute w-full h-1.5 bg-transparent appearance-none pointer-events-none cursor-pointer z-20" min="0" max="100000000" value="0" step="100000">
-                                        <input type="range" class="js-max-range range-input absolute w-full h-1.5 bg-transparent appearance-none pointer-events-none cursor-pointer z-20" min="0" max="100000000" value="100000000" step="100000">
-                                    </div>
-                                    <div class="space-y-4">
-                                        <div class="group/in relative flex items-center bg-gray-50/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[1.25rem] px-4 py-3 transition-all focus-within:border-primary-500/50 focus-within:bg-white dark:focus-within:bg-white/10">
-                                            <span class="text-[11px] font-bold text-gray-400 ml-3">از</span>
-                                            <input type="text" class="js-min-price-input w-full bg-transparent border-none focus:ring-0 text-sm font-black text-gray-700 dark:text-white text-left p-0" value="0">
-                                        </div>
-                                        <div class="group/in relative flex items-center bg-gray-50/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[1.25rem] px-4 py-3 transition-all focus-within:border-primary-500/50 focus-within:bg-white dark:focus-within:bg-white/10">
-                                            <span class="text-[11px] font-bold text-gray-400 ml-3">تا</span>
-                                            <input type="text" class="js-max-price-input w-full bg-transparent border-none focus:ring-0 text-sm font-black text-gray-700 dark:text-white text-left p-0" value="100,000,000">
-                                        </div>
-                                    </div>
-                                    <button class="w-full mt-8 py-4 bg-primary-500 hover:bg-primary-600 text-white rounded-[1.5rem] text-xs font-black transition-all active:scale-95">تایید محدوده قیمت</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Status Product -->
-                        <div class="relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-lg shadow-gray-200/50 dark:shadow-none transition-all duration-500">
-                            <div class="js-collapse-header flex items-center justify-between p-7 cursor-pointer select-none group/header">
-                                <h3 class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-3">
-                                    <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
-                                    وضعیت کالا
-                                </h3>
-                                <svg class="js-collapse-icon w-5 h-5 text-gray-400 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </div>
-
-                            <div class="js-collapse-content overflow-hidden transition-all duration-500 ease-in-out" style="max-height: 1000px; opacity: 1;">
-                                <div class="px-7 pb-8 space-y-6">
-                                    <label class="flex items-center justify-between cursor-pointer group/sw">
-                                        <div class="flex flex-col gap-1.5">
-                                            <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/sw:text-emerald-500 transition-colors">فقط کالاهای موجود</span>
-                                            <span class="text-[10px] text-gray-400 font-medium">حذف کالاهای ناموجود از لیست</span>
-                                        </div>
-                                        <div class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" class="sr-only peer" checked>
-                                            <div class="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-sm"></div>
-                                        </div>
-                                    </label>
-
-                                    <label class="flex items-center justify-between cursor-pointer group/sw">
-                                        <div class="flex flex-col gap-1.5">
-                                            <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/sw:text-rose-500 transition-colors">فقط کالاهای تخفیف‌دار</span>
-                                            <span class="text-[10px] text-gray-400 font-medium">نمایش پیشنهادات ویژه و شگفت‌انگیز</span>
-                                        </div>
-                                        <div class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" class="sr-only peer">
-                                            <div class="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
-                                        </div>
-                                    </label>
-
-                                    <label class="flex items-center justify-between cursor-pointer group/sw">
-                                        <div class="flex flex-col gap-1.5">
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/sw:text-blue-500 transition-colors">ارسال فوری (مانا جت)</span>
-                                                <span class="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
-                                            </div>
-                                            <span class="text-[10px] text-gray-400 font-medium">تحویل در کمتر از ۳ ساعت در تهران</span>
-                                        </div>
-                                        <div class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" class="sr-only peer">
-                                            <div class="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                        </div>
-                                    </label>
-
-                                    <label class="flex items-center justify-between cursor-pointer group/sw">
-                                        <div class="flex flex-col gap-1.5">
-                                            <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/sw:text-purple-500 transition-colors">کالاهای با گارانتی اصلی</span>
-                                            <span class="text-[10px] text-gray-400 font-medium">فقط محصولات تضمین شده توسط مانا</span>
-                                        </div>
-                                        <div class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" class="sr-only peer">
-                                            <div class="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-                                        </div>
-                                    </label>
-
-                                    <label class="flex items-center justify-between cursor-pointer group/sw">
-                                        <div class="flex flex-col gap-1.5">
-                                            <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/sw:text-secondary-500 transition-colors">جدیدترین محصولات</span>
-                                            <span class="text-[10px] text-gray-400 font-medium">محصولات اضافه شده در ۷ روز اخیر</span>
-                                        </div>
-                                        <div class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" class="sr-only peer">
-                                            <div class="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary-500"></div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Popular Brand Desktop -->
-                        <div class="relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-lg shadow-gray-200/50 dark:shadow-none transition-all duration-500">
-                            <div class="js-collapse-header flex items-center justify-between p-7 cursor-pointer select-none group/header">
-                                <h3 class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-3">
-                                    <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                                    برندهای محبوب
-                                </h3>
-                                <div class="flex items-center gap-3">
-                                    <span class="text-[10px] font-black text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full uppercase tracking-widest">همه</span>
-                                    <svg class="js-collapse-icon w-5 h-5 text-gray-400 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </div>
-                            </div>
-
-                            <div class="js-collapse-content overflow-hidden transition-all duration-500 ease-in-out" style="max-height: 1000px; opacity: 1;">
-                                <div class="px-7 pb-8 space-y-5">
-                                    <div class="relative group/search">
-                                        <input type="text" class="js-brand-search w-full bg-white/60 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-2xl py-3.5 pr-11 pl-4 text-xs font-bold text-gray-800 dark:text-white outline-none transition-all focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5" placeholder="جستجوی برند...">
-                                        <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                                        </div>
-                                    </div>
-
-                                    <ul class="js-brands-list space-y-1 max-h-72 overflow-y-auto custom-scrollbar pl-2">
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">اپل (Apple)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">سامسونگ (Samsung)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer" checked>
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">شیائومی (Xiaomi)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">سونی (Sony)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">هواوی (Huawei)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-
-                                        <li class="group/brand">
-                                            <label class="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">مایکروسافت (Microsoft)</span>
-                                                <div class="relative flex items-center">
-                                                    <input type="checkbox" class="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                                    <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </div>
-                                            </label>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
+                        @include('components.main.sections.category-filters')
                     </div>
                 </aside>
 
                 <div class="lg:col-span-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
 
-                        @forelse($products as $product)
+                        @forelse($this->viewProducts as $row)
 
                             @php
-                                $variant = $product->variants
-                                    ->where('status', 1)
-                                    ->where('stock', '>', 0)
-                                    ->sortBy(function ($variant) {
-                                        return $variant->final_price ?? $variant->price;
-                                    })
-                                    ->first();
-
-                                $price = $variant?->price ?? 0;
-                                $finalPrice = $variant?->final_price ?? $price;
-
-                                $discountPercent = 0;
-
-                                if ($price > 0 && $finalPrice < $price) {
-                                    $discountPercent = round(
-                                        (($price - $finalPrice) / $price) * 100
-                                    );
-                                }
-
-                                $image = $product->media
-                                    ->where('collection', 'product')
-                                    ->first();
+                                $product = $row->product;
+                                $variant = $row->variant;
                             @endphp
-
 
                             <div class="group relative h-full pt-12">
 
-                                {{-- Card Background --}}
                                 <div
                                     class="absolute inset-0
                        bg-white/80 dark:bg-[#0a0a0a]/40
@@ -1015,7 +782,7 @@ new class extends Component
                                 >
 
                                     {{-- Discount --}}
-                                    @if($discountPercent > 0)
+                                    @if($row->discount_percent > 0)
 
                                         <div class="absolute -top-6 -right-2 z-20">
 
@@ -1031,7 +798,7 @@ new class extends Component
                                    transition-all duration-500
                                    border-2 border-white dark:border-white/20"
                                             >
-                                                {{ $discountPercent }}٪
+                                                {{ $row->discount_percent }}٪
                                             </div>
 
                                         </div>
@@ -1051,16 +818,18 @@ new class extends Component
                                         ></div>
 
 
-                                        @if($image)
+                                        @if($row->image)
 
-                                            <img
-                                                src="{{ asset('storage/' . $image->file_path) }}"
-                                                class="relative z-10 w-full h-44 object-contain
-                                   transition-all duration-700
-                                   group-hover:scale-110
-                                   group-hover:drop-shadow-[0_15px_35px_rgba(37,99,235,0.3)]"
-                                                alt="{{ $product->title }}"
-                                            >
+                                            <a href="{{ route('product.show', $product->slug) }}">
+                                                <img
+                                                    src="{{ asset('storage/' . $row->image->file_path) }}"
+                                                    class="relative z-10 w-full h-44 object-contain
+                                       transition-all duration-700
+                                       group-hover:scale-110
+                                       group-hover:drop-shadow-[0_15px_35px_rgba(37,99,235,0.3)]"
+                                                    alt="{{ $product->title }}"
+                                                >
+                                            </a>
 
                                         @else
 
@@ -1097,8 +866,8 @@ new class extends Component
                                             {{-- Quick View --}}
                                             <div class="relative flex items-center group/tooltip">
 
-                                                <button
-                                                    type="button"
+                                                <a
+                                                    href="{{ route('product.show', $product->slug) }}"
                                                     class="w-10 h-10 quick-view-btn
                                        bg-white/90 dark:bg-zinc-900/90
                                        backdrop-blur-md
@@ -1130,7 +899,7 @@ new class extends Component
                                                         />
                                                     </svg>
 
-                                                </button>
+                                                </a>
 
                                                 <span
                                                     class="absolute right-full mr-3 whitespace-nowrap
@@ -1154,17 +923,18 @@ new class extends Component
 
                                                 <button
                                                     type="button"
+                                                    wire:click="toggleFavorite({{ $product->id }})"
                                                     class="w-10 h-10
                                        bg-white/90 dark:bg-zinc-900/90
                                        backdrop-blur-md
-                                       text-gray-900 dark:text-white
                                        rounded-xl flex items-center justify-center
                                        shadow-sm border border-white dark:border-white/10
-                                       hover:text-red-500 transition-all"
+                                       transition-all
+                                       {{ $row->is_favorited ? 'text-red-500' : 'text-gray-900 dark:text-white hover:text-red-500' }}"
                                                 >
 
                                                     <svg class="w-5 h-5"
-                                                         fill="none"
+                                                         fill="{{ $row->is_favorited ? 'currentColor' : 'none' }}"
                                                          stroke="currentColor"
                                                          viewBox="0 0 24 24">
                                                         <path
@@ -1192,7 +962,7 @@ new class extends Component
                                        transition-all duration-300
                                        border border-white/5"
                                                 >
-                                افزودن به علاقه‌مندی
+                                {{ $row->is_favorited ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی' }}
                             </span>
 
                                             </div>
@@ -1203,16 +973,18 @@ new class extends Component
 
 
                                     {{-- Title --}}
-                                    <h3
-                                        class="text-[15px] font-black
-                           text-gray-800 dark:text-zinc-100
-                           mb-6 line-clamp-2 leading-7 h-14
-                           group-hover:text-blue-600
-                           dark:group-hover:text-blue-400
-                           transition-colors"
-                                    >
-                                        {{ $product->title }}
-                                    </h3>
+                                    <a href="{{ route('products.show', $product->slug) }}">
+                                        <h3
+                                            class="text-[15px] font-black
+                                                   text-gray-800 dark:text-zinc-100
+                                                   mb-6 line-clamp-2 leading-7 h-14
+                                                   group-hover:text-blue-600
+                                                   dark:group-hover:text-blue-400
+                                                   transition-colors"
+                                        >
+                                            {{ $product->title }}
+                                        </h3>
+                                    </a>
 
 
                                     {{-- Price --}}
@@ -1224,13 +996,13 @@ new class extends Component
 
                                         <div class="flex flex-col gap-1">
 
-                                            @if($discountPercent > 0)
+                                            @if($row->discount_percent > 0)
 
                                                 <span
                                                     class="text-[11px] text-gray-400 dark:text-zinc-500
                                        line-through tabular-nums leading-none"
                                                 >
-                                {{ number_format($price) }}
+                                {{ number_format($row->compare_price && $row->compare_price > $row->final_price ? $row->compare_price : $row->price) }}
                             </span>
 
                                             @endif
@@ -1243,7 +1015,7 @@ new class extends Component
                                        text-gray-900 dark:text-white
                                        tracking-tighter tabular-nums"
                             >
-                                {{ number_format($finalPrice) }}
+                                {{ number_format($row->final_price) }}
                             </span>
 
                                                 <span
@@ -1259,82 +1031,32 @@ new class extends Component
 
 
                                         {{-- Add To Cart --}}
-                                        @if($variant)
-
-                                            <button
-                                                type="button"
-                                                wire:click="addToCart({{ $variant->id }})"
-                                                wire:loading.attr="disabled"
-                                                class="w-14 h-14
-                                   bg-primary-500 dark:bg-blue-600
-                                   text-white rounded-[1.5rem]
-                                   flex items-center justify-center
-                                   shadow-lg
-                                   dark:shadow-[0_0_25px_rgba(37,99,235,0.3)]
-                                   hover:scale-110 active:scale-90
-                                   transition-all
-                                   group/btn relative overflow-hidden"
+                                        <a
+                                            href="{{ route('products.show', $variant->product->slug) }}"
+                                            class="w-10 h-10
+           rounded-xl
+           bg-gray-100 dark:bg-white/5
+           text-gray-500 dark:text-gray-300
+           flex items-center justify-center
+           hover:bg-primary-500 hover:text-white
+           hover:scale-110
+           transition-all"
+                                            title="مشاهده محصول"
+                                        >
+                                            <svg
+                                                class="w-5 h-5 rtl:rotate-180"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
                                             >
-
-                                                <svg
-                                                    wire:loading.remove
-                                                    class="w-6 h-6 relative z-10"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        stroke-width="2.5"
-                                                        d="M12 4v16m8-8H4"
-                                                    />
-                                                </svg>
-
-                                                <svg
-                                                    wire:loading
-                                                    class="w-5 h-5 animate-spin"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <circle
-                                                        class="opacity-25"
-                                                        cx="12"
-                                                        cy="12"
-                                                        r="10"
-                                                        stroke="currentColor"
-                                                        stroke-width="4"
-                                                    />
-
-                                                    <path
-                                                        class="opacity-75"
-                                                        fill="currentColor"
-                                                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                                                    />
-                                                </svg>
-
-                                                <div
-                                                    class="absolute inset-0
-                                       bg-gradient-to-r
-                                       from-transparent via-white/25 to-transparent
-                                       -translate-x-full
-                                       group-hover/btn:animate-[shimmer_2s_infinite]"
-                                                ></div>
-
-                                            </button>
-
-                                        @else
-
-                                            <span
-                                                class="px-4 py-3 rounded-2xl
-                                   bg-gray-100 dark:bg-white/5
-                                   text-[10px] font-black
-                                   text-gray-400"
-                                            >
-                            ناموجود
-                        </span>
-
-                                        @endif
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M9 5l7 7-7 7"
+                                                />
+                                            </svg>
+                                        </a>
 
                                     </div>
 
@@ -1382,35 +1104,9 @@ new class extends Component
 
                     </div>
 
-                    <!-- Pagination -->
+                    {{-- Pagination واقعی (بر پایه‌ی paginate(12)) --}}
                     <div class="mt-16 flex items-center justify-center">
-                        <div class="flex items-center gap-2 bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 p-2 rounded-[2rem] shadow-lg shadow-gray-200/40 dark:shadow-none">
-
-                            <button class="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-white dark:hover:bg-white/10 transition-all group">
-                                <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </button>
-
-                            <div class="flex items-center gap-1.5 px-2">
-                                <button class="w-11 h-11 rounded-[1.2rem] bg-white/60 dark:bg-white/10 border border-white dark:border-white/5 flex items-center justify-center text-xs font-black text-gray-600 dark:text-gray-300 hover:bg-blue-500 hover:text-white hover:shadow-lg hover:shadow-blue-500/30 transition-all">۱</button>
-
-                                <button class="w-11 h-11 rounded-[1.2rem] bg-blue-500 text-white flex items-center justify-center text-xs font-black shadow-lg shadow-blue-500/40 ring-4 ring-blue-500/10">۲</button>
-
-                                <button class="w-11 h-11 rounded-[1.2rem] bg-white/60 dark:bg-white/10 border border-white dark:border-white/5 flex items-center justify-center text-xs font-black text-gray-600 dark:text-gray-300 hover:bg-blue-500 hover:text-white hover:shadow-lg hover:shadow-blue-500/30 transition-all">۳</button>
-
-                                <span class="px-2 text-gray-400 font-black">...</span>
-
-                                <button class="w-11 h-11 rounded-[1.2rem] bg-white/60 dark:bg-white/10 border border-white dark:border-white/5 flex items-center justify-center text-xs font-black text-gray-600 dark:text-gray-300 hover:bg-blue-500 hover:text-white hover:shadow-lg hover:shadow-blue-500/30 transition-all">۱۲</button>
-                            </div>
-
-                            <button class="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-white dark:hover:bg-white/10 transition-all group">
-                                <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
-                                </svg>
-                            </button>
-
-                        </div>
+                        {{ $this->paginator->onEachSide(1)->links() }}
                     </div>
 
                 </div>
