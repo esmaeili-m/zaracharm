@@ -461,38 +461,57 @@ new class extends Component
                                             </div>
                                         @endif
 
-                                        <div class="relative mb-8 flex items-center justify-center min-h-[180px]">
-                                            <div class="absolute w-40 h-40 bg-brown-500/20 dark:bg-indigo-500/20 blur-[70px] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-1000"></div>
+                                            <div class="relative mb-8 flex items-center justify-center min-h-[180px]">
 
-                                            <img src="{{ $product->featuredImageUrl }}"
-                                                 class="relative z-10 w-full h-44 object-contain transition-all duration-700 group-hover:scale-110 group-hover:drop-shadow-brown"
-                                                 alt="{{ $product->title }}">
+                                                @if(($data['pictureMode'] ?? 'transparent') === 'background')
 
-                                            <div class="absolute top-0 -left-2 z-20 flex flex-col gap-3 opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-500">
-                                                <div class="relative flex items-center group/tooltip">
-                                                    <button class="w-10 quick-view-btn h-10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-gray-900 dark:text-white rounded-xl flex items-center justify-center shadow-sm border border-white dark:border-white/10 hover:bg-secondary-500 dark:hover:bg-secondary-500 hover:text-white transition-all">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                                        </svg>
-                                                    </button>
-                                                    <span class="absolute right-full mr-3 whitespace-nowrap bg-gray-900 dark:bg-zinc-800 text-white text-[10px] py-1.5 px-3 rounded-lg opacity-0 pointer-events-none translate-x-2 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-x-0 transition-all duration-300 border border-white/5 after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:-right-1 after:border-4 after:border-transparent after:border-l-gray-900 dark:after:border-l-zinc-800">
-                                                        مشاهده سریع
-                                                    </span>
-                                                </div>
+                                                    {{-- حالت عکس با بک‌گراند --}}
+                                                    <div class="relative w-full h-44 rounded-[2rem] overflow-hidden">
+                                                        <img src="{{ $product->featuredImageUrl }}"
+                                                             class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                                             alt="{{ $product->title }}">
 
-                                                <div class="relative flex items-center group/tooltip">
-                                                    <button class="w-10 h-10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-gray-900 dark:text-white rounded-xl flex items-center justify-center shadow-sm border border-white dark:border-white/10 hover:text-red-500 transition-all">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                                                        </svg>
-                                                    </button>
-                                                    <span class="absolute right-full mr-3 whitespace-nowrap bg-gray-900 dark:bg-zinc-800 text-white text-[10px] py-1.5 px-3 rounded-lg opacity-0 pointer-events-none translate-x-2 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-x-0 transition-all duration-300 border border-white/5 after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:-right-1 after:border-4 after:border-transparent after:border-l-gray-900 dark:after:border-l-zinc-800">
-                                                        افزودن به علاقه‌مندی
-                                                    </span>
+                                                        <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+                                                        <div class="absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-black/5 dark:ring-white/10"></div>
+                                                    </div>
+
+                                                @else
+
+                                                    {{-- حالت عکس بدون بک‌گراند (transparent) --}}
+                                                    <div class="absolute w-40 h-40 bg-brown-500/20 dark:bg-indigo-500/20 blur-[70px] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-1000"></div>
+
+                                                    <img src="{{ $product->featuredImageUrl }}"
+                                                         class="relative z-10 w-full h-44 object-contain transition-all duration-700 group-hover:scale-110 group-hover:drop-shadow-brown"
+                                                         alt="{{ $product->title }}">
+
+                                                @endif
+
+                                                <div class="absolute top-0 -left-2 z-20 flex flex-col gap-3 opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-500">
+                                                    <div class="relative flex items-center group/tooltip">
+                                                        <a href="{{ route('products.show', $product->slug) }}" class="w-10 h-10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-gray-900 dark:text-white rounded-xl flex items-center justify-center shadow-sm border border-white dark:border-white/10 hover:bg-secondary-500 dark:hover:bg-secondary-500 hover:text-white transition-all">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                            </svg>
+                                                        </a>
+                                                        <span class="absolute right-full mr-3 whitespace-nowrap bg-gray-900 dark:bg-zinc-800 text-white text-[10px] py-1.5 px-3 rounded-lg opacity-0 pointer-events-none translate-x-2 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-x-0 transition-all duration-300 border border-white/5 after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:-right-1 after:border-4 after:border-transparent after:border-l-gray-900 dark:after:border-l-zinc-800">
+                مشاهده سریع
+            </span>
+                                                    </div>
+
+                                                    <div class="relative flex items-center group/tooltip">
+                                                        <button class="w-10 h-10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-gray-900 dark:text-white rounded-xl flex items-center justify-center shadow-sm border border-white dark:border-white/10 hover:text-red-500 transition-all">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                                            </svg>
+                                                        </button>
+                                                        <span class="absolute right-full mr-3 whitespace-nowrap bg-gray-900 dark:bg-zinc-800 text-white text-[10px] py-1.5 px-3 rounded-lg opacity-0 pointer-events-none translate-x-2 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-x-0 transition-all duration-300 border border-white/5 after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:-right-1 after:border-4 after:border-transparent after:border-l-gray-900 dark:after:border-l-zinc-800">
+                افزودن به علاقه‌مندی
+            </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
 
                                         <h3 class="text-[15px] font-black text-gray-800 dark:text-zinc-100 mb-6 line-clamp-2 leading-7 h-14 group-hover:text-brown-600 dark:group-hover:text-brown-400 transition-colors">
                                             {{ $product->title }}
@@ -509,12 +528,22 @@ new class extends Component
                                                 </div>
                                             </div>
 
-                                            <button class="w-14 h-14 bg-brown-500 dark:bg-brown-600 text-white rounded-[1.5rem] flex items-center justify-center shadow-lg dark:shadow-[0_0_25px_rgba(37,99,235,0.3)] hover:scale-110 active:scale-90 transition-all group/btn relative overflow-hidden">
-                                                <svg class="w-6 h-6 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                                            <a href="{{ route('products.show', $product->slug) }}" class="w-14 h-14 bg-brown-500 dark:bg-brown-600 text-white rounded-[1.5rem] flex items-center justify-center shadow-lg dark:shadow-[0_0_25px_rgba(37,99,235,0.3)] hover:scale-110 active:scale-90 transition-all group/btn relative overflow-hidden">
+                                                <svg
+                                                    class="w-5 h-5 rotate-180"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        d="M5 12h14m-6-6 6 6-6 6"
+                                                        stroke-width="2.5"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                    />
                                                 </svg>
                                                 <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_2s_infinite]"></div>
-                                            </button>
+                                            </a>
                                         </div>
                                     </div>
                                 </div>

@@ -159,7 +159,8 @@ document.addEventListener('DOMContentLoaded', function () {
         rtl: true,
         spaceBetween: 24,
 
-        slidesPerView: 1.2,
+        slidesPerView: 'auto',   // <-- تغییر اصلی: به‌جای 1.2
+
         centeredSlides: false,
 
         loop: false,

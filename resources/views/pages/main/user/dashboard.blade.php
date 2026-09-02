@@ -5,7 +5,7 @@ use Livewire\Component;
 new class extends Component
 {
 
-    public $status = 5;
+    public $status = 1;
     public $user ;
 
     public function mount()

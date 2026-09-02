@@ -325,7 +325,7 @@ new class extends Component
                                     type="text"
                                     wire:model.blur="name"
                                     autocomplete="name"
-                                    placeholder="مثلا: امیر رضایی"
+                                    placeholder="مثلا: مهدی اسماعیلی"
                                     class="w-full rounded-2xl border bg-white/50 px-6 py-4 text-sm font-bold transition-all placeholder:text-gray-400 focus:border-blue-600 focus:outline-none dark:bg-white/5 dark:text-white
                 {{ $errors->has('name')
                     ? 'border-red-500 focus:border-red-500'

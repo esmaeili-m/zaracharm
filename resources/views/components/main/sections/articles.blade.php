@@ -11,6 +11,9 @@ new class extends Component
     public function mount($data)
     {
         $this->data=$data;
+        if (!$this->data){
+            return;
+        }
         $this->loadArticles();
         $this->view = match ((int) ($data['view'] ?? 1)) {
             1 => 'جدیدترین ',

@@ -136,27 +136,35 @@ function startTimer(durationInHours, displayId) {
  * AMAZING DEALS TIMER
  * Alternative 8-hour timer with different DOM structure
  */
-function startAmazingTimer(hours, elementId) {
-    let totalSeconds = hours * 3600;
-    const container = document.getElementById(elementId);
-    const displays = container.querySelectorAll('.timer-box span:first-child');
+function startAmazingTimer(timer) {
+    const endTime = parseInt(timer.dataset.endTime) * 1000;
 
-    const updateTimer = () => {
+    const seconds = timer.querySelector('[data-timer-unit="seconds"]');
+    const minutes = timer.querySelector('[data-timer-unit="minutes"]');
+    const hours = timer.querySelector('[data-timer-unit="hours"]');
+
+    function updateTimer() {
+        const now = Date.now();
+        let remaining = Math.max(0, endTime - now);
+
+        const totalSeconds = Math.floor(remaining / 1000);
+
         const h = Math.floor(totalSeconds / 3600);
         const m = Math.floor((totalSeconds % 3600) / 60);
         const s = totalSeconds % 60;
 
-        const persian = (num) => String(num).padStart(2, '0').replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+        hours.textContent = String(h).padStart(2, '0');
+        minutes.textContent = String(m).padStart(2, '0');
+        seconds.textContent = String(s).padStart(2, '0');
 
-        displays[2].textContent = persian(h); // Hours
-        displays[1].textContent = persian(m); // Minutes
-        displays[0].textContent = persian(s); // Seconds
+        if (totalSeconds <= 0) {
+            clearInterval(interval);
+        }
+    }
 
-        if (totalSeconds > 0) totalSeconds--;
-    };
-
-    setInterval(updateTimer, 1000);
     updateTimer();
+
+    const interval = setInterval(updateTimer, 1000);
 }
 
 /* =========================================================
@@ -1998,13 +2006,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Initialize 8-hour timer
     if (document.getElementById('special-timer')) {
-        startTimer(8, 'special-timer');
+        if (document.getElementById('special-timer-unique')) {
+            startAmazingTimer(8, 'special-timer-unique');
+        }
     }
 
     // Initialize amazing deals timer
-    if (document.getElementById('special-timer-unique')) {
-        startAmazingTimer(8, 'special-timer-unique');
-    }
+    document.querySelectorAll('.amazing-timer-container').forEach((timer) => {
+        startAmazingTimer(timer);
+    });
 
     // OTP Field navigation and input handling
     const otpFields = document.querySelectorAll('.otp-field');
