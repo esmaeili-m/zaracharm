@@ -22,14 +22,14 @@ new class extends Component
     public function mount($product)
     {
         $this->product = Product::active()->where('slug',$product)
-            ->with(['variants','primaryCategory','comments','specifications'])
+            ->with(['variants.optionValues','primaryCategory','comments','specifications'])
             ->first();
         if (!$this->product){
             abort(404);
         }
-        $this->selectedVariant = $this->product->variants
-            ->firstWhere('is_default', true)
+        $this->selectedVariant = $this->product->cheapestVariant
             ?? $this->product->variants->first();
+
     }
     public function findVariant()
     {
@@ -83,7 +83,10 @@ new class extends Component
         $this->prosInput = '';
         $this->resetErrorBag('pros');
     }
-
+    public function getAverageRatingProperty()
+    {
+        return round($this->product->ratings->avg('rating') ?? 0, 1);
+    }
     public function addConsFromInput(): void
     {
         $value = trim($this->consInput);
@@ -180,6 +183,39 @@ new class extends Component
 
         $this->dispatch('cart-updated');
         $this->dispatch('alert', type: 'success', message: 'به سبد خرید اضافه شد.');
+    }
+    public function selectOption($valueId)
+    {
+        $newValue = \App\Models\OptionValue::findOrFail($valueId);
+
+        // مقادیر Variant فعلی
+        $currentValues = $this->selectedVariant->values;
+        // فقط مقدار ویژگی‌ای که کلیک شده را عوض کن
+        $newValueIds = $currentValues
+            ->map(function ($value) use ($newValue) {
+
+                if ($value->option_id == $newValue->option_id) {
+                    return $newValue->id;
+                }
+
+                return $value->id;
+            })
+            ->toArray();
+        // Variant جدید را پیدا کن
+        $this->selectedVariant = $this->product->variants
+            ->first(function ($variant) use ($newValueIds) {
+
+                return $variant->values
+                        ->pluck('id')
+                        ->sort()
+                        ->values()
+                        ->toArray()
+                    ==
+                    collect($newValueIds)
+                        ->sort()
+                        ->values()
+                        ->toArray();
+            });
     }
     private function stockForVariant(int $variantId): int
     {
@@ -357,7 +393,27 @@ new class extends Component
             'comment-success',
             'دیدگاه شما با موفقیت ثبت شد و پس از تأیید نمایش داده خواهد شد.'
         );
-    }};
+    }
+    public function getPositivePointsProperty()
+    {
+        return $this->product->comments
+            ->flatMap(fn ($comment) => $comment->commentPoints)
+            ->where('type', 'positive')
+            ->pluck('body')
+            ->unique()
+            ->values();
+    }
+
+    public function getNegativePointsProperty()
+    {
+        return $this->product->comments
+            ->flatMap(fn ($comment) => $comment->commentPoints)
+            ->where('type', 'negative')
+            ->pluck('body')
+            ->unique()
+            ->values();
+    }
+}
 ?>
 
 <div>
@@ -458,7 +514,7 @@ new class extends Component
                             <div class="swiper productThumbsSwiper !pb-5 swiper-initialized swiper-horizontal swiper-free-mode swiper-rtl swiper-watch-progress swiper-backface-hidden swiper-thumbs">
                                 <div class="swiper-wrapper" id="swiper-wrapper-c574f2f1c7b9375d" aria-live="polite" style="transform: translate3d(0px, 0px, 0px);">
                                     @foreach($product->media()->get() ?? [] as $img)
-                                        <div class="swiper-slide cursor-pointer rounded-[1.5rem] border-2 border-transparent bg-white/40 dark:bg-white/5 p-2 transition-all opacity-40 overflow-hidden swiper-slide-visible swiper-slide-fully-visible swiper-slide-active swiper-slide-thumb-active" style="width: 88.75px; margin-left: 15px;" role="group" aria-label="1 / 6">
+                                        <div class="swiper-slide shadow-lg cursor-pointer rounded-[1.5rem] border-2 border-transparent bg-white/40 dark:bg-white/5 p-2 transition-all opacity-40 overflow-hidden swiper-slide-visible swiper-slide-fully-visible swiper-slide-active swiper-slide-thumb-active" style="width: 88.75px; margin-left: 15px;" role="group" aria-label="1 / 6">
                                             <img src="{{asset('storage/'.$img->file_path)}}" class="w-full aspect-square object-contain" alt="thumb">
                                         </div>
                                     @endforeach
@@ -484,7 +540,7 @@ new class extends Component
                                     <span class="text-gray-400 font-bold mr-1">({{$product->comments->count()}} دیدگاه)</span>
                                 </div>
                                 <div class="w-[1px] h-4 bg-gray-200 dark:bg-white/10"></div>
-                                <a href="#" class="text-brown-500 text-[11px] font-bold hover:underline">پرسش و پاسخ (۱۵)</a>
+                                <a href="#" class="text-brown-500 text-[11px] font-bold hover:underline">پرسش و پاسخ (0)</a>
                             </div>
                         </div>
 
@@ -493,38 +549,44 @@ new class extends Component
                                 <!-- Variable -->
                                 <div class="space-y-6">
                                     @foreach($product->options ?? [] as $option)
-
-                                            <div class="space-y-4">
+                                            <div class="space-y-4 ">
                                                 <p class="text-[13px] font-black text-gray-900 dark:text-white">
                                                     {{ $option->title }}:
                                                     <span
                                                         id="selected-option-{{ $option->id }}"
                                                         class="text-gray-500 font-bold"
                                                     >
-                                                    {{ $option->values->first()?->title }}
+                                                    {{ $selectedVariant->values->where('option_id', $option->id)?->first()->title }}
                                                 </span>
                                                 </p>
 
                                                 <div class="flex flex-wrap gap-2">
-
-                                                    @foreach($option->values as $item)
-
+                                                    @foreach($product->variants->pluck('values')->flatten()->where('option_id', $option->id)->unique('slug') as $item)
+                                                        @php
+                                                            $isActive = $selectedVariant->values
+                                                                ->where('option_id', $option->id)
+                                                                ->contains('slug', $item->slug);
+                                                        @endphp
                                                         <button
                                                             type="button"
-                                                            data-option="{{ $option->id }}"
-                                                            data-value="{{ $item->id }}"
-                                                            data-title="{{ $item->title }}"
+                                                            wire:click="selectOption({{ $item->id }})"
                                                             class="option-btn px-4 py-2 rounded-xl
-                               border-2 border-transparent
-                               bg-gray-100 dark:bg-white/5
-                               text-gray-700 dark:text-gray-300
-                               text-xs font-bold
-                               hover:bg-gray-200 dark:hover:bg-white/10
-                               transition-all"
+           {{ $isActive
+                ? 'border-2 border-brown-600 shadow-lg shadow-brown-600/25'
+                : 'border-2 border-transparent'
+           }}
+           bg-white dark:bg-white/5
+           text-gray-700 dark:text-gray-300
+           text-xs font-bold
+           shadow-[0_3px_12px_rgba(0,0,0,0.08)]
+           dark:shadow-[0_3px_12px_rgba(0,0,0,0.25)]
+           hover:-translate-y-0.5
+           hover:shadow-[0_5px_16px_rgba(0,0,0,0.12)]
+           dark:hover:shadow-[0_5px_16px_rgba(0,0,0,0.3)]
+           transition-all duration-200"
                                                         >
                                                             {{ $item->title }}
                                                         </button>
-
                                                     @endforeach
 
                                                 </div>
@@ -646,8 +708,7 @@ new class extends Component
 
                                     <!-- Price -->
                                     @php
-                                        $pricing = app(\App\Services\Pricing\ProductPriceService::class)
-                                            ->calculate($selectedVariant);
+                                        $pricing=$selectedVariant->priceData();
                                     @endphp
 
                                     <div class="space-y-2 pt-4 border-t border-gray-200 dark:border-white/5">
@@ -722,7 +783,14 @@ new class extends Component
                             type="button"
                             wire:click="$set('activeTab', 'overview')"
                             id="btn-overview"
-                            class="tab-btn {{ $activeTab === 'overview' ? 'active' : '' }} flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all whitespace-nowrap"
+                            class="
+            flex items-center gap-2 px-6 py-3 rounded-2xl
+            text-sm font-black transition-all whitespace-nowrap
+            {{ $activeTab === 'overview'
+                ? 'active bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+            }}
+        "
                         >
                             <svg xmlns="http://www.w3.org/2000/svg"
                                  fill="none"
@@ -746,7 +814,14 @@ new class extends Component
                             type="button"
                             wire:click="$set('activeTab', 'expert')"
                             id="btn-expert"
-                            class="tab-btn {{ $activeTab === 'expert' ? 'active' : '' }} flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all whitespace-nowrap"
+                            class="
+            flex items-center gap-2 px-6 py-3 rounded-2xl
+            text-sm font-black transition-all whitespace-nowrap
+            {{ $activeTab === 'expert'
+                ? 'active bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+            }}
+        "
                         >
                             <svg xmlns="http://www.w3.org/2000/svg"
                                  fill="none"
@@ -770,7 +845,14 @@ new class extends Component
                             type="button"
                             wire:click="$set('activeTab', 'specs')"
                             id="btn-specs"
-                            class="tab-btn {{ $activeTab === 'specs' ? 'active' : '' }} flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all whitespace-nowrap"
+                            class="
+            flex items-center gap-2 px-6 py-3 rounded-2xl
+            text-sm font-black transition-all whitespace-nowrap
+            {{ $activeTab === 'specs'
+                ? 'active bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+            }}
+        "
                         >
                             <svg xmlns="http://www.w3.org/2000/svg"
                                  fill="none"
@@ -794,7 +876,14 @@ new class extends Component
                             type="button"
                             wire:click="$set('activeTab', 'reviews')"
                             id="btn-reviews"
-                            class="tab-btn {{ $activeTab === 'reviews' ? 'active' : '' }} flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all whitespace-nowrap"
+                            class="
+            flex items-center gap-2 px-6 py-3 rounded-2xl
+            text-sm font-black transition-all whitespace-nowrap
+            {{ $activeTab === 'reviews'
+                ? 'active bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+            }}
+        "
                         >
                             <svg xmlns="http://www.w3.org/2000/svg"
                                  fill="none"
@@ -818,7 +907,14 @@ new class extends Component
                             type="button"
                             wire:click="$set('activeTab', 'faq')"
                             id="btn-faq"
-                            class="tab-btn {{ $activeTab === 'faq' ? 'active' : '' }} flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all whitespace-nowrap"
+                            class="
+            flex items-center gap-2 px-6 py-3 rounded-2xl
+            text-sm font-black transition-all whitespace-nowrap
+            {{ $activeTab === 'faq'
+                ? 'active bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+            }}
+        "
                         >
                             <svg xmlns="http://www.w3.org/2000/svg"
                                  fill="none"
@@ -905,116 +1001,249 @@ new class extends Component
                                     </div>
                                 </div>
 
-                                <div class="bg-white/30 dark:bg-white/[0.02] backdrop-blur-md rounded-[4rem] p-8 lg:p-12 border border-white/50 dark:border-white/10 shadow-xl">
-                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                                        <div class="order-2 lg:order-1 grid grid-cols-2 gap-4">
-                                            <img src="assets/images/blog/blog-3.jpg" class="rounded-[2.5rem] h-64 w-full object-cover border border-white/20" alt="Display Quality">
-                                            <div class="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm p-6 rounded-[2.5rem] flex flex-col justify-center shadow-inner border border-white/40 dark:border-white/5">
-                                                <span class="text-brown-600 font-black text-4xl shadow-brown-500/20">2000</span>
-                                                <span class="text-[10px] font-black text-zinc-400 uppercase mt-1">Maximum Nits</span>
-                                                <p class="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 mt-4 leading-6">روشنایی خیره‌کننده نمایشگر حتی زیر تابش مستقیم خورشید.</p>
-                                            </div>
-                                        </div>
-                                        <div class="order-1 lg:order-2 space-y-6">
-                                            <h3 class="text-2xl font-black text-zinc-900 dark:text-white flex items-center gap-3">
-                                                <span class="w-3 h-3 rounded-full bg-brown-600 animate-pulse"></span>
-                                                نمایشگر؛ دریچه‌ای به واقعیت
-                                            </h3>
-                                            <p class="text-sm font-medium text-zinc-600 dark:text-zinc-300 leading-8 text-justify">
-                                                پنل LTPO Super Retina XDR این گوشی، بهترین تجربه‌ی بصری را در میان تمام گوشی‌های هوشمند بازار ارائه می‌دهد. نرخ نوسازی ۱۲۰ هرتزی بسیار روان عمل می‌کند و به لطف عمق رنگ ۱۰ بیتی، تفکیک رنگ‌ها در تصاویر HDR به شکلی است که مرز بین تصویر و واقعیت از بین می‌رود.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
 
-                                <div class="space-y-10">
-                                    <div class="text-center max-w-2xl mx-auto space-y-4">
-                                        <h3 class="text-2xl font-black text-zinc-900 dark:text-white">سخت‌افزار و تجربه گیمینگ</h3>
-                                        <p class="text-xs font-black text-brown-600 uppercase tracking-[0.2em] opacity-80">تراشه A17 Pro: کنسول در جیب شما</p>
-                                    </div>
-
-                                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                        <div class="p-8 bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/50 dark:border-white/5 rounded-[3rem] shadow-sm flex flex-col items-center group hover:bg-white/60 dark:hover:bg-white/[0.06] transition-all duration-500">
-                                            <div class="w-16 h-16 bg-brown-600/10 dark:bg-brown-500/10 rounded-2xl flex items-center justify-center mb-6 text-brown-600 group-hover:scale-110 transition-transform">
-                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                                            </div>
-                                            <span class="text-[10px] font-black text-zinc-400 uppercase mb-2 tracking-widest">Geekbench 6</span>
-                                            <p class="text-4xl font-black text-zinc-900 dark:text-white tabular-nums">7,238</p>
-                                            <p class="text-[10px] font-bold text-brown-500 mt-3 px-3 py-1 bg-brown-500/5 rounded-full">۲۰٪ سریع‌تر از نسل قبل</p>
-                                        </div>
-
-                                        <div class="p-8 bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/50 dark:border-white/5 rounded-[3rem] shadow-sm flex flex-col items-center group hover:bg-white/60 dark:hover:bg-white/[0.06] transition-all duration-500">
-                                            <div class="w-16 h-16 bg-indigo-600/10 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-6 text-indigo-600">
-                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
-                                            </div>
-                                            <span class="text-[10px] font-black text-zinc-400 uppercase mb-2 tracking-widest">GPU Performance</span>
-                                            <p class="text-3xl font-black text-zinc-900 dark:text-white">Ray Tracing</p>
-                                            <p class="text-[10px] font-bold text-indigo-500 mt-3 px-3 py-1 bg-indigo-500/5 rounded-full">پردازش گرافیکی فوق‌سریع</p>
-                                        </div>
-
-                                        <div class="p-8 bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/50 dark:border-white/5 rounded-[3rem] shadow-sm flex flex-col items-center group hover:bg-white/60 dark:hover:bg-white/[0.06] transition-all duration-500">
-                                            <div class="w-16 h-16 bg-emerald-600/10 dark:bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 text-emerald-600">
-                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                            </div>
-                                            <span class="text-[10px] font-black text-zinc-400 uppercase mb-2 tracking-widest">Battery Life</span>
-                                            <p class="text-4xl font-black text-zinc-900 dark:text-white tabular-nums">۲۹ ساعت</p>
-                                            <p class="text-[10px] font-bold text-emerald-600 mt-3 px-3 py-1 bg-emerald-500/5 rounded-full">پایداری عالی باتری</p>
-                                        </div>
-                                    </div>
-                                </div>
 
                                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+
+                                    {{-- نقاط قوت و چالش‌ها --}}
                                     <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div class="p-10 bg-emerald-500/[0.03] backdrop-blur-md rounded-[3rem] border border-emerald-500/20 shadow-sm">
+
+                                        {{-- نقاط قوت --}}
+                                        <div
+                                            class="p-10
+                   bg-emerald-500/[0.03]
+                   backdrop-blur-md
+                   rounded-[3rem]
+                   border border-emerald-500/20
+                   shadow-sm"
+                                        >
+
                                             <h4 class="text-sm font-black text-emerald-600 mb-6 flex items-center gap-2">
+
                                                 <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                    <svg
+                                                        class="w-5 h-5"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            stroke-width="2.5"
+                                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                        />
+                                                    </svg>
                                                 </div>
+
                                                 نقاط قوت
+
                                             </h4>
-                                            <ul class="space-y-4 text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                                                <li class="flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> وزن بسیار کمتر نسبت به نسل قبل</li>
-                                                <li class="flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> عملکرد بی‌نظیر در حالت شب</li>
-                                                <li class="flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> دکمه اکشن شخصی‌سازی شده</li>
-                                                <li class="flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> پورت USB-C پر سرعت</li>
-                                            </ul>
+
+
+                                            @if($this->positivePoints->isNotEmpty())
+
+                                                <ul class="space-y-4 text-xs font-bold text-zinc-500 dark:text-zinc-400">
+
+                                                    @foreach($this->positivePoints as $point)
+
+                                                        <li class="flex items-center gap-3">
+
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+
+                                                            {{ $point }}
+
+                                                        </li>
+
+                                                    @endforeach
+
+                                                </ul>
+
+                                            @else
+
+                                                <p class="text-xs font-bold text-zinc-400">
+                                                    هنوز نقطه قوتی برای این محصول ثبت نشده است.
+                                                </p>
+
+                                            @endif
+
                                         </div>
 
-                                        <div class="p-10 bg-brown-500/[0.03] backdrop-blur-md rounded-[3rem] border border-brown-500/20 shadow-sm">
+
+                                        {{-- چالش‌ها --}}
+                                        <div
+                                            class="p-10
+                   bg-brown-500/[0.03]
+                   backdrop-blur-md
+                   rounded-[3rem]
+                   border border-brown-500/20
+                   shadow-sm"
+                                        >
+
                                             <h4 class="text-sm font-black text-brown-600 mb-6 flex items-center gap-2">
+
                                                 <div class="w-8 h-8 rounded-xl bg-brown-500/10 flex items-center justify-center">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+
+                                                    <svg
+                                                        class="w-5 h-5"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                                        />
+                                                    </svg>
+
                                                 </div>
+
                                                 چالش‌های محصول
+
                                             </h4>
-                                            <ul class="space-y-4 text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                                                <li class="flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-brown-500/50"></span> سرعت شارژ پایین نسبت به رقبا</li>
-                                                <li class="flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-brown-500/50"></span> قیمت قابل توجه در بازار جهانی</li>
-                                                <li class="flex items-center gap-3"><span class="w-1.5 h-1.5 rounded-full bg-brown-500/50"></span> عدم وجود آداپتور داخل جعبه</li>
-                                            </ul>
+
+
+                                            @if($this->negativePoints->isNotEmpty())
+
+                                                <ul class="space-y-4 text-xs font-bold text-zinc-500 dark:text-zinc-400">
+
+                                                    @foreach($this->negativePoints as $point)
+
+                                                        <li class="flex items-center gap-3">
+
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-brown-500/50 shrink-0"></span>
+
+                                                            {{ $point }}
+
+                                                        </li>
+
+                                                    @endforeach
+
+                                                </ul>
+
+                                            @else
+
+                                                <p class="text-xs font-bold text-zinc-400">
+                                                    هنوز چالشی برای این محصول ثبت نشده است.
+                                                </p>
+
+                                            @endif
+
                                         </div>
+
                                     </div>
 
-                                    <div class="lg:col-span-4 bg-zinc-900/90 dark:bg-black/80 backdrop-blur-md rounded-[3.5rem] p-10 text-center flex flex-col justify-center items-center shadow-lg border border-white/10 relative overflow-hidden group">
-                                        <div class="absolute top-0 right-0 w-32 h-32 bg-brown-600/20 blur-[60px] rounded-full"></div>
 
-                                        <span class="text-[10px] font-black text-brown-400 uppercase tracking-[0.3em] mb-4 relative">ارزش خرید نهایی</span>
-                                        <div class="text-8xl font-black text-white mb-6 tracking-tighter relative group-hover:scale-110 transition-transform duration-500">۹.۶</div>
+                                    {{-- امتیاز --}}
+                                    <div
+                                        class="lg:col-span-4
+               bg-zinc-900/90
+               dark:bg-black/80
+               backdrop-blur-md
+               rounded-[3.5rem]
+               p-10
+               text-center
+               flex flex-col
+               justify-center
+               items-center
+               shadow-lg
+               border border-white/10
+               relative
+               overflow-hidden
+               group"
+                                    >
 
-                                        <div class="flex gap-1 mb-8 bg-white/5 px-4 py-2 rounded-2xl backdrop-blur-sm border border-white/5">
-                                            <svg class="w-5 h-5 text-brown-500 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                                        <div
+                                            class="absolute top-0 right-0
+                   w-32 h-32
+                   bg-brown-600/20
+                   blur-[60px]
+                   rounded-full"
+                                        ></div>
+
+
+                                        <span
+                                            class="text-[10px]
+                   font-black
+                   text-brown-400
+                   uppercase
+                   tracking-[0.3em]
+                   mb-4
+                   relative"
+                                        >
+            امتیاز کاربران
+        </span>
+
+
+                                        <div
+                                            class="text-8xl
+                   font-black
+                   text-white
+                   mb-6
+                   tracking-tighter
+                   relative
+                   group-hover:scale-110
+                   transition-transform
+                   duration-500"
+                                        >
+                                            {{ $this->averageRating }}
                                         </div>
+
+
+                                        {{-- ستاره‌ها --}}
+                                        <div
+                                            class="flex gap-1
+                   mb-8
+                   bg-white/5
+                   px-4 py-2
+                   rounded-2xl
+                   backdrop-blur-sm
+                   border border-white/5"
+                                        >
+
+                                            @for($i = 1; $i <= 5; $i++)
+
+                                                <svg
+                                                    class="w-5 h-5 {{ $i <= round($this->averageRating / 2) ? 'text-brown-500' : 'text-zinc-700' }}"
+                                                    fill="currentColor"
+                                                    viewBox="0 0 20 20"
+                                                >
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                                </svg>
+
+                                            @endfor
+
+                                        </div>
+
 
                                         <p class="text-xs font-medium text-zinc-400 leading-7 relative">
-                                            این گوشی بهترین انتخاب برای کسانی است که به دنبال قدرت بی‌پایان و اکوسیستم پایدار هستند.
+                                            امتیاز ثبت‌شده بر اساس نظر کاربران این محصول است.
                                         </p>
 
-                                        <button class="mt-8 w-full py-5 bg-brown-600 text-white text-sm font-black rounded-2xl hover:bg-brown-500 shadow-[0_15px_30px_-10px_rgba(37,99,235,0.5)] transition-all active:scale-95 relative overflow-hidden">
+
+                                        <button
+                                            type="button"
+                                            class="mt-8 w-full py-5
+                   bg-brown-600
+                   text-white
+                   text-sm
+                   font-black
+                   rounded-2xl
+                   hover:bg-brown-500
+                   shadow-[0_15px_30px_-10px_rgba(120,72,45,0.5)]
+                   transition-all
+                   active:scale-95
+                   relative
+                   overflow-hidden"
+                                        >
                                             مشاهده قیمت و خرید
                                         </button>
-                                    </div>
-                                </div>
 
+                                    </div>
+
+                                </div>
                             </div>
                         </div>
 
@@ -1025,113 +1254,39 @@ new class extends Component
                         >
                             <div class="space-y-16 p-2" dir="rtl">
 
-                                <div class="space-y-8">
-                                    <div class="flex items-center gap-4">
-                                        <div class="relative">
-                                            <div class="w-1.5 h-8 bg-brown-600 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.6)]"></div>
-                                            <div class="absolute inset-0 w-1.5 h-8 bg-brown-400 blur-sm rounded-full opacity-50"></div>
-                                        </div>
-                                        <h4 class="text-lg font-black text-zinc-900 dark:text-white tracking-tight">هسته پردازشی و حافظه</h4>
-                                    </div>
 
-                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                @if($product->specifications->isNotEmpty())
+                                    <div class="relative p-8 rounded-[2.5rem]
+                bg-white/30 dark:bg-[#0c0c0c]/40
+                backdrop-blur-md
+                border border-white/50 dark:border-white/10">
 
-                                        <div class="group relative p-1 rounded-[2.5rem] bg-gradient-to-br from-white/60 to-white/10 dark:from-white/10 dark:to-transparent border border-white/40 dark:border-white/5 shadow-lg transition-all duration-500 hover:-translate-y-2">
-                                            <div class="p-7 bg-white/40 dark:bg-[#0c0c0c]/60 backdrop-blur-md rounded-[2.3rem] h-full">
-                                                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brown-600 to-indigo-600 flex items-center justify-center mb-6 shadow-lg shadow-brown-500/20 group-hover:scale-110 transition-transform">
-                                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
+
+                                            @foreach($product->specifications as $specification)
+                                                <div
+                                                    class="flex items-center justify-between gap-6 pb-4
+                           border-b border-zinc-200/50 dark:border-white/5"
+                                                >
+
+                                                    {{-- عنوان مشخصات --}}
+                                                    <span class="text-[11px] font-bold text-zinc-500
+                                 dark:text-zinc-400 uppercase tracking-widest">
+                        {{ $specification->title }}
+                    </span>
+
+                                                    {{-- مقدار مشخصات --}}
+                                                    <span class="text-xs font-black text-zinc-900
+                                 dark:text-white text-left">
+                        {{ $specification->value }}
+                    </span>
+
                                                 </div>
-                                                <span class="text-[10px] font-black text-brown-600 dark:text-brown-400 uppercase tracking-[0.2em] mb-2 block">Processor</span>
-                                                <h5 class="text-base font-black text-zinc-900 dark:text-white leading-7">A17 Pro Chipset</h5>
-                                                <p class="text-[11px] font-bold text-zinc-500 mt-1">6-Core CPU &amp; 6-Core GPU</p>
-                                            </div>
-                                        </div>
+                                            @endforeach
 
-                                        <div class="group relative p-1 rounded-[2.5rem] bg-gradient-to-br from-white/60 to-white/10 dark:from-white/10 dark:to-transparent border border-white/40 dark:border-white/5 shadow-lg transition-all duration-500 hover:-translate-y-2">
-                                            <div class="p-7 bg-white/40 dark:bg-[#0c0c0c]/60 backdrop-blur-md rounded-[2.3rem] h-full">
-                                                <div class="w-14 h-14 rounded-2xl bg-brown-600/10 dark:bg-brown-500/10 flex items-center justify-center mb-6 border border-brown-500/20 text-brown-600 group-hover:bg-brown-600 group-hover:text-white transition-all">
-                                                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                                                </div>
-                                                <span class="text-[10px] font-black text-brown-600 dark:text-brown-400 uppercase tracking-[0.2em] mb-2 block">System Memory</span>
-                                                <h5 class="text-base font-black text-zinc-900 dark:text-white">8GB LPDDR5X</h5>
-                                                <p class="text-[11px] font-bold text-zinc-500 mt-1">High-Efficiency Architecture</p>
-                                            </div>
-                                        </div>
-
-                                        <div class="group relative p-1 rounded-[2.5rem] bg-gradient-to-br from-white/60 to-white/10 dark:from-white/10 dark:to-transparent border border-white/40 dark:border-white/5 shadow-lg transition-all duration-500 hover:-translate-y-2">
-                                            <div class="p-7 bg-white/40 dark:bg-[#0c0c0c]/60 backdrop-blur-md rounded-[2.3rem] h-full">
-                                                <div class="w-14 h-14 rounded-2xl bg-brown-600/10 dark:bg-brown-500/10 flex items-center justify-center mb-6 border border-brown-500/20 text-brown-600 group-hover:bg-brown-600 group-hover:text-white transition-all">
-                                                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4a2 2 0 012-2m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-                                                </div>
-                                                <span class="text-[10px] font-black text-brown-600 dark:text-brown-400 uppercase tracking-[0.2em] mb-2 block">Storage</span>
-                                                <h5 class="text-base font-black text-zinc-900 dark:text-white leading-7">256GB Up to 1TB</h5>
-                                                <p class="text-[11px] font-bold text-zinc-500 mt-1">Super-Fast NVMe Module</p>
-                                            </div>
                                         </div>
                                     </div>
-                                </div>
-
-                                <div class="relative p-8 rounded-[2.5rem] bg-white/30 dark:bg-[#0c0c0c]/40 backdrop-blur-md border border-white/50 dark:border-white/10">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
-
-                                        <div class="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
-                                            <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">سیستم عامل</span>
-                                            <span class="text-xs font-black text-zinc-900 dark:text-white">iOS 17 (v18 Support)</span>
-                                        </div>
-
-                                        <div class="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
-                                            <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">فناوری بیومتریک</span>
-                                            <span class="text-xs font-black text-zinc-900 dark:text-white">FaceID (TrueDepth)</span>
-                                        </div>
-
-                                        <div class="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
-                                            <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">وزن کل</span>
-                                            <span class="text-xs font-black text-zinc-900 dark:text-white">221 Grams</span>
-                                        </div>
-
-                                        <div class="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
-                                            <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">ظرفیت باتری</span>
-                                            <span class="text-xs font-black text-zinc-900 dark:text-white">4,441 mAh (29W Fast)</span>
-                                        </div>
-
-                                        <div class="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
-                                            <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">مقاومت بدنه</span>
-                                            <div class="flex items-center gap-2">
-                                                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                                                <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">IP68 Certified</span>
-                                            </div>
-                                        </div>
-
-                                        <div class="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
-                                            <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">فیلم‌برداری</span>
-                                            <span class="text-xs font-black text-zinc-900 dark:text-white">ProRes 4K at 60fps</span>
-                                        </div>
-
-                                        <div class="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
-                                            <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">متریال</span>
-                                            <span class="text-xs font-black text-zinc-900 dark:text-white">Titanium Grade 5</span>
-                                        </div>
-
-                                        <div class="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
-                                            <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">موتور عصبی</span>
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-xs font-black text-brown-600 dark:text-brown-400">16-core Neural Engine</span>
-                                            </div>
-                                        </div>
-
-                                        <div class="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
-                                            <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">شبکه بی‌سیم</span>
-                                            <span class="text-xs font-black text-zinc-900 dark:text-white">Wi-Fi 6E | Bluetooth 5.3</span>
-                                        </div>
-
-                                        <div class="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
-                                            <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">پیک روشنایی</span>
-                                            <span class="text-xs font-black text-zinc-900 dark:text-white">2000 nits (Peak)</span>
-                                        </div>
-
-                                    </div>
-                                </div>
-
+                                @endif
 
                             </div>
                         </div>
@@ -1555,15 +1710,31 @@ new class extends Component
                                             <button
                                                 type="submit"
                                                 wire:loading.attr="disabled"
-                                                class="w-full py-6 bg-brown-600 text-white rounded-[2rem] font-black text-[14px] uppercase tracking-[0.3em] shadow-[0_20px_40px_rgba(37,99,235,0.25)] hover:bg-zinc-900 dark:hover:bg-white dark:hover:text-black transition-all duration-500 active:scale-[0.97] border-none outline-none disabled:opacity-50">
+                                                class="w-full py-6
+           bg-brown-600
+           text-white
+           rounded-[2rem]
+           font-black
+           text-[14px]
+           uppercase
+           tracking-[0.3em]
+           shadow-[0_20px_40px_rgba(120,72,45,0.25)]
+           hover:bg-brown-700
+           dark:hover:bg-brown-500
+           transition-all
+           duration-500
+           active:scale-[0.97]
+           border-none
+           outline-none
+           disabled:opacity-50">
 
-                        <span wire:loading.remove wire:target="submitComment">
-                            تایید و ثبت نهایی دیدگاه
-                        </span>
+    <span wire:loading.remove wire:target="submitComment">
+        تایید و ثبت نهایی دیدگاه
+    </span>
 
                                                 <span wire:loading wire:target="submitComment">
-                            در حال ثبت دیدگاه...
-                        </span>
+        در حال ثبت دیدگاه...
+    </span>
 
                                             </button>
 

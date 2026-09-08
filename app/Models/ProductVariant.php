@@ -51,6 +51,8 @@ class ProductVariant extends Model
     {
         return $this->hasMany(ProductVariantOptionValue::class);
     }
+
+
     public function values(): BelongsToMany
     {
         return $this->belongsToMany(

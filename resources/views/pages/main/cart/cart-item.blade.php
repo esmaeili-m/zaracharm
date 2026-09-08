@@ -597,7 +597,7 @@ new class extends Component
                     'tax_amount'      => $taxAmount,
                     'shipping_amount' => $shippingAmount,
                     'total_amount'    => $totalAmount,
-                    'expires_at'      => now()->addMinutes(30),
+                    'expires_at'      => now()->addMinutes(1800),
                 ]);
 
                 // ---------------------------------------------------------------
@@ -656,12 +656,7 @@ new class extends Component
 
                 return $order;
             });
-
-            return $this->redirectRoute('checkout', ['order' => $order->order_number]);
-
-        } catch (\RuntimeException $e) {
-            $this->dispatch('alert', type: 'error', message: $e->getMessage());
-            return;
+            return $this->redirectRoute('checkout', ['code' => $order->order_number]);
 
         } catch (\Throwable $e) {
             report($e);

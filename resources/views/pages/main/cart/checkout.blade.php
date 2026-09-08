@@ -63,6 +63,7 @@ new class extends Component
             ->where('payment_status', 'unpaid')
             ->where('expires_at', '>', now())
             ->first();
+
         abort_unless($order->user_id === Auth::id(), 403);
 
         if ($order->status !== 'pending' || ($order->expires_at && $order->expires_at->isPast())) {
@@ -522,7 +523,7 @@ new class extends Component
                                     <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Shipping Details</p>
                                 </div>
                                 <button wire:click="toggleAddressList" type="button"
-                                        class="px-4 py-2 bg-blue-600/10 text-blue-600 rounded-xl text-xs font-black hover:bg-blue-600 hover:text-white transition-all">
+                                        class="px-4 py-2 bg-brown-600/10 text-brown-600 rounded-xl text-xs font-black hover:bg-brown-600 hover:text-white transition-all">
                                     تغییر یا ویرایش
                                 </button>
                             </div>
@@ -530,9 +531,9 @@ new class extends Component
                             @php $activeAddress = $addresses->firstWhere('id', $selectedAddressId); @endphp
 
                             @if ($activeAddress)
-                                <div class="p-6 bg-blue-500/5 rounded-3xl border border-blue-500/10">
+                                <div class="p-6 bg-brown-500/5 rounded-3xl border border-brown-500/10">
                                     @if ($activeAddress->title)
-                                        <span class="text-[10px] font-black text-blue-600">{{ $activeAddress->title }}</span>
+                                        <span class="text-[10px] font-black text-brown-600">{{ $activeAddress->title }}</span>
                                     @endif
                                     <p class="text-gray-800 dark:text-gray-200 font-bold leading-loose text-sm mt-1">
                                         {{ $activeAddress->province }}، {{ $activeAddress->city }}، {{ $activeAddress->address }}
@@ -556,10 +557,10 @@ new class extends Component
                                     @foreach ($addresses as $addr)
                                         <div wire:click="selectAddress({{ $addr->id }})"
                                              class="address-item cursor-pointer p-5 rounded-2xl dark:bg-white/5 border-2 transition-all
-                                             {{ $addr->id === $selectedAddressId ? 'border-blue-500 bg-white/60 shadow-sm' : 'border-transparent bg-white/30' }}">
+                                             {{ $addr->id === $selectedAddressId ? 'border-brown-500 bg-white/60 shadow-sm' : 'border-transparent bg-white/30' }}">
                                             <div class="flex justify-between items-center">
-                                                <span class="text-[10px] font-black text-blue-600">{{ $addr->is_default ? 'آدرس اصلی' : ($addr->title ?? 'آدرس') }}</span>
-                                                <div class="status-dot w-4 h-4 rounded-full {{ $addr->id === $selectedAddressId ? 'bg-blue-500 border-2 border-blue-500' : 'bg-transparent border-2 border-gray-300' }}"></div>
+                                                <span class="text-[10px] font-black text-brown-600">{{ $addr->is_default ? 'آدرس اصلی' : ($addr->title ?? 'آدرس') }}</span>
+                                                <div class="status-dot w-4 h-4 rounded-full {{ $addr->id === $selectedAddressId ? 'bg-brown-500 border-2 border-brown-500' : 'bg-transparent border-2 border-gray-300' }}"></div>
                                             </div>
                                             <p class="text-xs text-gray-700 dark:text-gray-300 mt-2 font-bold leading-relaxed">
                                                 {{ $addr->province }}، {{ $addr->city }}، {{ $addr->address }}
@@ -568,7 +569,7 @@ new class extends Component
                                     @endforeach
 
                                     <button wire:click="openAddForm" type="button"
-                                            class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-white/10 rounded-2xl text-gray-400 text-xs font-black hover:bg-blue-50/50 hover:border-blue-500/50 transition-all">
+                                            class="w-full py-4 border-2 border-dashed border-gray-300 dark:border-white/10 rounded-2xl text-gray-400 text-xs font-black hover:bg-brown-50/50 hover:border-brown-500/50 transition-all">
                                         + افزودن آدرس جدید
                                     </button>
                                 </div>
@@ -578,46 +579,46 @@ new class extends Component
                                 <div class="mt-6 space-y-4">
                                     <div>
                                         <input type="text" wire:model="newTitle" placeholder="عنوان آدرس (مثلاً: خانه، محل کار) — اختیاری"
-                                               class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-blue-500 font-bold">
+                                               class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brown-500 font-bold">
                                     </div>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <input type="text" wire:model="newName" placeholder="نام و نام خانوادگی گیرنده"
-                                                   class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-blue-500 font-bold">
+                                                   class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brown-500 font-bold">
                                             @error('newName') <span class="text-[10px] text-rose-500 font-bold">{{ $message }}</span> @enderror
                                         </div>
                                         <div>
                                             <input type="tel" wire:model="newPhone" placeholder="شماره تماس (مثلاً ۰۹۱۲...)" dir="ltr"
-                                                   class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-blue-500 text-left font-bold">
+                                                   class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brown-500 text-left font-bold">
                                             @error('newPhone') <span class="text-[10px] text-rose-500 font-bold">{{ $message }}</span> @enderror
                                         </div>
                                     </div>
                                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div>
                                             <input type="text" wire:model="newProvince" placeholder="استان"
-                                                   class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-blue-500 font-bold">
+                                                   class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brown-500 font-bold">
                                             @error('newProvince') <span class="text-[10px] text-rose-500 font-bold">{{ $message }}</span> @enderror
                                         </div>
                                         <div>
                                             <input type="text" wire:model="newCity" placeholder="شهر"
-                                                   class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-blue-500 font-bold">
+                                                   class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brown-500 font-bold">
                                             @error('newCity') <span class="text-[10px] text-rose-500 font-bold">{{ $message }}</span> @enderror
                                         </div>
                                         <div>
                                             <input type="text" wire:model="newPostalCode" placeholder="کد پستی (اختیاری)" dir="ltr"
-                                                   class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-blue-500 text-left font-bold">
+                                                   class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brown-500 text-left font-bold">
                                             @error('newPostalCode') <span class="text-[10px] text-rose-500 font-bold">{{ $message }}</span> @enderror
                                         </div>
                                     </div>
                                     <div>
                                         <textarea wire:model="newAddress" placeholder="نشانی دقیق پستی (خیابان، کوچه، پلاک، واحد...)" rows="3"
-                                                  class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-blue-500 resize-none font-bold"></textarea>
+                                                  class="w-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-brown-500 resize-none font-bold"></textarea>
                                         @error('newAddress') <span class="text-[10px] text-rose-500 font-bold">{{ $message }}</span> @enderror
                                     </div>
 
                                     <div class="flex gap-3 pt-2">
                                         <button wire:click="saveAddress" type="button"
-                                                class="flex-1 bg-blue-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg shadow-blue-500/30">
+                                                class="flex-1 bg-brown-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg shadow-brown-500/30">
                                             ثبت و انتخاب این آدرس
                                         </button>
                                         <button wire:click="cancelAddForm" type="button"
@@ -655,11 +656,11 @@ new class extends Component
                                     <button wire:click="selectSlot({{ $slot->id }})" type="button"
                                             @disabled($slot->is_holiday)
                                             class="day-card group relative p-5 rounded-[2.5rem] border-2 text-center transition-all duration-300 shadow-sm
-                                            {{ $slot->id === $selectedSlotId ? 'border-blue-600 bg-white/80 dark:bg-blue-600/10' : 'border-white/60 dark:border-white/5 bg-white/30 dark:bg-white/[0.02]' }}
+                                            {{ $slot->id === $selectedSlotId ? 'border-brown-600 bg-white/80 dark:bg-brown-600/10' : 'border-white/60 dark:border-white/5 bg-white/30 dark:bg-white/[0.02]' }}
                                             {{ $slot->is_holiday ? 'opacity-50 cursor-not-allowed' : '' }}">
 
                                         @if ($slot->id === $selectedSlotId)
-                                            <div class="absolute top-3 left-3 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                                            <div class="absolute top-3 left-3 w-5 h-5 bg-brown-600 rounded-full flex items-center justify-center">
                                                 <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                             </div>
                                         @endif
@@ -720,18 +721,18 @@ new class extends Component
                                 @foreach ($paymentOptions as $key => $opt)
                                     <label wire:click="selectPayment('{{ $key }}')"
                                            class="payment-card relative flex items-center p-6 border-2 rounded-[2rem] cursor-pointer transition-all
-                                           {{ $paymentMethod === $key ? 'border-blue-600 bg-white shadow-sm' : 'border-gray-100 dark:border-white/5 bg-white/50 dark:bg-white/[0.02]' }}">
+                                           {{ $paymentMethod === $key ? 'border-brown-600 bg-white shadow-sm' : 'border-gray-100 dark:border-white/5 bg-white/50 dark:bg-white/[0.02]' }}">
                                         <input type="radio" name="payment" value="{{ $key }}" @checked($paymentMethod === $key) class="sr-only">
-                                        <div class="w-14 h-14 rounded-2xl flex items-center justify-center ml-4 transition-all {{ $paymentMethod === $key ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-400' }}">
+                                        <div class="w-14 h-14 rounded-2xl flex items-center justify-center ml-4 transition-all {{ $paymentMethod === $key ? 'bg-brown-600 text-white shadow-lg shadow-brown-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-400' }}">
                                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $opt['icon'] }}"></path>
                                             </svg>
                                         </div>
                                         <div class="flex-1">
                                             <span class="block text-sm font-black text-gray-900 dark:text-white">{{ $opt['title'] }}</span>
-                                            <span class="text-[10px] {{ $key === 'wallet' ? 'text-blue-500 font-black' : 'text-gray-400 font-bold' }}">{{ $opt['sub'] }}</span>
+                                            <span class="text-[10px] {{ $key === 'wallet' ? 'text-brown-500 font-black' : 'text-gray-400 font-bold' }}">{{ $opt['sub'] }}</span>
                                         </div>
-                                        <div class="w-6 h-6 border-2 rounded-full flex items-center justify-center {{ $paymentMethod === $key ? 'border-blue-600 bg-blue-600' : 'border-gray-200 dark:border-white/10' }}">
+                                        <div class="w-6 h-6 border-2 rounded-full flex items-center justify-center {{ $paymentMethod === $key ? 'border-brown-600 bg-brown-600' : 'border-gray-200 dark:border-white/10' }}">
                                             @if ($paymentMethod === $key)
                                                 <div class="w-2 h-2 bg-white rounded-full"></div>
                                             @endif
@@ -746,7 +747,7 @@ new class extends Component
                     <!-- خلاصه فاکتور -->
                     <div class="lg:col-span-3">
                         <div class="sticky top-8 group">
-                            <div class="absolute -top-10 -left-10 w-40 h-40 bg-blue-500/10 rounded-full blur-[80px]"></div>
+                            <div class="absolute -top-10 -left-10 w-40 h-40 bg-brown-500/10 rounded-full blur-[80px]"></div>
 
                             <div class="relative bg-white/20 dark:bg-black/20 backdrop-blur-[60px] border border-white/50 dark:border-white/5 rounded-[3.5rem] p-2 shadow-lg overflow-hidden">
 
@@ -790,7 +791,7 @@ new class extends Component
                                     <div class="relative h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-white/10 to-transparent my-2"></div>
 
                                     <div class="flex flex-col items-center gap-1">
-                                        <span class="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[5px]">Net Payable</span>
+                                        <span class="text-[10px] font-black text-brown-600 dark:text-brown-400 uppercase tracking-[5px]">Net Payable</span>
                                         <div class="flex items-baseline gap-1">
                                             <span class="text-4xl font-black text-gray-900 dark:text-white tracking-tighter transition-all duration-300">{{ number_format($this->total) }}</span>
                                             <span class="text-[10px] font-bold text-gray-400">تومان</span>
@@ -807,7 +808,8 @@ new class extends Component
 
                                 <div class="p-6">
                                     <button wire:click="placeOrder" wire:loading.attr="disabled" wire:target="placeOrder" type="button"
-                                            class="group/pay relative w-full h-20 bg-blue-600 dark:bg-blue-500 rounded-[2.2rem] overflow-hidden transition-all duration-500 shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.7)] hover:-translate-y-1 active:scale-95">
+                                            class="group/pay relative w-full h-20 bg-brown-600 dark:bg-brown-500 rounded-[2.2rem] overflow-hidden transition-all duration-500 shadow-[0_20px_40px_-10px_rgba(101,67,33,0.5)]
+                                                    hover:shadow-[0_25px_50px_-12px_rgba(101,67,33,0.7)] hover:-translate-y-1 active:scale-95">
 
                                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/pay:animate-[shimmer_1.5s_infinite]"></div>
 
@@ -862,7 +864,7 @@ new class extends Component
                 <div
                     class="absolute -top-24 -right-24
                    w-48 h-48 rounded-full
-                   bg-primary-500/10 blur-3xl
+                   bg-brown-500/10 blur-3xl
                    pointer-events-none"
                 ></div>
 
@@ -873,11 +875,11 @@ new class extends Component
 
                         <div
                             class="w-11 h-11 rounded-2xl
-                           bg-primary-500/10
+                           bg-brown-500/10
                            flex items-center justify-center"
                         >
                             <svg
-                                class="w-5 h-5 text-primary-500"
+                                class="w-5 h-5 text-brown-500"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -937,8 +939,8 @@ new class extends Component
                     {{-- Amount --}}
                     <div
                         class="p-4 rounded-2xl
-                       bg-primary-500/5
-                       border border-primary-500/10
+                       bg-brown-500/5
+                       border border-brown-500/10
                        mb-5"
                     >
                         <div class="flex items-center justify-between">
@@ -948,7 +950,7 @@ new class extends Component
                     </span>
 
                             <div class="flex items-baseline gap-1">
-                        <span class="text-xl font-black text-primary-500">
+                        <span class="text-xl font-black text-brown-500">
                            {{ number_format($this->total) }}
                         </span>
 
@@ -981,9 +983,9 @@ new class extends Component
 
                             <div
                                 class="w-10 h-10 rounded-xl
-                               bg-primary-500/10
+                               bg-brown-500/10
                                flex items-center justify-center
-                               text-primary-500 ml-3"
+                               text-brown-500 ml-3"
                             >
                                 <svg
                                     class="w-5 h-5"
@@ -1024,8 +1026,8 @@ new class extends Component
                             type="button"
                             onclick="navigator.clipboard.writeText('6037991812345678')"
                             class="mt-2 text-[9px] font-black
-                           text-primary-500
-                           hover:text-primary-600
+                           text-brown-500
+                           hover:text-brown-600
                            transition"
                         >
                             کپی شماره کارت
@@ -1093,8 +1095,8 @@ new class extends Component
                            text-sm font-black
                            text-gray-900 dark:text-white
                            placeholder:text-gray-300 dark:placeholder:text-gray-600
-                           focus:border-primary-500
-                           focus:ring-4 focus:ring-primary-500/10
+                           focus:border-brown-500
+                           focus:ring-4 focus:ring-brown-500/10
                            outline-none transition"
                             dir="ltr"
                         >
@@ -1116,12 +1118,12 @@ new class extends Component
                         type="button"
                         class="mt-5 w-full h-14
                        rounded-2xl
-                       bg-primary-500
+                       bg-brown-500
                        text-white
                        text-[11px]
                        font-black
-                       shadow-lg shadow-primary-500/25
-                       hover:bg-primary-600
+                       shadow-lg shadow-brown-500/25
+                       hover:bg-brown-600
                        disabled:opacity-60
                        disabled:cursor-not-allowed
                        transition-all

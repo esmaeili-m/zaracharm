@@ -26,9 +26,25 @@ new class extends Component
                     {!! $data['description'] ?? '' !!}
                 </p>
                 <div class="flex flex-wrap gap-4">
-                    <div class="px-6 py-3 bg-blue-600/5 border border-blue-600/10 rounded-2xl text-blue-600 text-xs font-black">تکنولوژی‌محور</div>
-                    <div class="px-6 py-3 bg-emerald-600/5 border border-emerald-600/10 rounded-2xl text-emerald-600 text-xs font-black">شفافیت کامل</div>
-                    <div class="px-6 py-3 bg-purple-600/5 border border-purple-600/10 rounded-2xl text-purple-600 text-xs font-black">ارسال هوشمند</div>
+                    <div class="px-6 py-3 bg-blue-600/5 border border-blue-600/10 rounded-2xl text-blue-600 text-xs font-black">
+                        کیفیت تضمین‌شده
+                    </div>
+
+                    <div class="px-6 py-3 bg-emerald-600/5 border border-emerald-600/10 rounded-2xl text-emerald-600 text-xs font-black">
+                        ارسال سریع
+                    </div>
+
+                    <div class="px-6 py-3 bg-purple-600/5 border border-purple-600/10 rounded-2xl text-purple-600 text-xs font-black">
+                        ضمانت اصالت کالا
+                    </div>
+
+                    <div class="px-6 py-3 bg-orange-600/5 border border-orange-600/10 rounded-2xl text-orange-600 text-xs font-black">
+                        پشتیبانی و پاسخگویی
+                    </div>
+
+                    <div class="px-6 py-3 bg-rose-600/5 border border-rose-600/10 rounded-2xl text-rose-600 text-xs font-black">
+                        خرید مطمئن و آسان
+                    </div>
                 </div>
             </div>
 

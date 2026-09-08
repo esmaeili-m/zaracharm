@@ -235,6 +235,7 @@ new class extends Component {
             ],
             'categories' => [
                 'mode' => 'sales',
+                'pictureMode' => 'background',
                 'limit' => 8,
                 'view' => 1,
 
@@ -252,6 +253,7 @@ new class extends Component {
                 'mode' => 'latest',
                 'limit' => 8,
                 'view' => 1,
+                'pictureMode' => 'background',
                 'product_ids' => [],
             ],
             'stories' => [
@@ -442,6 +444,9 @@ new class extends Component {
                         'integer',
                         'min:1',
                         'max:20'
+                    ],
+                    'formData.pictureMode' => [
+                        'nullable',
                     ],
 
                     'formData.product_ids' => [

@@ -18,6 +18,7 @@ class Order extends Model
         'subtotal',
         'discount_amount',
         'shipping_amount',
+        'expires_at',
         'total_amount'
 
     ];

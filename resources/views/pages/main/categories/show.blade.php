@@ -35,6 +35,13 @@ new class extends Component
     | 4) type روی جدول discounts فرض شده: 1 = درصدی، 2 = مبلغ ثابت (تومان).
     |    اگر enum واقعی پروژه فرق دارد، فقط همین دو ثابت پایین را عوض کنید.
     |
+    | 5) [جدید] Price Filter (minPrice/maxPrice) باید همیشه روی همین «Final Price» محاسبه‌شده کار کند،
+    |    نه روی product_variants.price خام. چون finalPrice نتیجه‌ی محاسبه‌ی PHP (نه یک ستون SQL) است،
+    |    تنها فیلترِ *امنِ* قابل انجام در سطح SQL محدودکردن کف قیمت (>= minPrice) روی basePrice است
+    |    (چون finalPrice همیشه <= basePrice، پس finalPrice >= min ⇒ basePrice >= min، بدون false-negative).
+    |    فیلترِ دقیقِ هر دو طرفِ بازه روی final_price، داخل viewProducts() بعد از محاسبه انجام می‌شود؛
+    |    دقیقاً با همان الگویی که پیش‌تر برای onlyInStock/onlyDiscounted استفاده شده بود.
+    |
     |--------------------------------------------------------------------
     | چرا render() نداریم
     |--------------------------------------------------------------------
@@ -101,6 +108,13 @@ new class extends Component
             ->get();
 
         // بازه‌ی واقعی قیمت بر اساس واریانت‌های محصولاتِ همین دسته (برای تنظیم اسلایدر قیمت)
+        // توجه: این بازه بر مبنای basePrice است، نه finalPrice. چون finalPrice <= basePrice همیشه
+        // برقرار است، این بازه یک محدوده‌ی «امن و محافظه‌کارانه» است (ممکن است در عمل چند محصولِ
+        // تخفیف‌خورده حتی از priceFloor هم ارزان‌تر باشند، ولی چون کف اسلایدر را می‌شود همان‌جا
+        // خالی گذاشت، مشکلی برای UX ایجاد نمی‌کند). محاسبه‌ی دقیقِ finalPrice برای کل کاتالوگ فقط
+        // برای تعیین بازه‌ی اسلایدر، به معنای لود و پردازش تمام واریانت‌های دسته در هر mount است که
+        // طبق قانون «از ایجاد Query اضافی جلوگیری کن» صرفه نمی‌کند؛ همان الگویی که خودِ کد قبلاً
+        // برای sort=cheap هم پذیرفته بود.
         $bounds = DB::table('product_variants')
             ->join('category_product', 'product_variants.product_id', '=', 'category_product.product_id')
             ->whereIn('category_product.category_id', $this->categoryIds)
@@ -163,8 +177,59 @@ new class extends Component
 
     public function applyPriceRange(): void
     {
-        // مقادیر minPrice/maxPrice همراه همین درخواست از طریق wire:model سینک شده‌اند
+        $this->clampPriceRange();
         $this->resetPage();
+    }
+
+    /**
+     * وقتی کاربر داخل اینپوت عددیِ «از» چیزی تایپ می‌کند (wire:model.live).
+     */
+    public function updatedMinPrice(): void
+    {
+        $this->clampPriceRange();
+        $this->resetPage();
+    }
+
+    /**
+     * وقتی کاربر داخل اینپوت عددیِ «تا» چیزی تایپ می‌کند (wire:model.live).
+     */
+    public function updatedMaxPrice(): void
+    {
+        $this->clampPriceRange();
+        $this->resetPage();
+    }
+
+    /**
+     * صدا زده می‌شود از اسلایدرِ Alpine، فقط یک‌بار در لحظه‌ی رها کردن دستگیره
+     * (نه در حین درگ کردن) تا درخواست‌های شبکه‌ی اضافی ایجاد نشود.
+     */
+    public function updatePriceRange(int $min, int $max): void
+    {
+        $this->minPrice = $min;
+        $this->maxPrice = $max;
+        $this->clampPriceRange();
+        $this->resetPage();
+    }
+
+    /**
+     * تضمین می‌کند minPrice از maxPrice عبور نکند و هر دو داخل بازه‌ی [priceFloor, priceCeil] بمانند.
+     */
+    private function clampPriceRange(): void
+    {
+        if ($this->minPrice !== null) {
+            $this->minPrice = max($this->priceFloor, min($this->minPrice, $this->priceCeil));
+        }
+
+        if ($this->maxPrice !== null) {
+            $this->maxPrice = max($this->priceFloor, min($this->maxPrice, $this->priceCeil));
+        }
+
+        if ($this->minPrice !== null && $this->maxPrice !== null && $this->minPrice > $this->maxPrice) {
+            [$this->minPrice, $this->maxPrice] = [
+                min($this->minPrice, $this->maxPrice),
+                max($this->minPrice, $this->maxPrice),
+            ];
+        }
     }
 
     public function updatedSelectedCategories(): void { $this->resetPage(); }
@@ -383,11 +448,16 @@ new class extends Component
             $query->where('created_at', '>=', now()->subDays(7));
         }
 
-        if ($this->minPrice !== null && $this->maxPrice !== null) {
+        // نارروینگِ امن قیمت (فقط کف): توضیح کامل بالای کلاس، نکته‌ی ۵.
+        // عمداً سقف قیمت اینجا اعمال نمی‌شود؛ چون finalPrice می‌تواند به‌خاطر تخفیف،
+        // خیلی کمتر از basePrice باشد و یک محدودیت SQL روی سقفِ basePrice محصولات
+        // تخفیف‌خورده‌ی گران را به‌غلط از نتیجه حذف می‌کند. فیلترِ دقیقِ سقف داخل
+        // viewProducts() روی final_price انجام می‌شود.
+        if ($this->minPrice !== null) {
             $query->whereHas('variants', function ($q) {
                 $q->where('status', 1)
                     ->whereNull('deleted_at')
-                    ->whereBetween('price', [$this->minPrice, $this->maxPrice]);
+                    ->where('price', '>=', $this->minPrice);
             });
         }
 
@@ -436,8 +506,8 @@ new class extends Component
     }
 
     /**
-     * صفحه‌ی جاری محصولات (بدون فیلترهای onlyInStock/onlyDiscounted که بعد از محاسبه‌ی
-     * قیمت نهایی اعمال می‌شوند - چون به داده‌ی محاسبه‌شده وابسته‌اند، نه ستون خام دیتابیس).
+     * صفحه‌ی جاری محصولات (بدون فیلترهای onlyInStock/onlyDiscounted/minPrice/maxPrice که بعد از
+     * محاسبه‌ی قیمت نهایی اعمال می‌شوند - چون به داده‌ی محاسبه‌شده وابسته‌اند، نه ستون خام دیتابیس).
      */
     #[Computed]
     public function paginator(): LengthAwarePaginator
@@ -465,7 +535,7 @@ new class extends Component
 
     /**
      * ردیف‌های آماده‌ی نمایش برای صفحه‌ی جاری: واریانت انتخابی، قیمت نهایی، درصد تخفیف،
-     * موجودی واقعی، تصویر و وضعیت علاقه‌مندی هر محصول.
+     * موجودی واقعی، تصویر، نوع کارت (transparent/background) و وضعیت علاقه‌مندی هر محصول.
      */
     #[Computed]
     public function viewProducts(): Collection
@@ -517,6 +587,16 @@ new class extends Component
             }
 
             $image = $product->media->firstWhere('collection', 'featured_image');
+
+            // تشخیص نوع کارت از روی mime_type همان تصویر (بدون نیاز به ستون جدید در دیتابیس).
+            // jpeg/jpg هرگز آلفا-چنل ندارد پس قطعاً Background است؛ png/webp/gif معمولاً برای
+            // تصاویر برش‌خورده(cutout)ی محصول استفاده می‌شوند، پس Transparent در نظر گرفته می‌شوند.
+            // این یک heuristic روی داده‌ی موجود است، نه تشخیص قطعیِ آلفا-چنل.
+            $imageStyle = 'background';
+            if ($image && in_array(strtolower((string) $image->mime_type), ['image/png', 'image/webp', 'image/gif'], true)) {
+                $imageStyle = 'transparent';
+            }
+
             return (object) [
                 'product' => $product,
                 'variant' => $variant,
@@ -526,18 +606,33 @@ new class extends Component
                 'discount_percent' => $discountPercent,
                 'stock' => $stock,
                 'image' => $image,
+                'image_style' => $imageStyle,
                 'is_favorited' => in_array($product->id, $this->favoriteProductIds, true),
             ];
         });
 
-        // فیلترهای «فقط موجود» و «فقط تخفیف‌دار» چون به قیمت/موجودیِ محاسبه‌شده وابسته‌اند،
-        // بعد از map روی همین کالکشن اعمال می‌شوند (نه در کوئری اصلی).
+        // فیلترهای «فقط موجود»، «فقط تخفیف‌دار» و بازه‌ی قیمت، چون به قیمت/موجودیِ محاسبه‌شده
+        // وابسته‌اند، بعد از map روی همین کالکشن اعمال می‌شوند (نه در کوئری اصلی).
         if ($this->onlyInStock) {
             $rows = $rows->filter(fn ($p) => $p->stock > 0);
         }
 
         if ($this->onlyDiscounted) {
             $rows = $rows->filter(fn ($p) => $p->discount_percent > 0);
+        }
+
+        if ($this->minPrice !== null || $this->maxPrice !== null) {
+            $rows = $rows->filter(function ($p) {
+                if ($this->minPrice !== null && $p->final_price < $this->minPrice) {
+                    return false;
+                }
+
+                if ($this->maxPrice !== null && $p->final_price > $this->maxPrice) {
+                    return false;
+                }
+
+                return true;
+            });
         }
 
         return $rows->values();
@@ -562,7 +657,7 @@ new class extends Component
                 >
 
                     <a href="{{ route('home') }}"
-                       class="hover:text-blue-500 transition-colors">
+                       class="hover:text-brown-500 transition-colors">
                         خانه
                     </a>
 
@@ -578,7 +673,7 @@ new class extends Component
                         </svg>
 
                         <a href="{{ route('home', $category->parent->slug) }}"
-                           class="hover:text-blue-500 transition-colors">
+                           class="hover:text-brown-500 transition-colors">
                             {{ $category->parent->title }}
                         </a>
                     @endif
@@ -593,7 +688,7 @@ new class extends Component
                               stroke-linejoin="round"/>
                     </svg>
 
-                    <span class="text-blue-600 dark:text-blue-400">
+                    <span class="text-brown-600 dark:text-brown-400">
             {{ $category->title }}
         </span>
 
@@ -607,7 +702,7 @@ new class extends Component
                     <div class="relative">
 
                         <div class="absolute -right-4 top-0 w-1 h-12
-                        bg-blue-500 rounded-full blur-[2px]"></div>
+                        bg-brown-500 rounded-full blur-[2px]"></div>
 
                         <h1 class="text-4xl font-black text-gray-900 dark:text-white tracking-tight">
                             {{ $category->title }}
@@ -640,7 +735,7 @@ new class extends Component
 
                         <div class="flex items-center px-4 gap-2">
 
-                            <svg class="w-4 h-4 text-blue-500"
+                            <svg class="w-4 h-4 text-brown-500"
                                  fill="none"
                                  stroke="currentColor"
                                  viewBox="0 0 24 24">
@@ -667,7 +762,7 @@ new class extends Component
                                 class="px-5 py-2.5 rounded-[1.2rem] text-[11px] font-black
                            transition-all active:scale-95
                            {{ $sort === 'latest'
-                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+                                ? 'bg-brown-500 text-white shadow-lg shadow-brown-500/25'
                                 : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-white/5'
                            }}"
                             >
@@ -681,7 +776,7 @@ new class extends Component
                                 class="px-5 py-2.5 rounded-[1.2rem] text-[11px] font-black
                            transition-all active:scale-95
                            {{ $sort === 'sales'
-                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+                                ? 'bg-brown-500 text-white shadow-lg shadow-brown-500/25'
                                 : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-white/5'
                            }}"
                             >
@@ -695,7 +790,7 @@ new class extends Component
                                 class="px-5 py-2.5 rounded-[1.2rem] text-[11px] font-black
                            transition-all active:scale-95
                            {{ $sort === 'cheap'
-                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+                                ? 'bg-brown-500 text-white shadow-lg shadow-brown-500/25'
                                 : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-white/5'
                            }}"
                             >
@@ -712,7 +807,7 @@ new class extends Component
 
             <!-- Filter Showing in Responsive Break Point -->
             <div class="fixed bottom-28 right-6 z-[95] lg:hidden">
-                <button onclick="toggleFilters(true)" class="flex items-center justify-center w-14 h-14 bg-white/40 dark:bg-white/[0.05] backdrop-blur-md text-blue-600 rounded-2xl shadow-lg border border-white/60 dark:border-white/10 active:scale-90 transition-all">
+                <button onclick="toggleFilters(true)" class="flex items-center justify-center w-14 h-14 bg-white/40 dark:bg-white/[0.05] backdrop-blur-md text-brown-600 rounded-2xl shadow-lg border border-white/60 dark:border-white/10 active:scale-90 transition-all">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                     </svg>
@@ -736,7 +831,7 @@ new class extends Component
                     </div>
 
                     <div class="p-6 bg-white/30 dark:bg-black/20 border-t border-white/40 dark:border-white/5">
-                        <button onclick="toggleFilters(false)" class="w-full bg-blue-600 text-white py-4 rounded-[1.8rem] font-black shadow-lg shadow-blue-600/30 active:scale-95 transition-all">اعمال فیلترها</button>
+                        <button onclick="toggleFilters(false)" class="w-full bg-brown-600 text-white py-4 rounded-[1.8rem] font-black shadow-lg shadow-brown-600/30 active:scale-95 transition-all">اعمال فیلترها</button>
                     </div>
                 </div>
             </div>
@@ -760,309 +855,433 @@ new class extends Component
                                 $variant = $row->variant;
                             @endphp
 
-                            <div class="group relative h-full pt-12">
+                            @if($row->image_style === 'transparent')
 
-                                <div
-                                    class="absolute inset-0
-                       bg-white/80 dark:bg-[#0a0a0a]/40
-                       backdrop-blur-[20px]
-                       rounded-[3rem]
-                       border border-gray-100 dark:border-white/[0.08]
-                       shadow-[0_20px_50px_rgba(0,0,0,0.02)]
-                       transition-all duration-700
-                       group-hover:border-blue-500/50
-                       dark:group-hover:shadow-[0_0_60px_rgba(37,99,235,0.12)]"
-                                ></div>
+                                {{-- ===================== Card Type 1 : Transparent ===================== --}}
+                                <div class="group relative h-full pt-12">
 
-
-                                <div
-                                    class="relative p-7 flex flex-col h-full z-10
-                       transition-transform duration-500
-                       group-hover:-translate-y-4"
-                                >
-
-                                    {{-- Discount --}}
-                                    @if($row->discount_percent > 0)
-
-                                        <div class="absolute -top-6 -right-2 z-20">
-
-                                            <div
-                                                class="bg-secondary-500 dark:bg-[#ff1744]
-                                   text-white text-[12px] font-black
-                                   w-12 h-12 rounded-[1.2rem]
-                                   flex items-center justify-center
-                                   shadow-lg shadow-red-500/40
-                                   dark:shadow-[#ff1744]/30
-                                   rotate-12
-                                   group-hover:rotate-0
-                                   transition-all duration-500
-                                   border-2 border-white dark:border-white/20"
-                                            >
-                                                {{ $row->discount_percent }}٪
-                                            </div>
-
-                                        </div>
-
-                                    @endif
+                                    <div
+                                        class="absolute inset-0
+                               bg-white/80 dark:bg-[#0a0a0a]/40
+                               backdrop-blur-[20px]
+                               rounded-[3rem]
+                               border border-gray-100 dark:border-white/[0.08]
+                               shadow-[0_20px_50px_rgba(0,0,0,0.02)]
+                               transition-all duration-700
+                               group-hover:border-brown-500/50
+                               dark:group-hover:shadow-[0_0_60px_rgba(37,99,235,0.12)]"
+                                    ></div>
 
 
-                                    {{-- Image --}}
-                                    <div class="relative mb-8 flex items-center justify-center min-h-[180px]">
+                                    <div
+                                        class="relative p-7 flex flex-col h-full z-10
+                               transition-transform duration-500
+                               group-hover:-translate-y-4"
+                                    >
 
-                                        <div
-                                            class="absolute w-40 h-40
-                               bg-blue-500/20 dark:bg-indigo-500/20
-                               blur-[70px] rounded-full
-                               opacity-0 group-hover:opacity-100
-                               transition-all duration-1000"
-                                        ></div>
+                                        {{-- Discount --}}
+                                        @if($row->discount_percent > 0)
 
+                                            <div class="absolute -top-6 -right-2 z-20">
 
-                                        @if($row->image)
-
-                                            <a href="{{ route('product.show', $product->slug) }}">
-                                                <img
-                                                    src="{{ asset('storage/' . $row->image->file_path) }}"
-                                                    class="relative z-10 w-full h-44 object-contain
-                                       transition-all duration-700
-                                       group-hover:scale-110
-                                       group-hover:drop-shadow-[0_15px_35px_rgba(37,99,235,0.3)]"
-                                                    alt="{{ $product->title }}"
+                                                <div
+                                                    class="bg-secondary-500 dark:bg-[#ff1744]
+                                       text-white text-[12px] font-black
+                                       w-12 h-12 rounded-[1.2rem]
+                                       flex items-center justify-center
+                                       shadow-lg shadow-red-500/40
+                                       dark:shadow-[#ff1744]/30
+                                       rotate-12
+                                       group-hover:rotate-0
+                                       transition-all duration-500
+                                       border-2 border-white dark:border-white/20"
                                                 >
-                                            </a>
+                                                    {{ $row->discount_percent }}٪
+                                                </div>
 
-                                        @else
-
-                                            <div
-                                                class="relative z-10 w-full h-44
-                                   flex items-center justify-center
-                                   text-gray-300 dark:text-zinc-700"
-                                            >
-                                                <svg class="w-20 h-20"
-                                                     fill="none"
-                                                     stroke="currentColor"
-                                                     viewBox="0 0 24 24">
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        stroke-width="1.5"
-                                                        d="M4 16l4-4 4 4 4-5 4 5M4 19h16M5 5h14a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z"
-                                                    />
-                                                </svg>
                                             </div>
 
                                         @endif
 
 
-                                        {{-- Actions --}}
-                                        <div
-                                            class="absolute top-0 -left-2 z-20
-                               flex flex-col gap-3
-                               opacity-0 group-hover:opacity-100
-                               -translate-x-4 group-hover:translate-x-0
-                               transition-all duration-500"
-                                        >
+                                        {{-- Image --}}
+                                        <div class="relative mb-8 flex items-center justify-center min-h-[180px]">
 
-                                            {{-- Quick View --}}
-                                            <div class="relative flex items-center group/tooltip">
+                                            <div
+                                                class="absolute w-40 h-40
+                                   bg-brown-500/20 dark:bg-indigo-500/20
+                                   blur-[70px] rounded-full
+                                   opacity-0 group-hover:opacity-100
+                                   transition-all duration-1000"
+                                            ></div>
 
-                                                <a
-                                                    href="{{ route('product.show', $product->slug) }}"
-                                                    class="w-10 h-10 quick-view-btn
-                                       bg-white/90 dark:bg-zinc-900/90
-                                       backdrop-blur-md
-                                       text-gray-900 dark:text-white
-                                       rounded-xl flex items-center justify-center
-                                       shadow-sm border border-white dark:border-white/10
-                                       hover:bg-secondary-500
-                                       hover:text-white transition-all"
+
+                                            @if($row->image)
+
+                                                <a href="{{ route('product.show', $product->slug) }}">
+                                                    <img
+                                                        src="{{ asset('storage/' . $row->image->file_path) }}"
+                                                        class="relative z-10 w-full h-44 object-contain
+                                           transition-all duration-700
+                                           group-hover:scale-110
+                                           group-hover:drop-shadow-[0_15px_35px_rgba(37,99,235,0.3)]"
+                                                        alt="{{ $product->title }}"
+                                                    >
+                                                </a>
+
+                                            @else
+
+                                                <div
+                                                    class="relative z-10 w-full h-44
+                                       flex items-center justify-center
+                                       text-gray-300 dark:text-zinc-700"
                                                 >
-
-                                                    <svg class="w-5 h-5"
+                                                    <svg class="w-20 h-20"
                                                          fill="none"
                                                          stroke="currentColor"
                                                          viewBox="0 0 24 24">
                                                         <path
                                                             stroke-linecap="round"
                                                             stroke-linejoin="round"
-                                                            stroke-width="2"
-                                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                        />
-                                                        <path
-                                                            stroke-linecap="round"
-                                                            stroke-linejoin="round"
-                                                            stroke-width="2"
-                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5
-                                           c4.478 0 8.268 2.943 9.542 7
-                                           -1.274 4.057-5.064 7-9.542 7
-                                           -4.477 0-8.268-2.943-9.542-7z"
+                                                            stroke-width="1.5"
+                                                            d="M4 16l4-4 4 4 4-5 4 5M4 19h16M5 5h14a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z"
                                                         />
                                                     </svg>
-
-                                                </a>
-
-                                                <span
-                                                    class="absolute right-full mr-3 whitespace-nowrap
-                                       bg-gray-900 dark:bg-zinc-800 text-white
-                                       text-[10px] py-1.5 px-3 rounded-lg
-                                       opacity-0 pointer-events-none
-                                       translate-x-2
-                                       group-hover/tooltip:opacity-100
-                                       group-hover/tooltip:translate-x-0
-                                       transition-all duration-300
-                                       border border-white/5"
-                                                >
-                                مشاهده سریع
-                            </span>
-
-                                            </div>
-
-
-                                            {{-- Favorite --}}
-                                            <div class="relative flex items-center group/tooltip">
-
-                                                <button
-                                                    type="button"
-                                                    wire:click="toggleFavorite({{ $product->id }})"
-                                                    class="w-10 h-10
-                                       bg-white/90 dark:bg-zinc-900/90
-                                       backdrop-blur-md
-                                       rounded-xl flex items-center justify-center
-                                       shadow-sm border border-white dark:border-white/10
-                                       transition-all
-                                       {{ $row->is_favorited ? 'text-red-500' : 'text-gray-900 dark:text-white hover:text-red-500' }}"
-                                                >
-
-                                                    <svg class="w-5 h-5"
-                                                         fill="{{ $row->is_favorited ? 'currentColor' : 'none' }}"
-                                                         stroke="currentColor"
-                                                         viewBox="0 0 24 24">
-                                                        <path
-                                                            stroke-linecap="round"
-                                                            stroke-linejoin="round"
-                                                            stroke-width="2"
-                                                            d="M4.318 6.318a4.5 4.5 0 000 6.364
-                                           L12 20.364l7.682-7.682
-                                           a4.5 4.5 0 00-6.364-6.364
-                                           L12 7.636l-1.318-1.318
-                                           a4.5 4.5 0 00-6.364 0z"
-                                                        />
-                                                    </svg>
-
-                                                </button>
-
-                                                <span
-                                                    class="absolute right-full mr-3 whitespace-nowrap
-                                       bg-gray-900 dark:bg-zinc-800 text-white
-                                       text-[10px] py-1.5 px-3 rounded-lg
-                                       opacity-0 pointer-events-none
-                                       translate-x-2
-                                       group-hover/tooltip:opacity-100
-                                       group-hover/tooltip:translate-x-0
-                                       transition-all duration-300
-                                       border border-white/5"
-                                                >
-                                {{ $row->is_favorited ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی' }}
-                            </span>
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-
-                                    {{-- Title --}}
-                                    <a href="{{ route('products.show', $product->slug) }}">
-                                        <h3
-                                            class="text-[15px] font-black
-                                                   text-gray-800 dark:text-zinc-100
-                                                   mb-6 line-clamp-2 leading-7 h-14
-                                                   group-hover:text-blue-600
-                                                   dark:group-hover:text-blue-400
-                                                   transition-colors"
-                                        >
-                                            {{ $product->title }}
-                                        </h3>
-                                    </a>
-
-
-                                    {{-- Price --}}
-                                    <div
-                                        class="flex items-center justify-between
-                           mt-auto pt-5
-                           border-t border-gray-100 dark:border-white/5"
-                                    >
-
-                                        <div class="flex flex-col gap-1">
-
-                                            @if($row->discount_percent > 0)
-
-                                                <span
-                                                    class="text-[11px] text-gray-400 dark:text-zinc-500
-                                       line-through tabular-nums leading-none"
-                                                >
-                                {{ number_format($row->compare_price && $row->compare_price > $row->final_price ? $row->compare_price : $row->price) }}
-                            </span>
+                                                </div>
 
                                             @endif
 
 
-                                            <div class="flex items-center gap-1.5">
+                                            {{-- Actions --}}
+                                            <div
+                                                class="absolute top-0 -left-2 z-20
+                                   flex flex-col gap-3
+                                   opacity-0 group-hover:opacity-100
+                                   -translate-x-4 group-hover:translate-x-0
+                                   transition-all duration-500"
+                                            >
 
-                            <span
-                                class="text-2xl font-black
-                                       text-gray-900 dark:text-white
-                                       tracking-tighter tabular-nums"
-                            >
-                                {{ number_format($row->final_price) }}
-                            </span>
+                                                {{-- Quick View --}}
+                                                <div class="relative flex items-center group/tooltip">
 
-                                                <span
-                                                    class="text-[10px] text-gray-400
-                                       dark:text-zinc-500 font-bold"
-                                                >
-                                تومان
-                            </span>
+                                                    <a
+                                                        href="{{ route('product.show', $product->slug) }}"
+                                                        class="w-10 h-10 quick-view-btn
+                                           bg-white/90 dark:bg-zinc-900/90
+                                           backdrop-blur-md
+                                           text-gray-900 dark:text-white
+                                           rounded-xl flex items-center justify-center
+                                           shadow-sm border border-white dark:border-white/10
+                                           hover:bg-secondary-500
+                                           hover:text-white transition-all"
+                                                    >
+
+                                                        <svg class="w-5 h-5"
+                                                             fill="none"
+                                                             stroke="currentColor"
+                                                             viewBox="0 0 24 24">
+                                                            <path
+                                                                stroke-linecap="round"
+                                                                stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                            />
+                                                            <path
+                                                                stroke-linecap="round"
+                                                                stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M2.458 12C3.732 7.943 7.523 5 12 5
+                                               c4.478 0 8.268 2.943 9.542 7
+                                               -1.274 4.057-5.064 7-9.542 7
+                                               -4.477 0-8.268-2.943-9.542-7z"
+                                                            />
+                                                        </svg>
+
+                                                    </a>
+
+                                                    <span
+                                                        class="absolute right-full mr-3 whitespace-nowrap
+                                           bg-gray-900 dark:bg-zinc-800 text-white
+                                           text-[10px] py-1.5 px-3 rounded-lg
+                                           opacity-0 pointer-events-none
+                                           translate-x-2
+                                           group-hover/tooltip:opacity-100
+                                           group-hover/tooltip:translate-x-0
+                                           transition-all duration-300
+                                           border border-white/5"
+                                                    >
+                                    مشاهده سریع
+                                </span>
+
+                                                </div>
+
+
+                                                {{-- Favorite --}}
+                                                <div class="relative flex items-center group/tooltip">
+
+                                                    <button
+                                                        type="button"
+                                                        wire:click="toggleFavorite({{ $product->id }})"
+                                                        class="w-10 h-10
+                                           bg-white/90 dark:bg-zinc-900/90
+                                           backdrop-blur-md
+                                           rounded-xl flex items-center justify-center
+                                           shadow-sm border border-white dark:border-white/10
+                                           transition-all
+                                           {{ $row->is_favorited ? 'text-red-500' : 'text-gray-900 dark:text-white hover:text-red-500' }}"
+                                                    >
+
+                                                        <svg class="w-5 h-5"
+                                                             fill="{{ $row->is_favorited ? 'currentColor' : 'none' }}"
+                                                             stroke="currentColor"
+                                                             viewBox="0 0 24 24">
+                                                            <path
+                                                                stroke-linecap="round"
+                                                                stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M4.318 6.318a4.5 4.5 0 000 6.364
+                                               L12 20.364l7.682-7.682
+                                               a4.5 4.5 0 00-6.364-6.364
+                                               L12 7.636l-1.318-1.318
+                                               a4.5 4.5 0 00-6.364 0z"
+                                                            />
+                                                        </svg>
+
+                                                    </button>
+
+                                                    <span
+                                                        class="absolute right-full mr-3 whitespace-nowrap
+                                           bg-gray-900 dark:bg-zinc-800 text-white
+                                           text-[10px] py-1.5 px-3 rounded-lg
+                                           opacity-0 pointer-events-none
+                                           translate-x-2
+                                           group-hover/tooltip:opacity-100
+                                           group-hover/tooltip:translate-x-0
+                                           transition-all duration-300
+                                           border border-white/5"
+                                                    >
+                                    {{ $row->is_favorited ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی' }}
+                                </span>
+
+                                                </div>
 
                                             </div>
 
                                         </div>
 
 
-                                        {{-- Add To Cart --}}
-                                        <a
-                                            href="{{ route('products.show', $variant->product->slug) }}"
-                                            class="w-10 h-10
-           rounded-xl
-           bg-gray-100 dark:bg-white/5
-           text-gray-500 dark:text-gray-300
-           flex items-center justify-center
-           hover:bg-primary-500 hover:text-white
-           hover:scale-110
-           transition-all"
-                                            title="مشاهده محصول"
-                                        >
-                                            <svg
-                                                class="w-5 h-5 rtl:rotate-180"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
+                                        {{-- Title --}}
+                                        <a href="{{ route('products.show', $product->slug) }}">
+                                            <h3
+                                                class="text-[15px] font-black
+                                                       text-gray-800 dark:text-zinc-100
+                                                       mb-6 line-clamp-2 leading-7 h-14
+                                                       group-hover:text-brown-600
+                                                       dark:group-hover:text-brown-400
+                                                       transition-colors"
                                             >
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M9 5l7 7-7 7"
-                                                />
-                                            </svg>
+                                                {{ $product->title }}
+                                            </h3>
                                         </a>
+
+
+                                        {{-- Price --}}
+                                        <div
+                                            class="flex items-center justify-between
+                               mt-auto pt-5
+                               border-t border-gray-100 dark:border-white/5"
+                                        >
+
+                                            <div class="flex flex-col gap-1">
+
+                                                @if($row->discount_percent > 0)
+
+                                                    <span
+                                                        class="text-[11px] text-gray-400 dark:text-zinc-500
+                                           line-through tabular-nums leading-none"
+                                                    >
+                                    {{ number_format($row->compare_price && $row->compare_price > $row->final_price ? $row->compare_price : $row->price) }}
+                                </span>
+
+                                                @endif
+
+
+                                                <div class="flex items-center gap-1.5">
+
+                                <span
+                                    class="text-2xl font-black
+                                           text-gray-900 dark:text-white
+                                           tracking-tighter tabular-nums"
+                                >
+                                    {{ number_format($row->final_price) }}
+                                </span>
+
+                                                    <span
+                                                        class="text-[10px] text-gray-400
+                                           dark:text-zinc-500 font-bold"
+                                                    >
+                                    تومان
+                                </span>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            {{-- Add To Cart --}}
+                                            <a
+                                                href="{{ route('products.show', $variant->product->slug) }}"
+                                                class="w-10 h-10
+               rounded-xl
+               bg-gray-100 dark:bg-white/5
+               text-gray-500 dark:text-gray-300
+               flex items-center justify-center
+               hover:bg-brown-500 hover:text-white
+               hover:scale-110
+               transition-all"
+                                                title="مشاهده محصول"
+                                            >
+                                                <svg
+                                                    class="w-5 h-5 rtl:rotate-180"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M9 5l7 7-7 7"
+                                                    />
+                                                </svg>
+                                            </a>
+
+                                        </div>
 
                                     </div>
 
                                 </div>
 
-                            </div>
+                            @else
+
+                                {{-- ===================== Card Type 2 : Background ===================== --}}
+                                <div class="group relative h-full">
+                                    <div
+                                        class="relative h-full flex flex-col
+                                       rounded-[2rem]
+                                       overflow-hidden
+                                       border border-gray-100 dark:border-white/[0.08]
+                                       shadow-[0_20px_50px_rgba(0,0,0,0.06)] dark:shadow-none
+                                       bg-white dark:bg-[#0a0a0a]/40
+                                       transition-all duration-500
+                                       group-hover:-translate-y-2
+                                       group-hover:shadow-xl
+                                       group-hover:border-brown-400/40
+                                       dark:group-hover:shadow-[0_0_50px_rgba(120,80,60,0.15)]"
+                                    >
+                                        {{-- Image + Gradient --}}
+                                        <div class="relative w-full h-56 sm:h-60 shrink-0 overflow-hidden">
+
+                                            @if($row->image)
+                                                <a href="{{ route('product.show', $product->slug) }}">
+                                                    <img
+                                                        src="{{ asset('storage/' . $row->image->file_path) }}"
+                                                        class="absolute inset-0 w-full h-full object-cover
+                                               transition-transform duration-700
+                                               group-hover:scale-110"
+                                                        alt="{{ $product->title }}"
+                                                    >
+                                                </a>
+                                            @else
+                                                <div class="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-white/5 text-gray-300 dark:text-zinc-700">
+                                                    <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4-4 4 4 4-5 4 5M4 19h16M5 5h14a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z"/>
+                                                    </svg>
+                                                </div>
+                                            @endif
+
+                                            {{-- Gradient قهوه‌ای برای خوانایی عنوان روی تصویر، هماهنگ با دارک/لایت --}}
+                                            <div class="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-brown-900/95 via-brown-800/55 to-transparent dark:from-brown-950/95 dark:via-brown-900/55 pointer-events-none"></div>
+
+                                            {{-- Discount badge --}}
+                                            @if($row->discount_percent > 0)
+                                                <div class="absolute top-4 right-4 z-20 bg-secondary-500 dark:bg-[#ff1744] text-white text-[11px] font-black w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg border-2 border-white/80 dark:border-white/20">
+                                                    {{ $row->discount_percent }}٪
+                                                </div>
+                                            @endif
+
+                                            {{-- Actions --}}
+                                            <div class="absolute top-4 left-4 z-20 flex flex-col gap-2 opacity-0 group-hover:opacity-100 -translate-y-2 group-hover:translate-y-0 transition-all duration-500">
+
+                                                <div class="relative flex items-center group/tooltip">
+                                                    <a
+                                                        href="{{ route('product.show', $product->slug) }}"
+                                                        class="w-9 h-9 quick-view-btn bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-gray-900 dark:text-white rounded-xl flex items-center justify-center shadow-sm hover:bg-secondary-500 hover:text-white transition-all"
+                                                    >
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                        </svg>
+                                                    </a>
+                                                    <span class="absolute right-full mr-3 whitespace-nowrap bg-gray-900 dark:bg-zinc-800 text-white text-[10px] py-1.5 px-3 rounded-lg opacity-0 pointer-events-none translate-x-2 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-x-0 transition-all duration-300 border border-white/5">
+                                                        مشاهده سریع
+                                                    </span>
+                                                </div>
+
+                                                <div class="relative flex items-center group/tooltip">
+                                                    <button
+                                                        type="button"
+                                                        wire:click="toggleFavorite({{ $product->id }})"
+                                                        class="w-9 h-9 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm transition-all {{ $row->is_favorited ? 'text-red-500' : 'text-gray-900 dark:text-white hover:text-red-500' }}"
+                                                    >
+                                                        <svg class="w-4 h-4" fill="{{ $row->is_favorited ? 'currentColor' : 'none' }}" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                                        </svg>
+                                                    </button>
+                                                    <span class="absolute right-full mr-3 whitespace-nowrap bg-gray-900 dark:bg-zinc-800 text-white text-[10px] py-1.5 px-3 rounded-lg opacity-0 pointer-events-none translate-x-2 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-x-0 transition-all duration-300 border border-white/5">
+                                                        {{ $row->is_favorited ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {{-- Title روی گرادینت --}}
+                                            <div class="absolute inset-x-0 bottom-0 p-4 z-10">
+                                                <a href="{{ route('products.show', $product->slug) }}">
+                                                    <h3 class="text-sm font-black text-white mb-0 line-clamp-2 leading-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
+                                                        {{ $product->title }}
+                                                    </h3>
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                        {{-- Price --}}
+                                        <div class="p-5 mt-auto flex items-center justify-between border-t border-gray-100 dark:border-white/5">
+                                            <div class="flex flex-col gap-1">
+                                                @if($row->discount_percent > 0)
+                                                    <span class="text-[11px] text-gray-400 dark:text-zinc-500 line-through tabular-nums leading-none">
+                                                        {{ number_format($row->compare_price && $row->compare_price > $row->final_price ? $row->compare_price : $row->price) }}
+                                                    </span>
+                                                @endif
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xl font-black text-gray-900 dark:text-white tracking-tighter tabular-nums">{{ number_format($row->final_price) }}</span>
+                                                    <span class="text-[10px] text-gray-400 dark:text-zinc-500 font-bold">تومان</span>
+                                                </div>
+                                            </div>
+
+                                            <a
+                                                href="{{ route('products.show', $variant->product->slug) }}"
+                                                class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-300 flex items-center justify-center hover:bg-brown-500 hover:text-white hover:scale-110 transition-all"
+                                                title="مشاهده محصول"
+                                            >
+                                                <svg class="w-5 h-5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            @endif
 
                         @empty
 

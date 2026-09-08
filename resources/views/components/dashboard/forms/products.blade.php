@@ -69,6 +69,25 @@
     <div class="col-md-3">
 
         <label class="form-label">
+            تعداد نمایش
+        </label>
+
+        <select
+            wire:model="formData.pictureMode"
+            class="form-select">
+
+            <option value="background">
+                تصاویر با بکگراند
+            </option>
+            <option value="transparent">
+                بدون بکگراند
+            </option>
+        </select>
+
+    </div>
+    <div class="col-md-3">
+
+        <label class="form-label">
             نوع نمایش
         </label>
 

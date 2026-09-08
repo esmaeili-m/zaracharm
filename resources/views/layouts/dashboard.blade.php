@@ -740,321 +740,585 @@
         <div class="main-sidebar" id="sidebar-scroll">
             <!-- Start::nav -->
             <nav class="main-menu-container nav nav-pills flex-column sub-open">
+
+                {{-- Sidebar Left --}}
                 <div class="slide-left" id="slide-left">
-                    <svg fill="#7b8191" height="24" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M13.293 6.293 7.586 12l5.707 5.707 1.414-1.414L10.414 12l4.293-4.293z"></path>
+                    <svg fill="#7b8191"
+                         height="24"
+                         viewBox="0 0 24 24"
+                         width="24"
+                         xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13.293 6.293 7.586 12l5.707 5.707 1.414-1.414L10.414 12l4.293-4.293z"/>
                     </svg>
                 </div>
 
                 <ul class="main-menu">
+
+                    {{-- ========================================================= --}}
+                    {{-- داشبورد --}}
+                    {{-- ========================================================= --}}
+
                     <li class="slide">
                         <a class="side-menu__item {{ request()->routeIs('dashboard.*') ? 'active' : '' }}"
                            href="{{ route('dashboard') }}">
-                            <i class="ri-server-line side-menu__icon"></i>
-                            <span class="side-menu__label">داشبورد</span>
+
+                            <i class="ri-dashboard-3-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        داشبورد
+                    </span>
+
                         </a>
-                    </li>
-                    {{-- ==================== اصلی ==================== --}}
-                    <li class="slide__category">
-                        <span class="category-name">اصلی</span>
                     </li>
 
+
+                    {{-- ========================================================= --}}
                     {{-- کاربران --}}
+                    {{-- ========================================================= --}}
+
+                    <li class="slide__category">
+                <span class="category-name">
+                    کاربران
+                </span>
+                    </li>
+
                     <li class="slide has-sub {{ request()->routeIs('users.*') || request()->routeIs('roles.*') ? 'open active' : '' }}">
+
                         <a class="side-menu__item" href="javascript:void(0);">
+
                             <i class="ri-team-line side-menu__icon"></i>
-                            <span class="side-menu__label">کاربران</span>
+
+                            <span class="side-menu__label">
+                        مدیریت کاربران
+                    </span>
+
                             <i class="ri-arrow-down-s-line side-menu__angle"></i>
+
                         </a>
+
                         <ul class="slide-menu child1">
+
                             <li class="slide side-menu__label1">
-                                <a href="javascript:void(0)">کاربران</a>
+                                <a href="javascript:void(0)">
+                                    مدیریت کاربران
+                                </a>
                             </li>
+
+                            {{-- کاربران --}}
                             <li class="slide">
+
                                 <a class="side-menu__item {{ request()->routeIs('users.*') ? 'active' : '' }}"
                                    href="{{ route('users.index') }}">
-                                    <i class="ri-user-line side-menu__icon"></i>
-                                    لیست کاربران
+
+                                    <i class="ri-user-3-line side-menu__icon"></i>
+
+                                    <span>
+                                کاربران
+                            </span>
+
                                 </a>
+
                             </li>
+
+                            {{-- نقش ها --}}
                             <li class="slide">
+
                                 <a class="side-menu__item {{ request()->routeIs('roles.*') ? 'active' : '' }}"
                                    href="{{ route('roles.index') }}">
+
                                     <i class="ri-shield-user-line side-menu__icon"></i>
-                                    لیست نقش‌ها
+
+                                    <span>
+                                نقش‌ها
+                            </span>
+
                                 </a>
+
                             </li>
+
                         </ul>
+
                     </li>
 
 
-                    {{-- ==================== محتوا ==================== --}}
+                    {{-- ========================================================= --}}
+                    {{-- محتوا --}}
+                    {{-- ========================================================= --}}
+
                     <li class="slide__category">
-                        <span class="category-name">محتوا</span>
+                <span class="category-name">
+                    محتوا
+                </span>
                     </li>
 
-                    {{-- صفحات و سکشن‌ها --}}
-                    <li class="slide has-sub {{ request()->routeIs('pages.*') || request()->routeIs('sections.*') ? 'open active' : '' }}">
-                        <a class="side-menu__item" href="javascript:void(0);">
-                            <i class="ri-layout-2-line side-menu__icon"></i>
-                            <span class="side-menu__label">صفحات و بخش‌ها</span>
-                            <i class="ri-arrow-down-s-line side-menu__angle"></i>
+
+                    {{-- صفحات --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('pages.*') ? 'active' : '' }}"
+                           href="{{ route('pages.index') }}">
+
+                            <i class="ri-pages-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        صفحات
+                    </span>
+
                         </a>
-                        <ul class="slide-menu child1">
-                            <li class="slide side-menu__label1">
-                                <a href="javascript:void(0)">صفحات و بخش‌ها</a>
-                            </li>
-                            <li class="slide">
-                                <a class="side-menu__item {{ request()->routeIs('pages.*') ? 'active' : '' }}"
-                                   href="{{ route('pages.index') }}">
-                                    <i class="ri-pages-line side-menu__icon"></i>
-                                    صفحات
-                                </a>
-                            </li>
-                        </ul>
+
                     </li>
+
 
                     {{-- مقالات --}}
                     <li class="slide">
+
                         <a class="side-menu__item {{ request()->routeIs('articles.*') ? 'active' : '' }}"
                            href="{{ route('articles.index') }}">
+
                             <i class="ri-article-line side-menu__icon"></i>
-                            <span class="side-menu__label">مقالات</span>
-                        </a>
-                    </li>
 
-                    {{-- گالری --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('galleries.*') ? 'active' : '' }}"
-                           href="{{ route('galleries.index') }}">
-                            <i class="ri-image-2-line side-menu__icon"></i>
-                            <span class="side-menu__label">گالری</span>
+                            <span class="side-menu__label">
+                        مقالات
+                    </span>
+
                         </a>
-                    </li>
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('storage.*') ? 'active' : '' }}"
-                           href="{{ route('storage.index') }}">
-                            <i class="ri-server-line side-menu__icon"></i>
-                            <span class="side-menu__label">فضای ابری</span>
-                        </a>
+
                     </li>
 
 
-                    {{-- ==================== آموزش و خدمات ==================== --}}
-                    <li class="slide__category">
-                        <span class="category-name">محصولات</span>
-                    </li>
-
-                    {{-- محصولات --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('products.*') ? 'active' : '' }}"
-                           href="{{ route('products.index') }}">
-                            <i class="ri-book-open-line side-menu__icon"></i>
-                            <span class="side-menu__label">محصولات</span>
-                        </a>
-                    </li>
                     {{-- استوری --}}
                     <li class="slide">
+
                         <a class="side-menu__item {{ request()->routeIs('stories.*') ? 'active' : '' }}"
                            href="{{ route('stories.index') }}">
-                            <i class="ri-book-open-line side-menu__icon"></i>
-                            <span class="side-menu__label">استوری</span>
-                        </a>
-                    </li>
 
-                    {{-- برندها --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('brands.*') ? 'active' : '' }}"
-                           href="{{ route('brands.index') }}">
-                            <i class="ri-book-open-line side-menu__icon"></i>
-                            <span class="side-menu__label">برندها</span>
-                        </a>
-                    </li>
+                            <i class="ri-instagram-line side-menu__icon"></i>
 
-                    {{-- ویژگی ها --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('options.*') ? 'active' : '' }}"
-                           href="{{ route('options.index') }}">
-                            <i class="ri-book-open-line side-menu__icon"></i>
-                            <span class="side-menu__label">ویژگی ها</span>
-                        </a>
-                    </li>
-                    {{-- مشخصات فنی --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('specifications.*') ? 'active' : '' }}"
-                           href="{{ route('specifications.index') }}">
-                            <i class="ri-book-open-line side-menu__icon"></i>
-                            <span class="side-menu__label">مشخصات فنی</span>
-                        </a>
-                    </li>
-                    {{-- انبار --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('inventories.*') ? 'active' : '' }}"
-                           href="{{ route('inventories.index') }}">
-                            <i class="ri-book-open-line side-menu__icon"></i>
-                            <span class="side-menu__label">انبارداری</span>
-                        </a>
-                    </li>
-                    {{-- دتخفیف ها --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('discounts.*') ? 'active' : '' }}"
-                           href="{{ route('discounts.index') }}">
-                            <i class="ri-book-open-line side-menu__icon"></i>
-                            <span class="side-menu__label">تخفیف ها</span>
-                        </a>
-                    </li>
+                            <span class="side-menu__label">
+                        استوری‌ها
+                    </span>
 
-                    {{--کوپن دتخفیف --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('coupons.*') ? 'active' : '' }}"
-                           href="{{ route('coupons.index') }}">
-                            <i class="ri-book-open-line side-menu__icon"></i>
-                            <span class="side-menu__label">کوپن تخفیف</span>
                         </a>
-                    </li>
 
-                    {{--اسلایدر --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('sliders.*') ? 'active' : '' }}"
-                           href="{{ route('sliders.index') }}">
-                            <i class="ri-book-open-line side-menu__icon"></i>
-                            <span class="side-menu__label">اسلایدر</span>
-                        </a>
-                    </li>
-
-                    {{--کمپین --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('campaign.*') ? 'active' : '' }}"
-                           href="{{ route('campaign.index') }}">
-                            <i class="ri-book-open-line side-menu__icon"></i>
-                            <span class="side-menu__label">کمپین ها</span>
-                        </a>
                     </li>
 
 
-                    {{-- ==================== سازمان‌دهی ==================== --}}
-                    <li class="slide__category">
-                        <span class="category-name">سازمان‌دهی</span>
-                    </li>
-
-                    {{-- دسته‌بندی‌ها --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('categories.*') ? 'active' : '' }}"
-                           href="{{ route('categories.index') }}">
-                            <i class="ri-folder-2-line side-menu__icon"></i>
-                            <span class="side-menu__label">دسته‌بندی‌ها</span>
-                        </a>
-                    </li>
-
-                    {{-- تگ‌ها --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('tags.*') ? 'active' : '' }}"
-                           href="{{ route('tags.index') }}">
-                            <i class="ri-price-tag-3-line side-menu__icon"></i>
-                            <span class="side-menu__label">تگ‌ها</span>
-                        </a>
-                    </li>
-
-                    {{-- منوها --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('menus.*') ? 'active' : '' }}"
-                           href="{{ route('menus.index') }}">
-                            <i class="ri-menu-2-line side-menu__icon"></i>
-                            <span class="side-menu__label">منوها</span>
-                        </a>
-                    </li>
+                    {{-- گالری --}}
 
 
-                    {{-- ==================== ارتباطات ==================== --}}
-                    <li class="slide__category">
-                        <span class="category-name">ارتباطات</span>
-                    </li>
-
-                    {{-- پیام‌ها --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('messages.*') ? 'active' : '' }}"
-                           href="{{ route('messages.index') }}">
-                            <i class="ri-message-3-line side-menu__icon"></i>
-                            <span class="side-menu__label">پیام‌ها</span>
-                        </a>
-                    </li>
-
-                    {{-- کامنت‌ها --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('comments.*') ? 'active' : '' }}"
-                           href="{{ route('comments.index') }}">
-                            <i class="ri-chat-3-line side-menu__icon"></i>
-                            <span class="side-menu__label">کامنت‌ها</span>
-                        </a>
-                    </li>
-
-                    {{-- تیکت‌ها / پشتیبانی --}}
-                    <li class="slide">
-                        <a class="side-menu__item {{ request()->routeIs('tickets.*') ? 'active' : '' }}"
-                           href="{{ route('tickets.index') }}">
-                            <i class="ri-headphone-line side-menu__icon"></i>
-                            <span class="side-menu__label">تیکت‌ها / پشتیبانی</span>
-                        </a>
-                    </li>
 
                     {{-- سوالات متداول --}}
                     <li class="slide">
+
                         <a class="side-menu__item {{ request()->routeIs('faq.*') ? 'active' : '' }}"
                            href="{{ route('faq.index') }}">
+
                             <i class="ri-question-answer-line side-menu__icon"></i>
-                            <span class="side-menu__label">سوالات متداول</span>
+
+                            <span class="side-menu__label">
+                        سوالات متداول
+                    </span>
+
                         </a>
+
                     </li>
 
 
-                    {{-- ==================== مالی و سئو ==================== --}}
+                    {{-- منوهای سایت --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('menus.*') ? 'active' : '' }}"
+                           href="{{ route('menus.index') }}">
+
+                            <i class="ri-menu-2-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        منوهای سایت
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- ========================================================= --}}
+                    {{-- فروشگاه --}}
+                    {{-- ========================================================= --}}
+
                     <li class="slide__category">
-                        <span class="category-name">مالی و سئو</span>
+                <span class="category-name">
+                    فروشگاه
+                </span>
                     </li>
+
+
+                    {{-- محصولات --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('products.*') ? 'active' : '' }}"
+                           href="{{ route('products.index') }}">
+
+                            <i class="ri-shopping-bag-3-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        محصولات
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- دسته بندی --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('categories.*') ? 'active' : '' }}"
+                           href="{{ route('categories.index') }}">
+
+                            <i class="ri-folder-3-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        دسته‌بندی‌ها
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- برندها --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('brands.*') ? 'active' : '' }}"
+                           href="{{ route('brands.index') }}">
+
+                            <i class="ri-price-tag-3-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        برندها
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- ویژگی ها --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('options.*') ? 'active' : '' }}"
+                           href="{{ route('options.index') }}">
+
+                            <i class="ri-list-settings-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        ویژگی‌ها
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- مشخصات فنی --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('specifications.*') ? 'active' : '' }}"
+                           href="{{ route('specifications.index') }}">
+
+                            <i class="ri-file-list-3-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        مشخصات فنی
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- انبار --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('inventories.*') ? 'active' : '' }}"
+                           href="{{ route('inventories.index') }}">
+
+                            <i class="ri-archive-stack-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        انبارداری
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- ========================================================= --}}
+                    {{-- بازاریابی --}}
+                    {{-- ========================================================= --}}
+
+                    <li class="slide__category">
+                <span class="category-name">
+                    بازاریابی
+                </span>
+                    </li>
+
+
+                    {{-- تخفیف ها --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('discounts.*') ? 'active' : '' }}"
+                           href="{{ route('discounts.index') }}">
+
+                            <i class="ri-discount-percent-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        تخفیف‌ها
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- کوپن --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('coupons.*') ? 'active' : '' }}"
+                           href="{{ route('coupons.index') }}">
+
+                            <i class="ri-coupon-3-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        کوپن‌های تخفیف
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- کمپین --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('campaign.*') ? 'active' : '' }}"
+                           href="{{ route('campaign.index') }}">
+
+                            <i class="ri-megaphone-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        کمپین‌ها
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- اسلایدر --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('sliders.*') ? 'active' : '' }}"
+                           href="{{ route('sliders.index') }}">
+
+                            <i class="ri-slideshow-3-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        اسلایدرها
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- ========================================================= --}}
+                    {{-- ارتباطات --}}
+                    {{-- ========================================================= --}}
+
+                    <li class="slide__category">
+                <span class="category-name">
+                    ارتباطات
+                </span>
+                    </li>
+
+
+                    {{-- پیام ها --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('messages.*') ? 'active' : '' }}"
+                           href="{{ route('messages.index') }}">
+
+                            <i class="ri-mail-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        پیام‌ها
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- دیدگاه ها --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('comments.*') ? 'active' : '' }}"
+                           href="{{ route('comments.index') }}">
+
+                            <i class="ri-chat-3-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        دیدگاه‌ها
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- تیکت --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('tickets.*') ? 'active' : '' }}"
+                           href="{{ route('tickets.index') }}">
+
+                            <i class="ri-customer-service-2-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        تیکت‌ها و پشتیبانی
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- ========================================================= --}}
+                    {{-- مالی --}}
+                    {{-- ========================================================= --}}
+
+                    <li class="slide__category">
+                <span class="category-name">
+                    مالی
+                </span>
+                    </li>
+
 
                     {{-- فاکتورها --}}
                     <li class="slide">
+
                         <a class="side-menu__item {{ request()->routeIs('invoices.*') ? 'active' : '' }}"
                            href="{{ route('invoices.index') }}">
-                            <i class="ri-receipt-line side-menu__icon"></i>
-                            <span class="side-menu__label">فاکتورها</span>
+
+                            <i class="ri-bill-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        فاکتورها
+                    </span>
+
                         </a>
+
                     </li>
+
+
+                    {{-- ========================================================= --}}
+                    {{-- سئو --}}
+                    {{-- ========================================================= --}}
+
+                    <li class="slide__category">
+                <span class="category-name">
+                    سئو
+                </span>
+                    </li>
+
 
                     {{-- مدیریت سئو --}}
                     <li class="slide">
+
                         <a class="side-menu__item {{ request()->routeIs('seo.*') ? 'active' : '' }}"
                            href="{{ route('seo.index') }}">
-                            <i class="ri-line-chart-line side-menu__icon"></i>
-                            <span class="side-menu__label">مدیریت سئو</span>
+
+                            <i class="ri-seo-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        مدیریت سئو
+                    </span>
+
                         </a>
+
                     </li>
 
 
-                    {{-- ==================== تنظیمات (آخر) ==================== --}}
+                    {{-- تگ ها --}}
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('tags.*') ? 'active' : '' }}"
+                           href="{{ route('tags.index') }}">
+
+                            <i class="ri-price-tag-2-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        تگ‌ها
+                    </span>
+
+                        </a>
+
+                    </li>
+
+
+                    {{-- ========================================================= --}}
+                    {{-- سیستم --}}
+                    {{-- ========================================================= --}}
+
                     <li class="slide__category">
-                        <span class="category-name">سیستم</span>
+                <span class="category-name">
+                    سیستم
+                </span>
                     </li>
+
+
+
+
 
                     {{-- تنظیمات --}}
                     <li class="slide">
+
                         <a class="side-menu__item {{ request()->routeIs('settings.*') ? 'active' : '' }}"
                            href="{{ route('settings.index') }}">
+
                             <i class="ri-settings-3-line side-menu__icon"></i>
-                            <span class="side-menu__label">تنظیمات</span>
+
+                            <span class="side-menu__label">
+                        تنظیمات
+                    </span>
+
                         </a>
+
                     </li>
 
                 </ul>
 
+
+                {{-- Sidebar Right --}}
                 <div class="slide-right" id="slide-right">
-                    <svg fill="#7b8191" height="24" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M10.707 17.707 16.414 12l-5.707-5.707-1.414 1.414L13.586 12l-4.293 4.293z"></path>
+
+                    <svg fill="#7b8191"
+                         height="24"
+                         viewBox="0 0 24 24"
+                         width="24"
+                         xmlns="http://www.w3.org/2000/svg">
+
+                        <path d="M10.707 17.707 16.414 12l-5.707-5.707-1.414 1.414L13.586 12l-4.293 4.293z"/>
+
                     </svg>
+
                 </div>
-            </nav>            <!-- End::nav -->
-        </div>
-        <!-- End::main-sidebar -->
+
+            </nav>
+            <!-- End::nav -->
+        </div>        <!-- End::main-sidebar -->
     </aside>
 
 

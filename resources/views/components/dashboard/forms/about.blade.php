@@ -7,7 +7,7 @@
 
         {{-- اینجا کامپوننت انتخاب تصویر خودت --}}
         <input
-            type="text"
+            type="file"
             wire:model="formData.images.image_1"
             class="form-control"
         >
