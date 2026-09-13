@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Transaction;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 class Order extends Model
 {
 
@@ -30,12 +32,22 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
-
+    public function address(): BelongsTo
+    {
+        return $this->belongsTo(Address::class);
+    }
     public function coupon()
     {
         return $this->belongsTo(Coupon::class);
     }
-
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+    public function shippingSlot(): BelongsTo
+    {
+        return $this->belongsTo(ShippingSlot::class);
+    }
     public function payment()
     {
         return $this->hasOne(Payment::class);

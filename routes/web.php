@@ -62,8 +62,10 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/comments', 'pages::dashboard.comments.index')->name('comments.index');
     Route::livewire('/services/trash', 'pages::dashboard.services.trash')->name('services.trash');
 
-    Route::livewire('/courses', 'pages::dashboard.courses.index')->name('courses.index');
-    Route::livewire('/courses/trash', 'pages::dashboard.courses.trash')->name('courses.trash');
+    Route::livewire('/courses', 'pages::dashboard.courses.index')->name('orders.index');
+    Route::livewire('/invoices', 'pages::dashboard.invoices.index')->name('invoices.index');
+    Route::livewire('/orders/trash', 'pages::dashboard.courses.trash')->name('orders.show');
+    Route::livewire('/tickets/trash', 'pages::dashboard.courses.trash')->name('tickets.show');
 
     Route::livewire('/products', 'pages::dashboard.products.index')->name('products.index');
     Route::livewire('/products/{product}/settings', 'pages::dashboard.products.settings')->name('products.settings');

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InventoryItem extends Model
 {
@@ -35,6 +36,10 @@ class InventoryItem extends Model
         return $this->belongsTo(ProductVariant::class,'product_variant_id');
     }
 
+    public function productVariant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
     public function getAvailableQuantityAttribute(): int
     {
         return $this->quantity - $this->reserved_quantity;

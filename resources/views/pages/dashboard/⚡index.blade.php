@@ -1,565 +1,511 @@
-<?php
+<?php // resources/views/components/admin/⚡dashboard.blade.php
+// نکته: نام فایل واقعی باید با ایموجی ⚡ شروع شود: admin/⚡dashboard.blade.php
+// در این خروجی به دلیل محدودیت نام‌گذاری، بدون ⚡ ذخیره شده — قبل از استفاده rename کنید.
 
-use App\Models\User;
-use App\Models\Course;
-use App\Models\Invoice;
-use App\Models\Transaction;
-use App\Models\Rating;
-use App\Models\Ticket;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-new class extends \Livewire\Component
-{
-    public $totalUsers;
-    public $totalCourses;
-    public $totalRevenue;
-    public $totalInvoices;
-    public $pendingTickets;
-    public $newUsersThisMonth;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\User;
+use App\Models\Product;
+use App\Models\InventoryItem;
+use App\Models\Ticket;
+use App\Models\Wallet;
+use App\Models\Comment;
+use App\Models\Payment;
 
-    // داده‌های نمودارها (JSON)
-    public $monthlyRevenueJson;
-    public $courseSalesJson;
-    public $newUsersJson;
-    public $courseShareJson;
+new #[Layout('layouts.dashboard')] class extends Component {
 
-    // جداول
-    public $topCourses;
-    public $recentInvoices;
-    public $recentRatings;
+    // بازه نمودار فروش (روز)
+    public string $period = '30';
 
-    #[\Livewire\Attributes\Layout('layouts.dashboard')]
-    public function mount()
+    /**
+     * کارت‌های آماری اصلی
+     */
+    #[Computed]
+    public function stats(): array
     {
-        $this->loadStats();
-        $this->loadCharts();
-        $this->loadTables();
+        $today = Carbon::today();
+        $startOfMonth = Carbon::now()->startOfMonth();
+
+        return [
+            'revenue_today'    => (int) Order::where('payment_status', 'paid')->whereDate('created_at', $today)->sum('total_amount'),
+            'revenue_month'    => (int) Order::where('payment_status', 'paid')->where('created_at', '>=', $startOfMonth)->sum('total_amount'),
+            'orders_total'     => Order::count(),
+            'orders_today'     => Order::whereDate('created_at', $today)->count(),
+            'orders_pending'   => Order::where('status', 'pending')->count(),
+            'orders_processing'=> Order::where('status', 'processing')->count(),
+            'users_total'      => User::count(),
+            'users_today'      => User::whereDate('created_at', $today)->count(),
+            'products_total'   => Product::where('status', 1)->whereNull('deleted_at')->count(),
+            'low_stock'        => InventoryItem::whereColumn('quantity', '<=', 'minimum_quantity')->count(),
+            'tickets_open'     => Ticket::whereIn('status', ['open', 'answered'])->count(),
+            'payments_pending' => Payment::where('status', 'pending')->count(),
+            'wallets_balance'  => (int) Wallet::sum('balance'),
+            'comments_pending' => Comment::where('is_approved', 0)->whereNull('deleted_at')->count(),
+        ];
     }
 
-    private function loadStats()
+    /**
+     * تعداد سفارش‌ها به تفکیک وضعیت (برای نمودار دونات)
+     */
+    #[Computed]
+    public function ordersByStatus()
     {
-        $this->totalUsers = User::whereNull('deleted_at')->count();
-
-        $this->totalCourses = Course::where('status', 1)->whereNull('deleted_at')->count();
-
-        $this->totalRevenue = Invoice::where('status', 'paid')->sum('total_amount');
-
-        $this->totalInvoices = Invoice::where('status', 'paid')->count();
-
-        $this->pendingTickets = Ticket::where('status', 'open')->count();
-
-        $this->newUsersThisMonth = User::whereNull('deleted_at')
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->count();
+        return Order::select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
     }
 
-    private function loadCharts()
+    /**
+     * داده نمودار فروش N روز اخیر
+     */
+    #[Computed]
+    public function salesChart(): array
     {
-        // نمودار درآمد ماهانه ۶ ماه اخیر
-        $monthly = Invoice::where('status', 'paid')
-            ->where('created_at', '>=', now()->subMonths(6))
-            ->selectRaw('MONTH(created_at) as month, YEAR(created_at) as year, SUM(total_amount) as total')
-            ->groupByRaw('YEAR(created_at), MONTH(created_at)')
-            ->orderByRaw('YEAR(created_at), MONTH(created_at)')
-            ->get();
+        $days  = max(7, min(90, (int) $this->period));
+        $start = Carbon::today()->subDays($days - 1);
 
-        $monthNames = ['', 'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
-            'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+        $rows = Order::where('payment_status', 'paid')
+            ->where('created_at', '>=', $start)
+            ->selectRaw('DATE(created_at) as d, SUM(total_amount) as total')
+            ->groupBy('d')
+            ->pluck('total', 'd');
 
-        $this->monthlyRevenueJson = json_encode([
-            'labels' => $monthly->pluck('month')->map(fn($m) => $monthNames[$m] ?? $m)->toArray(),
-            'data'   => $monthly->pluck('total')->toArray(),
-        ]);
+        $labels = [];
+        $values = [];
 
-        // نمودار فروش هر دوره (top 6)
-        $courseSales = DB::table('invoice_items')
-            ->join('courses', 'invoice_items.course_id', '=', 'courses.id')
-            ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
-            ->where('invoices.status', 'paid')
-            ->selectRaw('courses.title, COUNT(*) as sales_count, SUM(invoice_items.price) as total')
-            ->groupBy('courses.id', 'courses.title')
-            ->orderByDesc('sales_count')
-            ->limit(6)
-            ->get();
+        for ($i = 0; $i < $days; $i++) {
+            $date     = $start->copy()->addDays($i)->format('Y-m-d');
+            $labels[] = Carbon::parse($date)->translatedFormat('d M');
+            $values[] = (int) ($rows[$date] ?? 0);
+        }
 
-        $this->courseSalesJson = json_encode([
-            'labels' => $courseSales->pluck('title')->toArray(),
-            'data'   => $courseSales->pluck('sales_count')->toArray(),
-        ]);
-
-        // نمودار کاربران جدید ۶ ماه اخیر
-        $newUsers = User::whereNull('deleted_at')
-            ->where('created_at', '>=', now()->subMonths(6))
-            ->selectRaw('MONTH(created_at) as month, COUNT(*) as total')
-            ->groupByRaw('MONTH(created_at)')
-            ->orderByRaw('MONTH(created_at)')
-            ->get();
-
-        $this->newUsersJson = json_encode([
-            'labels' => $newUsers->pluck('month')->map(fn($m) => $monthNames[$m] ?? $m)->toArray(),
-            'data'   => $newUsers->pluck('total')->toArray(),
-        ]);
-
-        // نمودار دونات سهم هر دوره از درآمد
-        $courseShare = DB::table('invoice_items')
-            ->join('courses', 'invoice_items.course_id', '=', 'courses.id')
-            ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
-            ->where('invoices.status', 'paid')
-            ->selectRaw('courses.title, SUM(invoice_items.price) as total')
-            ->groupBy('courses.id', 'courses.title')
-            ->orderByDesc('total')
-            ->limit(5)
-            ->get();
-
-        $this->courseShareJson = json_encode([
-            'labels' => $courseShare->pluck('title')->toArray(),
-            'data'   => $courseShare->pluck('total')->toArray(),
-        ]);
+        return ['labels' => $labels, 'values' => $values];
     }
 
-    private function loadTables()
+    #[Computed]
+    public function recentOrders()
     {
-        // پرفروش‌ترین دوره‌ها
-        $this->topCourses = DB::table('courses')
-            ->leftJoin('invoice_items', 'invoice_items.course_id', '=', 'courses.id')
-            ->leftJoin('invoices', function ($join) {
-                $join->on('invoices.id', '=', 'invoice_items.invoice_id')
-                    ->where('invoices.status', 'paid');
-            })
-            ->leftJoin('ratings', function ($join) {
-                $join->on('ratings.rateable_id', '=', 'courses.id')
-                    ->where('ratings.rateable_type', 'App\\Models\\Course');
-            })
-            ->where('courses.status', 1)
-            ->whereNull('courses.deleted_at')
-            ->selectRaw('
-        courses.id,
-        courses.title,
-        courses.price,
-        courses.discount_price,
-        COUNT(DISTINCT invoices.id) as sales_count,
-        COALESCE(SUM(invoice_items.price),0) as total_revenue,
-        ROUND(AVG(ratings.rating),1) as avg_rating,
-        COUNT(DISTINCT ratings.id) as ratings_count
-    ')
-            ->groupBy(
-                'courses.id',
-                'courses.title',
-                'courses.price',
-                'courses.discount_price'
-            )
-            ->orderByDesc('sales_count')
-            ->limit(5)
-            ->get();
-
-        // آخرین فاکتورها
-        $this->recentInvoices = Invoice::with('user')
+        return Order::with('user:id,first_name,last_name,mobile')
             ->latest()
-            ->limit(6)
+            ->take(8)
             ->get();
+    }
 
-        // آخرین نظرات
-        $this->recentRatings = Rating::with(['user'])
-            ->where('rateable_type', 'App\\Models\\Course')
-            ->latest()
-            ->limit(5)
+    #[Computed]
+    public function topProducts()
+    {
+        return OrderItem::select('product_name', DB::raw('SUM(quantity) as qty'), DB::raw('SUM(total_price) as revenue'))
+            ->groupBy('product_name')
+            ->orderByDesc('qty')
+            ->take(5)
             ->get();
+    }
+
+    #[Computed]
+    public function recentTickets()
+    {
+        return Ticket::with('user:id,first_name,last_name')
+            ->whereIn('status', ['open', 'answered'])
+            ->orderByDesc('last_reply_at')
+            ->take(5)
+            ->get();
+    }
+
+    #[Computed]
+    public function lowStockItems()
+    {
+        return InventoryItem::with('productVariant.product:id,title')
+            ->whereColumn('quantity', '<=', 'minimum_quantity')
+            ->orderBy('quantity')
+            ->take(5)
+            ->get();
+    }
+
+    /**
+     * وقتی بازه نمودار فروش تغییر کند، داده جدید را برای Alpine/Chart.js ارسال می‌کنیم
+     * بدون رفرش کل کامپوننت (چون کانتینر نمودار wire:ignore دارد)
+     */
+    public function updatedPeriod(): void
+    {
+        $this->dispatch('sales-chart-updated', chart: $this->salesChart);
+    }
+
+    public function orderStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'pending'    => 'در انتظار',
+            'processing' => 'در حال پردازش',
+            'shipped'    => 'ارسال شده',
+            'completed'  => 'تکمیل شده',
+            'cancelled'  => 'لغو شده',
+            default      => $status,
+        };
+    }
+
+    public function orderStatusBadge(string $status): string
+    {
+        return match ($status) {
+            'pending'    => 'text-bg-warning-subtle text-warning-emphasis',
+            'processing' => 'text-bg-info-subtle text-info-emphasis',
+            'shipped'    => 'text-bg-primary-subtle text-primary-emphasis',
+            'completed'  => 'text-bg-success-subtle text-success-emphasis',
+            'cancelled'  => 'text-bg-danger-subtle text-danger-emphasis',
+            default      => 'text-bg-secondary-subtle text-secondary-emphasis',
+        };
+    }
+
+    public function paymentStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'unpaid'   => 'پرداخت‌نشده',
+            'pending'  => 'در انتظار پرداخت',
+            'paid'     => 'پرداخت‌شده',
+            'failed'   => 'ناموفق',
+            'refunded' => 'بازگشت وجه',
+            default    => $status,
+        };
     }
 };
 ?>
 
-<div>
-    <div>
-        <div class="main-content app-content">
-            <div class="container-fluid">
-                <div class="col-xxl-12">
-                    <div class="row">
+<div dir="rtl" x-data>
 
-                        {{-- ========== کارت‌های آمار ========== --}}
+    {{-- هدر --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+        <div>
+            <h1 class="h4 fw-bold text-dark mb-1">داشبورد مدیریت</h1>
+            <p class="text-muted small mb-0">{{ now()->translatedFormat('l، d F Y') }}</p>
+        </div>
 
-                        <div class="col-xxl-3 col-md-6">
-                            <div class="card custom-card overflow-hidden main-custom-card">
-                                <div class="card-body">
-                                    <div class="d-flex gap-3">
-                                        <div class="avatar avatar-md primary">
-                                            <i class="ti ti-shopping-cart fs-22 text-white"></i>
-                                        </div>
-                                        <div class="flex-fill">
-                                            <div class="fw-medium fs-13 mb-1">تعداد فروش دوره‌ها</div>
-                                            <div class="fs-22 fw-semibold mb-1">{{ number_format($totalInvoices) }}</div>
-                                            <div class="d-flex align-items-center fs-12">
-                            <span class="text-primary fw-semibold me-1">
-                                <i class="ti ti-trending-up me-1"></i>فاکتورهای پرداخت شده
-                            </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        @if($this->stats['low_stock'] > 0 || $this->stats['tickets_open'] > 0)
+            <div class="d-flex flex-wrap gap-2">
+                @if($this->stats['low_stock'] > 0)
+                    <span class="badge rounded-pill text-bg-danger-subtle text-danger-emphasis fw-normal px-3 py-2">
+                        <i class="bi bi-exclamation-triangle ms-1"></i>
+                        {{ $this->stats['low_stock'] }} کالا با موجودی کم
+                    </span>
+                @endif
+                @if($this->stats['tickets_open'] > 0)
+                    <span class="badge rounded-pill text-bg-info-subtle text-info-emphasis fw-normal px-3 py-2">
+                        <i class="bi bi-headset ms-1"></i>
+                        {{ $this->stats['tickets_open'] }} تیکت باز
+                    </span>
+                @endif
+            </div>
+        @endif
+    </div>
 
-                        <div class="col-xxl-3 col-md-6">
-                            <div class="card custom-card overflow-hidden main-custom-card">
-                                <div class="card-body">
-                                    <div class="d-flex gap-3">
-                                        <div class="avatar avatar-md secondary">
-                                            <i class="ti ti-currency-dollar fs-22 text-white"></i>
-                                        </div>
-                                        <div class="flex-fill">
-                                            <div class="fw-medium fs-13 mb-1">درآمد کل</div>
-                                            <div class="fs-22 fw-semibold mb-1">{{ number_format($totalRevenue) }} <small class="fs-12 fw-normal">تومان</small></div>
-                                            <div class="fs-12 text-muted">مجموع فاکتورهای پرداخت شده</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+    {{-- کارت‌های آماری --}}
+    <div class="row g-3 mb-4">
 
-                        <div class="col-xxl-3 col-md-6">
-                            <div class="card custom-card overflow-hidden main-custom-card">
-                                <div class="card-body">
-                                    <div class="d-flex gap-3">
-                                        <div class="avatar avatar-md warning">
-                                            <i class="ti ti-users fs-22 text-white"></i>
-                                        </div>
-                                        <div class="flex-fill">
-                                            <div class="fw-medium fs-13 mb-1">تعداد کاربران</div>
-                                            <div class="fs-22 fw-semibold mb-1">{{ number_format($totalUsers) }}</div>
-                                            <div class="d-flex align-items-center fs-12">
-                            <span class="text-success fw-semibold me-1">
-                                <i class="ti ti-trending-up me-1"></i>{{ number_format($newUsersThisMonth) }} نفر این ماه
-                            </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-xxl-3 col-md-6">
-                            <div class="card custom-card overflow-hidden main-custom-card">
-                                <div class="card-body">
-                                    <div class="d-flex gap-3">
-                                        <div class="avatar avatar-md danger">
-                                            <i class="ti ti-book fs-22 text-white"></i>
-                                        </div>
-                                        <div class="flex-fill">
-                                            <div class="fw-medium fs-13 mb-1">تعداد دوره‌ها</div>
-                                            <div class="fs-22 fw-semibold mb-1">{{ number_format($totalCourses) }}</div>
-                                            <div class="fs-12 text-muted">
-                                                @if($pendingTickets > 0)
-                                                    <span class="text-danger fw-semibold">
-                                    <i class="ti ti-ticket me-1"></i>{{ $pendingTickets }} تیکت باز
-                                </span>
-                                                @else
-                                                    <span class="text-success">تیکت باز وجود ندارد</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- ========== نمودار درآمد ماهانه ========== --}}
-
-                        <div class="col-xxl-8">
-                            <div class="card custom-card">
-                                <div class="card-header justify-content-between">
-                                    <div class="card-title">درآمد ماهانه (۶ ماه اخیر)</div>
-                                </div>
-                                <div class="card-body pb-0">
-                                    <canvas id="monthlyRevenueChart" height="120"></canvas>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- ========== نمودار دونات سهم دوره‌ها ========== --}}
-
-                        <div class="col-xxl-4 col-xl-6">
-                            <div class="card custom-card">
-                                <div class="card-header justify-content-between">
-                                    <div class="card-title">سهم هر دوره از درآمد</div>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="courseShareChart" height="220"></canvas>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- ========== نمودار فروش هر دوره ========== --}}
-
-                        <div class="col-xxl-6">
-                            <div class="card custom-card">
-                                <div class="card-header">
-                                    <div class="card-title">فروش هر دوره</div>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="courseSalesChart" height="180"></canvas>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- ========== نمودار کاربران جدید ========== --}}
-
-                        <div class="col-xxl-6">
-                            <div class="card custom-card">
-                                <div class="card-header">
-                                    <div class="card-title">کاربران جدید (ماهانه)</div>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="newUsersChart" height="180"></canvas>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- ========== دوره‌های پرفروش ========== --}}
-
-                        <div class="col-xxl-7">
-                            <div class="card custom-card overflow-hidden">
-                                <div class="card-header justify-content-between">
-                                    <div class="card-title">دوره‌های پرفروش</div>
-                                </div>
-                                <div class="card-body p-0">
-                                    <div class="table-responsive">
-                                        <table class="table text-nowrap table-hover">
-                                            <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>نام دوره</th>
-                                                <th class="text-center">فروش</th>
-                                                <th>قیمت</th>
-                                                <th class="text-center">امتیاز</th>
-                                            </tr>
-                                            </thead>
-                                            <tbody>
-                                            @forelse($topCourses as $index => $course)
-                                                <tr>
-                                                    <td>{{ $index + 1 }}</td>
-                                                    <td>
-                                                        <span class="fw-semibold">{{ $course->title }}</span>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <span class="badge bg-primary-transparent">{{ number_format($course->sales_count) }}</span>
-                                                    </td>
-                                                    <td>
-                                                        @if($course->discount_price)
-                                                            <span class="text-decoration-line-through text-muted fs-12">{{ number_format($course->price) }}</span>
-                                                            <span class="fw-semibold text-success ms-1">{{ number_format($course->discount_price) }}</span>
-                                                        @else
-                                                            <span class="fw-semibold">{{ number_format($course->price) }}</span>
-                                                        @endif
-                                                        <small class="text-muted">ت</small>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        @if($course->avg_rating)
-                                                            <span class="text-warning">
-                                            <i class="ti ti-star-filled"></i>
-                                            {{ $course->avg_rating }}
-                                        </span>
-                                                            <small class="text-muted">({{ $course->ratings_count }})</small>
-                                                        @else
-                                                            <span class="text-muted">-</span>
-                                                        @endif
-                                                    </td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="5" class="text-center text-muted py-3">دوره‌ای یافت نشد</td>
-                                                </tr>
-                                            @endforelse
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- ========== آخرین نظرات ========== --}}
-
-                        <div class="col-xxl-5">
-                            <div class="card custom-card">
-                                <div class="card-header justify-content-between">
-                                    <div class="card-title">آخرین نظرات</div>
-                                </div>
-                                <div class="card-body p-0">
-                                    <ul class="list-group list-group-flush">
-                                        @forelse($recentRatings as $rating)
-                                            <li class="list-group-item">
-                                                <div class="d-flex align-items-center gap-2">
-                            <span class="avatar avatar-sm avatar-rounded bg-primary-transparent">
-                                <i class="ti ti-user fs-16"></i>
-                            </span>
-                                                    <div class="flex-fill">
-                                                        <span class="fw-semibold d-block fs-13">{{ $rating->user?->name ?? 'کاربر' }}</span>
-                                                        <span class="fs-12 text-muted">{{ $rating->created_at?->diffForHumans() }}</span>
-                                                    </div>
-                                                    <div>
-                                                        @for($i = 1; $i <= 5; $i++)
-                                                            <i class="ti ti-star{{ $i <= $rating->rating ? '-filled text-warning' : ' text-muted' }} fs-12"></i>
-                                                        @endfor
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        @empty
-                                            <li class="list-group-item text-center text-muted py-3">نظری ثبت نشده</li>
-                                        @endforelse
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- ========== آخرین فاکتورها ========== --}}
-
-                        <div class="col-xl-12">
-                            <div class="card custom-card overflow-hidden">
-                                <div class="card-header justify-content-between">
-                                    <div class="card-title">آخرین فاکتورها</div>
-                                </div>
-                                <div class="card-body p-0">
-                                    <div class="table-responsive">
-                                        <table class="table text-nowrap table-hover">
-                                            <thead>
-                                            <tr>
-                                                <th>شماره فاکتور</th>
-                                                <th>کاربر</th>
-                                                <th>مبلغ</th>
-                                                <th>وضعیت</th>
-                                                <th>تاریخ</th>
-                                            </tr>
-                                            </thead>
-                                            <tbody>
-                                            @forelse($recentInvoices as $invoice)
-                                                <tr>
-                                                    <td>
-                                                        <span class="fw-semibold">#{{ $invoice->invoice_number }}</span>
-                                                    </td>
-                                                    <td>
-                                                        <div class="d-flex align-items-center gap-2">
-                                        <span class="avatar avatar-sm avatar-rounded bg-secondary-transparent">
-                                            <i class="ti ti-user fs-14"></i>
-                                        </span>
-                                                            <span>{{ $invoice->user?->name ?? $invoice->user?->mobile ?? '-' }}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <span class="fw-semibold">{{ number_format($invoice->total_amount) }}</span>
-                                                        <small class="text-muted">تومان</small>
-                                                    </td>
-                                                    <td>
-                                                        @switch($invoice->status)
-                                                            @case('paid')
-                                                                <span class="badge bg-success-transparent">پرداخت شده</span>
-                                                                @break
-                                                            @case('pending')
-                                                                <span class="badge bg-warning-transparent">در انتظار</span>
-                                                                @break
-                                                            @case('failed')
-                                                                <span class="badge bg-danger-transparent">ناموفق</span>
-                                                                @break
-                                                            @case('refunded')
-                                                                <span class="badge bg-secondary-transparent">بازگشت داده شده</span>
-                                                                @break
-                                                        @endswitch
-                                                    </td>
-                                                    <td>
-                                                        <span class="fw-semibold d-block">{{ $invoice->created_at?->format('Y-m-d') }}</span>
-                                                        <span class="fs-12 text-muted">{{ $invoice->created_at?->format('H:i') }}</span>
-                                                    </td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="5" class="text-center text-muted py-3">فاکتوری یافت نشد</td>
-                                                </tr>
-                                            @endforelse
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>{{-- end row --}}
+        <div class="col-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">درآمد امروز</p>
+                    <p class="h4 fw-bold text-dark mb-0">{{ number_format($this->stats['revenue_today']) }}</p>
+                    <p class="text-muted small mb-0">تومان</p>
                 </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">درآمد این ماه</p>
+                    <p class="h4 fw-bold text-dark mb-0">{{ number_format($this->stats['revenue_month']) }}</p>
+                    <p class="text-muted small mb-0">تومان</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">سفارش‌های امروز</p>
+                    <p class="h4 fw-bold text-dark mb-0">{{ number_format($this->stats['orders_today']) }}</p>
+                    <p class="text-muted small mb-0">از {{ number_format($this->stats['orders_total']) }} سفارش کل</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">کاربران جدید امروز</p>
+                    <p class="h4 fw-bold text-dark mb-0">{{ number_format($this->stats['users_today']) }}</p>
+                    <p class="text-muted small mb-0">از {{ number_format($this->stats['users_total']) }} کاربر کل</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">سفارش‌های در انتظار</p>
+                    <p class="h4 fw-bold text-warning mb-0">{{ number_format($this->stats['orders_pending']) }}</p>
+                    <p class="text-muted small mb-0">{{ number_format($this->stats['orders_processing']) }} در حال پردازش</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">پرداخت‌های در انتظار</p>
+                    <p class="h4 fw-bold text-dark mb-0">{{ number_format($this->stats['payments_pending']) }}</p>
+                    <p class="text-muted small mb-0">نیاز به بررسی دارند</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">مجموع موجودی کیف‌پول‌ها</p>
+                    <p class="h4 fw-bold text-dark mb-0">{{ number_format($this->stats['wallets_balance']) }}</p>
+                    <p class="text-muted small mb-0">تومان</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">نظرات در انتظار تایید</p>
+                    <p class="h4 fw-bold text-dark mb-0">{{ number_format($this->stats['comments_pending']) }}</p>
+                    <p class="text-muted small mb-0">{{ number_format($this->stats['products_total']) }} محصول فعال</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {{-- نمودارها --}}
+    <div class="row g-3 mb-4">
+
+        {{-- نمودار فروش --}}
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h2 class="h6 fw-bold text-dark mb-0">روند فروش</h2>
+                        <select wire:model.live="period" class="form-select form-select-sm w-auto">
+                            <option value="7">۷ روز اخیر</option>
+                            <option value="30">۳۰ روز اخیر</option>
+                            <option value="90">۹۰ روز اخیر</option>
+                        </select>
+                    </div>
+
+                    <div
+                        wire:ignore
+                        x-data="salesChart(@js($this->salesChart))"
+                        x-init="init()"
+                        @sales-chart-updated.window="update($event.detail.chart)"
+                    >
+                        <canvas x-ref="canvas" height="110"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- وضعیت سفارش‌ها --}}
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6 fw-bold text-dark mb-3">وضعیت سفارش‌ها</h2>
+                    <div
+                        wire:ignore
+                        x-data="ordersStatusChart(@js($this->ordersByStatus))"
+                        x-init="init()"
+                    >
+                        <canvas x-ref="canvas" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row g-3">
+
+        {{-- آخرین سفارش‌ها --}}
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h2 class="h6 fw-bold text-dark mb-0">آخرین سفارش‌ها</h2>
+                        <a href="{{ route('orders.index') }}" class="small text-muted text-decoration-none">
+                            مشاهده همه <i class="bi bi-arrow-left"></i>
+                        </a>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                            <tr class="text-muted small">
+                                <th class="fw-medium">شماره سفارش</th>
+                                <th class="fw-medium">مشتری</th>
+                                <th class="fw-medium">مبلغ</th>
+                                <th class="fw-medium">وضعیت</th>
+                                <th class="fw-medium">پرداخت</th>
+                                <th class="fw-medium">تاریخ</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @forelse($this->recentOrders as $order)
+                                <tr wire:key="order-{{ $order->id }}">
+                                    <td>
+                                        <a href="{{ route('orders.show', $order) }}" class="fw-medium text-dark text-decoration-none">
+                                            {{ $order->order_number }}
+                                        </a>
+                                    </td>
+                                    <td class="small">{{ trim(($order->user->first_name ?? '') . ' ' . ($order->user->last_name ?? '')) ?: ($order->user->mobile ?? '—') }}</td>
+                                    <td class="small">{{ number_format($order->total_amount) }}</td>
+                                    <td>
+                                            <span class="badge rounded-pill fw-normal {{ $this->orderStatusBadge($order->status) }}">
+                                                {{ $this->orderStatusLabel($order->status) }}
+                                            </span>
+                                    </td>
+                                    <td class="small text-muted">{{ $this->paymentStatusLabel($order->payment_status) }}</td>
+                                    <td class="small text-muted">{{ $order->created_at?->translatedFormat('d M H:i') }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">هنوز سفارشی ثبت نشده است</td>
+                                </tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- ستون کناری --}}
+        <div class="col-lg-4">
+            <div class="d-flex flex-column gap-3">
+
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="h6 fw-bold text-dark mb-3">پرفروش‌ترین محصولات</h2>
+                        <ul class="list-unstyled mb-0">
+                            @forelse($this->topProducts as $item)
+                                <li wire:key="top-{{ $loop->index }}" class="d-flex align-items-center justify-content-between small mb-2">
+                                    <span class="text-dark text-truncate" style="max-width: 160px;">{{ $item->product_name }}</span>
+                                    <span class="text-muted">{{ number_format($item->qty) }} عدد</span>
+                                </li>
+                            @empty
+                                <li class="small text-muted">داده‌ای موجود نیست</li>
+                            @endforelse
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="h6 fw-bold text-dark mb-3">تیکت‌های باز اخیر</h2>
+                        <ul class="list-unstyled mb-0">
+                            @forelse($this->recentTickets as $ticket)
+                                <li wire:key="ticket-{{ $ticket->id }}" class="mb-2">
+                                    <a href="{{ route('tickets.show', $ticket) }}" class="small text-dark text-decoration-none d-block text-truncate">
+                                        {{ $ticket->title }}
+                                    </a>
+                                    <span class="small text-muted">{{ trim(($ticket->user->first_name ?? '') . ' ' . ($ticket->user->last_name ?? '')) ?: 'کاربر' }}</span>
+                                </li>
+                            @empty
+                                <li class="small text-muted">تیکت بازی وجود ندارد</li>
+                            @endforelse
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="h6 fw-bold text-dark mb-3">موجودی کم</h2>
+                        <ul class="list-unstyled mb-0">
+                            @forelse($this->lowStockItems as $item)
+                                <li wire:key="stock-{{ $item->id }}" class="d-flex align-items-center justify-content-between small mb-2">
+                                    <span class="text-dark text-truncate" style="max-width: 160px;">{{ $item->productVariant?->product?->title ?? '—' }}</span>
+                                    <span class="text-danger fw-medium">{{ $item->quantity }}</span>
+                                </li>
+                            @empty
+                                <li class="small text-muted">همه کالاها موجودی کافی دارند</li>
+                            @endforelse
+                        </ul>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 
-    @push('scripts')
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-            const chartDefaults = {
-                responsive: true,
-                plugins: { legend: { display: false } },
-            };
+    @script
+    <script>
+        Alpine.data('salesChart', (initial) => ({
+            chart: null,
+            init() {
+                this.chart = new Chart(this.$refs.canvas, {
+                    type: 'line',
+                    data: {
+                        labels: initial.labels,
+                        datasets: [{
+                            label: 'فروش (تومان)',
+                            data: initial.values,
+                            borderColor: '#5b5fc7',
+                            backgroundColor: 'rgba(91,95,199,0.08)',
+                            fill: true,
+                            tension: 0.35,
+                            pointRadius: 0,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { ticks: { callback: (v) => new Intl.NumberFormat('fa-IR').format(v) } },
+                        },
+                    },
+                });
+            },
+            update(data) {
+                this.chart.data.labels = data.labels;
+                this.chart.data.datasets[0].data = data.values;
+                this.chart.update();
+            },
+        }));
 
-            // ۱. درآمد ماهانه
-            const monthlyData = @json(json_decode($monthlyRevenueJson));
-            new Chart(document.getElementById('monthlyRevenueChart'), {
-                type: 'line',
-                data: {
-                    labels: monthlyData.labels,
-                    datasets: [{
-                        label: 'درآمد (تومان)',
-                        data: monthlyData.data,
-                        borderColor: '#6c5ffc',
-                        backgroundColor: 'rgba(108,95,252,0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointBackgroundColor: '#6c5ffc',
-                    }]
-                },
-                options: { ...chartDefaults, plugins: { legend: { display: true } } }
-            });
+        Alpine.data('ordersStatusChart', (initial) => ({
+            init() {
+                const labels = {
+                    pending: 'در انتظار',
+                    processing: 'در حال پردازش',
+                    shipped: 'ارسال شده',
+                    completed: 'تکمیل شده',
+                    cancelled: 'لغو شده',
+                };
+                new Chart(this.$refs.canvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(initial).map(k => labels[k] ?? k),
+                        datasets: [{
+                            data: Object.values(initial),
+                            backgroundColor: ['#f0ad4e', '#5bc0de', '#5b5fc7', '#5cb85c', '#d9534f'],
+                            borderWidth: 0,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+                    },
+                });
+            },
+        }));
+    </script>
+    @endscript
 
-            // ۲. سهم دوره‌ها (دونات)
-            const shareData = @json(json_decode($courseShareJson));
-            new Chart(document.getElementById('courseShareChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: shareData.labels,
-                    datasets: [{
-                        data: shareData.data,
-                        backgroundColor: ['#6c5ffc','#26bf94','#f7b731','#fc5c65','#45aaf2'],
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { position: 'bottom', labels: { font: { family: 'inherit' } } } }
-                }
-            });
-
-            // ۳. فروش هر دوره
-            const salesData = @json(json_decode($courseSalesJson));
-            new Chart(document.getElementById('courseSalesChart'), {
-                type: 'bar',
-                data: {
-                    labels: salesData.labels,
-                    datasets: [{
-                        label: 'تعداد فروش',
-                        data: salesData.data,
-                        backgroundColor: 'rgba(108,95,252,0.7)',
-                        borderRadius: 6,
-                    }]
-                },
-                options: { ...chartDefaults, plugins: { legend: { display: true } } }
-            });
-
-            // ۴. کاربران جدید
-            const usersData = @json(json_decode($newUsersJson));
-            new Chart(document.getElementById('newUsersChart'), {
-                type: 'bar',
-                data: {
-                    labels: usersData.labels,
-                    datasets: [{
-                        label: 'کاربران جدید',
-                        data: usersData.data,
-                        backgroundColor: 'rgba(38,191,148,0.7)',
-                        borderRadius: 6,
-                    }]
-                },
-                options: { ...chartDefaults, plugins: { legend: { display: true } } }
-            });
-        </script>
-    @endpush
 </div>

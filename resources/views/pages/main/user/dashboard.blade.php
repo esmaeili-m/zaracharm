@@ -31,6 +31,13 @@ new class extends Component
         };
 
     }
+
+    public function logout()
+    {
+        \Illuminate\Support\Facades\Auth::logout();
+
+        return redirect()->route('login');
+    }
 };
 ?>
 
@@ -227,7 +234,7 @@ new class extends Component
                             {{-- Logout --}}
                             <div class="pt-4 mt-4 border-t border-gray-200/30 dark:border-white/5">
 
-                                <a href="#"
+                                <a wire:click="logout" href="#"
                                    class="flex items-center gap-4 px-5 py-4 rounded-2xl text-red-500 hover:bg-red-500/10 transition-all group">
 
                                     <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform"

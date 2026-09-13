@@ -36,7 +36,7 @@
 <!-- HEADER -->
 <header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
     <div class="bg-primary-900 text-white py-1.5 text-center text-[11px] font-medium tracking-wide hidden md:block">
-        <p>🎉 جشنواره زمستانی: تا ۵۰٪ تخفیف روی تمام محصولات دیجیتال | کد تخفیف: <span class="text-secondary-400">WINTER2025</span></p>
+        <p>🎉 جشنواره زمستانی: تا ۵۰٪ تخفیف روی تمام محصولات  | کد تخفیف: <span class="text-secondary-400">WINTER2025</span></p>
     </div>
 
     <div class="container">
@@ -185,7 +185,7 @@
                        href="{{ auth()->check() ? route('user.dashboard') : route('login')}}"
                             class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-md hover:border-primary-500/50 hover:bg-primary-50/50 dark:hover:bg-primary-500/10 transition-all duration-300 group shadow-sm">
                         <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-primary-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                        <span class="text-xs font-black text-gray-700 dark:text-gray-200 hidden lg:block uppercase tracking-tighter">{{auth()->check() ? (auth()->user()->fullname ?? auth()->user()->mobile) : 'ورود یا ثبت ‌نام'}}</span>
+                        <span class="text-xs font-black text-gray-700 dark:text-gray-200 hidden lg:block uppercase tracking-tighter">{{auth()->check() ? (auth()->user()->fullname == "" ? auth()->user()->fullname : auth()->user()->mobile) : 'ورود یا ثبت ‌نام'}}</span>
                     </a>
                 </div>
                 @auth
