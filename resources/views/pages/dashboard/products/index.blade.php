@@ -26,6 +26,7 @@ new class extends Component
     public $brand_id;
     public $short_description;
     public $type=1;
+    public $url;
     public $featured_image;
     public $banner_image;
     public $editorImage;
@@ -113,6 +114,7 @@ new class extends Component
         $this->published_at=$this->selectItem->published_at;
         $this->description=$this->selectItem->description;
         $this->brand_id=$this->selectItem->brand_id;
+        $this->url=$this->selectItem->url;
         $this->type=$this->selectItem->type;
         $this->short_description=$this->selectItem->short_description;
         $this->tag_ids = $this->selectItem->tags()->pluck('tags.id')->toArray();
@@ -162,6 +164,12 @@ new class extends Component
                 'string',
                 'min:2',
                 'max:200',
+            ],
+            'url' => [
+                'nullable',
+                'string',
+                'url',
+                'max:500',
             ],
 
             'slug' => [
@@ -284,6 +292,10 @@ new class extends Component
             'tag_ids.array' => 'تگ‌ها معتبر نیستند.',
             'tag_ids.*.exists' => 'یکی از تگ‌های انتخاب شده معتبر نیست.',
 
+            'url.required' => 'آدرس ویدیو یا محصول الزامی است.',
+            'url.string'   => 'آدرس باید به صورت متن وارد شود.',
+            'url.url'      => 'آدرس وارد شده معتبر نیست.',
+            'url.max'      => 'آدرس نمی‌تواند بیشتر از ۵۰۰ کاراکتر باشد.',
         ];
     }
 
@@ -294,6 +306,7 @@ new class extends Component
         $categoryIds = $data['category_ids'] ?? [];
         unset($data['featured_image']);
         unset($data['tag_ids']);
+        unset($data['url']);
         unset($data['category_ids']);
 
         $item = $this->selectItem
@@ -311,6 +324,18 @@ new class extends Component
                 $this->featured_image,
                 $item,
                 'featured_image'
+            );
+        }
+        if ($this->url) {
+
+            $item->media()
+                ->where('collection', 'featured_video')
+                ->delete();
+
+            $this->attachExternal(
+                $this->url,
+                $item,
+                'featured_video'
             );
         }
 
@@ -634,7 +659,7 @@ new class extends Component
                                 @enderror
                             </div>
 
-                            <div class="col-xl-3 mt-3">
+                            <div class="col-xl-4 mt-3">
                                 <label  for="input-rounded" class="form-label ">جایگاه {{$info['personal'] ?? ''}}</label>
                                 <input wire:model.lazy="sort" type="number" class="form-control @error('sort') is-invalid @enderror" id="input-rounded" placeholder="لطفا آدرس {{$info['personal'] ?? ''}} را وارد کنید">
                                 @error('sort')
@@ -643,7 +668,7 @@ new class extends Component
                                 </div>
                                 @enderror
                             </div>
-                            <div class="col-xl-3 mt-3">
+                            <div class="col-xl-4 mt-3">
                                 <label class="form-label">
                                     تاریخ انتشار
                                 </label>
@@ -659,7 +684,7 @@ new class extends Component
                                 </div>
                                 @enderror
                             </div>
-                            <div class="col-xl-3 mt-3">
+                            <div class="col-xl-4 mt-3">
                                 <label class="form-label">
                                     برند {{ $info['personal'] ?? '' }}
                                 </label>
@@ -686,7 +711,7 @@ new class extends Component
                                 @enderror
                             </div>
 
-                            <div class="col-xl-3 mt-3">
+                            <div class="col-xl-6 mt-3">
                                 <label class="form-label">
                                     تصویر شاخص
                                     {{$info['featured_image'] ?? ''}}
@@ -712,6 +737,15 @@ new class extends Component
                                 </div>
                                 @error('featured_image')
                                 <div class="invalid-feedback d-block">
+                                    {{$message}}
+                                </div>
+                                @enderror
+                            </div>
+                            <div class="col-xl-6 mt-3">
+                                <label  for="input-rounded" class="form-label ">آدرس ویدئو {{$info['personal'] ?? ''}}</label>
+                                <input wire:model.lazy="url" type="text" class="form-control @error('url') is-invalid @enderror" id="input-rounded" placeholder="لطفا آدرس ویدئو {{$info['personal'] ?? ''}} را وارد کنید">
+                                @error('ur ویدئوl')
+                                <div  class="invalid-feedback">
                                     {{$message}}
                                 </div>
                                 @enderror

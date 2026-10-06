@@ -30,6 +30,24 @@ class ProductVariant extends Model
             'status' => 'boolean',
         ];
     }
+
+
+// موجودی قابل فروش = quantity - reserved (فقط ردیف‌ها و انبارهای فعال)
+    public function availableStock(): int
+    {
+        $items = $this->relationLoaded('inventoryItems')
+            ? $this->inventoryItems
+            : $this->inventoryItems()->with('inventory')->get();
+
+        return (int) $items
+            ->filter(fn ($item) => $item->status && $item->inventory?->status)
+            ->sum(fn ($item) => max($item->quantity - $item->reserved_quantity, 0));
+    }
+
+    public function isInStock(): bool
+    {
+        return $this->availableStock() > 0;
+    }
     public function priceData(): array
     {
         return app(ProductPriceService::class)

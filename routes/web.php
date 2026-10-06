@@ -11,15 +11,15 @@ Route::post('/logout', function () {
 })->name('logout');
 
 Route::livewire('/login', 'pages::auth.login')->name('login');
-Route::livewire('/user/dashboard', 'pages::main.user.dashboard')->name('user.dashboard');
+Route::livewire('/user/dashboard', 'pages::main.user.dashboard')->name('user.dashboard')->middleware(['auth']);
 Route::livewire('/product', 'pages::main.user.dashboard')->name('product.show');
 Route::livewire('/products/{product}', 'pages::main.products.show')->name('products.show');
-Route::livewire('/cartItem', 'pages::main.cart.cart-item')->name('cartItem');
-Route::livewire('/checkout/{code}', 'pages::main.cart.checkout')->name('checkout');
+Route::livewire('/cartItem', 'pages::main.cart.cart-item')->name('cartItem')->middleware(['auth']);
+Route::livewire('/checkout/{code}', 'pages::main.cart.checkout')->name('checkout')->middleware(['auth']);
 Route::livewire('/order/{code}/payment', 'pages::main.cart.payment')
-    ->name('order.payment.result');
+    ->name('order.payment.result')->middleware(['auth']);
 // ─── Static Pages ────────────────────────────────────────
-Route::livewire('/cart', 'pages::main.cart.index')->name('cart.index');
+Route::livewire('/cart', 'pages::main.cart.index')->name('cart.index')->middleware(['auth']);
 Route::livewire('/search', 'pages::main.search.index')->name('search');
 
 // ─── Resources ───────────────────────────────────────────
@@ -63,6 +63,7 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/services/trash', 'pages::dashboard.services.trash')->name('services.trash');
 
     Route::livewire('/courses', 'pages::dashboard.courses.index')->name('orders.index');
+    Route::livewire('/social-links', 'pages::dashboard.social-media.index')->name('social-links.index');
     Route::livewire('/invoices', 'pages::dashboard.invoices.index')->name('invoices.index');
     Route::livewire('/orders/trash', 'pages::dashboard.courses.trash')->name('orders.show');
     Route::livewire('/tickets/trash', 'pages::dashboard.courses.trash')->name('tickets.show');

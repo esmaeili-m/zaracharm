@@ -56,6 +56,28 @@
 
     </div>
 
+    <div class="col-md-6">
+
+        <label class="form-label">
+            نوع نمایش محصول
+        </label>
+
+        <select
+            wire:model="formData.view"
+            class="form-select">
+
+            <option value="1">
+                تصویر ترنسپرنت
+            </option>
+
+            <option value="2">
+                تصویر با بک‌گراند
+            </option>
+
+        </select>
+
+    </div>
+
     {{-- انتخاب دستی محصولات --}}
     @if(($formData['mode'] ?? null) === 'manual')
 

@@ -502,7 +502,7 @@ new class extends Component
 
             {{-- استپ‌لاین بالای صفحه بدون تغییر باقی می‌ماند --}}
 
-            <div class="container" dir="rtl">
+            <div class="" dir="rtl">
 
                 @if ($errorMessage)
                     <div class="mb-6 p-4 bg-rose-500/10 border border-rose-500/30 text-rose-600 rounded-2xl text-sm font-bold">
@@ -1010,11 +1010,11 @@ new class extends Component
                                    tracking-[2px]"
                             dir="ltr"
                         >
-                            6037 - 9918 - 1234 - 5678
+                            6393 - 4610 - 6688 - 7601
                         </span>
 
                                 <span class="block mt-1 text-[9px] font-bold text-gray-400">
-                            به نام: نام صاحب حساب
+                            به نام: سید محمد امین یاسینی
                         </span>
 
                             </div>

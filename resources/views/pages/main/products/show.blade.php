@@ -10,7 +10,7 @@ new class extends Component
     public $product;
     public $selectedVariant;
     public int $rating = 0;
-    public string $activeTab = 'reviews';
+    public string $activeTab = 'overview';
     public string $commentBody = '';
 
     public array $pros = [];
@@ -420,24 +420,52 @@ new class extends Component
     <main class="space-y-12">
 
         <!-- CONTENT -->
+        <!-- CONTENT -->
+        @php
+            // موجودی واریانت انتخاب‌شده
+            $inStock = $selectedVariant->isInStock();
+
+            // شناسه‌ی مقدارهایی (رنگ/سایز/...) که حداقل یک واریانت موجود دارند
+            $availableValueIds = $product->variants
+                ->filter(fn ($v) => $v->isInStock())
+                ->pluck('values')
+                ->flatten()
+                ->pluck('id')
+                ->unique()
+                ->all();
+
+            $pricing = $selectedVariant->priceData();
+        @endphp
+
         <section class="product-hero relative pt-8 overflow-hidden">
             <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-brown-600/5 blur-[100px] rounded-full -z-10 animate-pulse"></div>
 
-            <div class="container relative z-10 px-4">
+            <div class="relative z-10 px-4">
+
+                {{-- Breadcrumb --}}
                 <nav class="flex items-center gap-2 mb-8 text-[11px] font-bold text-gray-400 dark:text-gray-500">
                     <a href="index.html" class="hover:text-brown-600 transition-colors">خانه</a>
-
                     <i class="far fa-chevron-left text-[8px] opacity-40"></i>
-                    <span class="text-gray-900 dark:text-white font-black">{{$product->title}}</span>
+                    <span class="text-gray-900 dark:text-white font-black">{{ $product->title }}</span>
                 </nav>
 
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
 
-                    <div class="lg:col-span-5 space-y-6 flex flex-col items-center justify-center">
-                        <!-- Icon box and main gallery -->
+                    {{-- ===================== Gallery column ===================== --}}
+                    <div class="lg:col-span-5 space-y-6 flex flex-col items-center justify-center {{ $inStock ? '' : 'grayscale opacity-70 pointer-events-none select-none' }}">
+
                         <div class="relative group bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[3rem] border border-white/60 dark:border-white/5 shadow-lg p-6 overflow-hidden w-full">
 
-                            <!-- Icon box -->
+                            {{-- Out of stock stamp --}}
+                            @unless($inStock)
+                                <div class="absolute inset-0 z-[110] flex items-center justify-center pointer-events-none">
+                                    <div class="px-8 py-3 bg-zinc-900/90 dark:bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-lg transform -rotate-12">
+                                        <span class="text-white text-2xl font-black">ناموجود</span>
+                                    </div>
+                                </div>
+                            @endunless
+
+                            {{-- Icon box --}}
                             <div class="absolute top-6 left-1/2 -translate-x-1/2 z-[100] isolate">
                                 <div class="flex items-center gap-1.5 p-1.5 bg-white/40 dark:bg-black/40 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/10 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-[-15px] group-hover:translate-y-0 flex-row-reverse">
 
@@ -446,9 +474,9 @@ new class extends Component
                                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                                         </button>
                                         <span class="absolute top-full mt-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 dark:bg-zinc-800 text-white text-[10px] font-black rounded-lg whitespace-nowrap opacity-0 -translate-y-1 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-y-0 transition-all duration-300 pointer-events-none shadow-lg z-[110] border border-white/10">
-                                        علاقه‌مندی
-                                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-b-gray-900 dark:border-b-zinc-800"></span>
-                                    </span>
+                                    علاقه‌مندی
+                                    <span class="absolute bottom-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-b-gray-900 dark:border-b-zinc-800"></span>
+                                </span>
                                     </div>
 
                                     <div class="w-[1px] h-5 bg-gray-400/20 dark:bg-white/10"></div>
@@ -458,9 +486,9 @@ new class extends Component
                                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"></path><path d="M8 21H3v-5"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg>
                                         </button>
                                         <span class="absolute top-full mt-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 dark:bg-zinc-800 text-white text-[10px] font-black rounded-lg whitespace-nowrap opacity-0 -translate-y-1 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-y-0 transition-all duration-300 pointer-events-none shadow-lg z-[110] border border-white/10">
-                                        مقایسه کالا
-                                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-b-gray-900 dark:border-b-zinc-800"></span>
-                                    </span>
+                                    مقایسه کالا
+                                    <span class="absolute bottom-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-b-gray-900 dark:border-b-zinc-800"></span>
+                                </span>
                                     </div>
 
                                     <div class="w-[1px] h-5 bg-gray-400/20 dark:bg-white/10"></div>
@@ -469,75 +497,82 @@ new class extends Component
                                         <button onclick="toggleModal('priceModal')" class="w-10 h-10 rounded-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-brown-600 hover:text-white transition-all duration-300">
                                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
                                         </button>
-                                        <span class="absolute top-full mt-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 dark:bg-zinc-800 text-white text-[10px] font-black rounded-lg opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[110]">
-                                        نمودار قیمت
-                                    </span>
+                                        <span class="absolute top-full mt-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 dark:bg-zinc-800 text-white text-[10px] font-black rounded-lg whitespace-nowrap opacity-0 -translate-y-1 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-y-0 transition-all duration-300 pointer-events-none shadow-lg z-[110] border border-white/10">
+                                    نمودار قیمت
+                                </span>
                                     </div>
 
                                     <div class="relative group/tooltip">
-
                                         <button onclick="toggleModal('shareModal')" class="w-10 h-10 rounded-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-brown-600 hover:text-white transition-all duration-300">
                                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
                                         </button>
                                         <span class="absolute top-full mt-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 dark:bg-zinc-800 text-white text-[10px] font-black rounded-lg whitespace-nowrap opacity-0 -translate-y-1 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-y-0 transition-all duration-300 pointer-events-none shadow-lg z-[110] border border-white/10">
-                                        اشتراک‌گذاری
-                                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-b-gray-900 dark:border-b-zinc-800"></span>
-                                        </span>
+                                    اشتراک‌گذاری
+                                    <span class="absolute bottom-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-b-gray-900 dark:border-b-zinc-800"></span>
+                                </span>
                                     </div>
-
-                                    <div class="w-[1px] h-5 bg-gray-400/20 dark:bg-white/10"></div>
 
                                 </div>
                             </div>
 
-                            <!-- Gallery -->
-                            <div class="swiper productMainSwiper h-[380px] md:h-[450px] swiper-initialized swiper-horizontal swiper-rtl swiper-backface-hidden">
-                                <div class="swiper-wrapper" id="swiper-wrapper-81a473b17c952bdb" aria-live="polite">
+                            {{-- Main gallery --}}
+                            <div class="swiper productMainSwiper h-[200px] md:h-[450px] swiper-initialized swiper-horizontal swiper-rtl swiper-backface-hidden">
+                                <div class="swiper-wrapper">
                                     @foreach($product->media()->get() ?? [] as $img)
-
-                                    <div class="swiper-slide swiper-slide-active" style="width: 557px; margin-left: 10px;" role="group" aria-label="1 / 7">
-                                        <div class="swiper-zoom-container flex items-center justify-center p-4">
-                                            <img src="{{asset('storage/'.$img->file_path)}}" class="max-h-full w-auto object-contain transition-transform duration-700" alt="product">
+                                        <div class="swiper-slide">
+                                            <div class="swiper-zoom-container flex h-full w-full items-center justify-center p-3 md:p-4">
+                                                <div class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl">
+                                                    <img
+                                                        src="{{ asset('storage/' . $img->file_path) }}"
+                                                        class="max-h-full max-w-full rounded-2xl object-contain transition-transform duration-700"
+                                                        alt="{{ $product->title }}"
+                                                    >
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
                                     @endforeach
-
                                 </div>
 
-                                <div class="swiper-button-next !w-12 !h-12 !bg-white/90 dark:!bg-black/60 rounded-2xl after:!text-sm shadow-lg !text-brown-600 border border-white/50 dark:border-white/5" tabindex="0" role="button" aria-label="Next slide" aria-controls="swiper-wrapper-81a473b17c952bdb" aria-disabled="false"></div>
-                                <div class="swiper-button-prev !w-12 !h-12 !bg-white/90 dark:!bg-black/60 rounded-2xl after:!text-sm shadow-lg !text-brown-600 border border-white/50 dark:border-white/5 swiper-button-disabled" tabindex="-1" role="button" aria-label="Previous slide" aria-controls="swiper-wrapper-81a473b17c952bdb" aria-disabled="true"></div>
-                                <span class="swiper-notification" aria-live="assertive" aria-atomic="true"></span></div>
+                                <div class="swiper-button-next !w-10 !h-10 md:!w-12 md:!h-12 !bg-white/90 dark:!bg-black/60 rounded-2xl after:!text-sm shadow-lg !text-brown-600 border border-white/50 dark:border-white/5"></div>
+                                <div class="swiper-button-prev !w-10 !h-10 md:!w-12 md:!h-12 !bg-white/90 dark:!bg-black/60 rounded-2xl after:!text-sm shadow-lg !text-brown-600 border border-white/50 dark:border-white/5"></div>
+                            </div>
                         </div>
 
-                        <!-- Gallery thumbnail -->
+                        {{-- Thumbnails --}}
                         <div class="w-full max-w-[400px]">
                             <div class="swiper productThumbsSwiper !pb-5 swiper-initialized swiper-horizontal swiper-free-mode swiper-rtl swiper-watch-progress swiper-backface-hidden swiper-thumbs">
                                 <div class="swiper-wrapper" id="swiper-wrapper-c574f2f1c7b9375d" aria-live="polite" style="transform: translate3d(0px, 0px, 0px);">
-                                    @foreach($product->media()->get() ?? [] as $img)
+                                    @foreach($product->media()->whereNull('external_url')->get() ?? [] as $img)
                                         <div class="swiper-slide shadow-lg cursor-pointer rounded-[1.5rem] border-2 border-transparent bg-white/40 dark:bg-white/5 p-2 transition-all opacity-40 overflow-hidden swiper-slide-visible swiper-slide-fully-visible swiper-slide-active swiper-slide-thumb-active" style="width: 88.75px; margin-left: 15px;" role="group" aria-label="1 / 6">
                                             <img src="{{asset('storage/'.$img->file_path)}}" class="w-full aspect-square object-contain" alt="thumb">
                                         </div>
                                     @endforeach
-
                                 </div>
-                                <span class="swiper-notification" aria-live="assertive" aria-atomic="true"></span></div>
+                                <span class="swiper-notification" aria-live="assertive" aria-atomic="true"></span>
+                            </div>
                         </div>
                     </div>
 
+                    {{-- ===================== Info column ===================== --}}
                     <div class="lg:col-span-7 space-y-6">
 
+                        {{-- Title block --}}
                         <div class="space-y-3">
                             <div class="flex items-center gap-3">
-                                <span class="text-[10px] font-black text-brown-600 bg-brown-600/10 px-3 py-1 rounded-lg">{{$product->primaryCategory?->title}}</span>
-                                <span class="text-[10px] font-bold text-gray-400">شناسه کالا: {{$product->barcode}}</span>
+                        <span class="text-[10px] font-black px-3 py-1 rounded-lg {{ $inStock ? 'text-brown-600 bg-brown-600/10' : 'text-gray-400 bg-gray-400/10' }}">
+                            {{ $product->primaryCategory?->title }}
+                        </span>
+                                <span class="text-[10px] font-bold text-gray-400">شناسه کالا: {{ $product->barcode }}</span>
                             </div>
-                            <h1 class="text-2xl font-black text-gray-900 dark:text-white leading-relaxed">
-                                {{$product->title}}
+
+                            <h1 class="text-2xl font-black leading-relaxed {{ $inStock ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-zinc-600' }}">
+                                {{ $product->title }}
                             </h1>
+
                             <div class="flex items-center gap-6">
-                                <div class="flex items-center gap-1.5 text-secondary-500 text-xs font-black">
+                                <div class="flex items-center gap-1.5 text-xs font-black {{ $inStock ? 'text-secondary-500' : 'text-gray-400' }}">
                                     <i class="fas fa-star"></i> <span class="tabular-nums">۴.۸</span>
-                                    <span class="text-gray-400 font-bold mr-1">({{$product->comments->count()}} دیدگاه)</span>
+                                    <span class="text-gray-400 font-bold mr-1">({{ $product->comments->count() }} دیدگاه)</span>
                                 </div>
                                 <div class="w-[1px] h-4 bg-gray-200 dark:bg-white/10"></div>
                                 <a href="#" class="text-brown-500 text-[11px] font-bold hover:underline">پرسش و پاسخ (0)</a>
@@ -545,90 +580,73 @@ new class extends Component
                         </div>
 
                         <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                            <div class="xl:col-span-7 space-y-6">
-                                <!-- Variable -->
+
+                            {{-- ---------- Options / specs ---------- --}}
+                            <div class="xl:col-span-7 space-y-6 {{ $inStock ? '' : 'opacity-50 pointer-events-none select-none' }}">
+
+                                {{-- Variant options --}}
                                 <div class="space-y-6">
                                     @foreach($product->options ?? [] as $option)
-                                            <div class="space-y-4 ">
-                                                <p class="text-[13px] font-black text-gray-900 dark:text-white">
-                                                    {{ $option->title }}:
-                                                    <span
-                                                        id="selected-option-{{ $option->id }}"
-                                                        class="text-gray-500 font-bold"
+                                        <div class="space-y-4">
+                                            <p class="text-[13px] font-black text-gray-900 dark:text-white">
+                                                {{ $option->title }}:
+                                                <span id="selected-option-{{ $option->id }}" class="text-gray-500 font-bold">
+                                            {{ $selectedVariant->values->where('option_id', $option->id)->first()?->title }}
+                                        </span>
+                                            </p>
+
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach($product->variants->pluck('values')->flatten()->where('option_id', $option->id)->unique('slug') as $item)
+                                                    @php
+                                                        $isActive = $selectedVariant->values
+                                                            ->where('option_id', $option->id)
+                                                            ->contains('slug', $item->slug);
+
+                                                        $valueOut = ! in_array($item->id, $availableValueIds);
+                                                    @endphp
+                                                    <button
+                                                        type="button"
+                                                        wire:click="selectOption({{ $item->id }})"
+                                                        class="option-btn px-4 py-2 rounded-xl
+                                                    {{ $isActive ? 'border-2 border-brown-600 shadow-lg shadow-brown-600/25' : 'border-2 border-transparent' }}
+                                                    {{ $valueOut ? 'opacity-50 line-through' : '' }}
+                                                    bg-white dark:bg-white/5
+                                                    text-gray-700 dark:text-gray-300
+                                                    text-xs font-bold
+                                                    shadow-[0_3px_12px_rgba(0,0,0,0.08)]
+                                                    dark:shadow-[0_3px_12px_rgba(0,0,0,0.25)]
+                                                    hover:-translate-y-0.5
+                                                    hover:shadow-[0_5px_16px_rgba(0,0,0,0.12)]
+                                                    dark:hover:shadow-[0_5px_16px_rgba(0,0,0,0.3)]
+                                                    transition-all duration-200"
                                                     >
-                                                    {{ $selectedVariant->values->where('option_id', $option->id)?->first()->title }}
-                                                </span>
-                                                </p>
-
-                                                <div class="flex flex-wrap gap-2">
-                                                    @foreach($product->variants->pluck('values')->flatten()->where('option_id', $option->id)->unique('slug') as $item)
-                                                        @php
-                                                            $isActive = $selectedVariant->values
-                                                                ->where('option_id', $option->id)
-                                                                ->contains('slug', $item->slug);
-                                                        @endphp
-                                                        <button
-                                                            type="button"
-                                                            wire:click="selectOption({{ $item->id }})"
-                                                            class="option-btn px-4 py-2 rounded-xl
-           {{ $isActive
-                ? 'border-2 border-brown-600 shadow-lg shadow-brown-600/25'
-                : 'border-2 border-transparent'
-           }}
-           bg-white dark:bg-white/5
-           text-gray-700 dark:text-gray-300
-           text-xs font-bold
-           shadow-[0_3px_12px_rgba(0,0,0,0.08)]
-           dark:shadow-[0_3px_12px_rgba(0,0,0,0.25)]
-           hover:-translate-y-0.5
-           hover:shadow-[0_5px_16px_rgba(0,0,0,0.12)]
-           dark:hover:shadow-[0_5px_16px_rgba(0,0,0,0.3)]
-           transition-all duration-200"
-                                                        >
-                                                            {{ $item->title }}
-                                                        </button>
-                                                    @endforeach
-
-                                                </div>
+                                                        {{ $item->title }}
+                                                    </button>
+                                                @endforeach
                                             </div>
-
-
+                                        </div>
                                     @endforeach
-
                                 </div>
 
-                                <!-- Feature -->
+                                {{-- Specifications --}}
                                 <div class="space-y-4">
                                     <p class="text-[13px] font-black text-gray-900 dark:text-white">ویژگی‌های اصلی کالا:</p>
 
                                     <div class="grid grid-cols-2 gap-3">
                                         @foreach($product->specifications as $specification)
-                                            <div class="bg-gray-50 dark:bg-white/5
-                                                border border-gray-100 dark:border-white/5
-                                                p-3 rounded-2xl
-                                                flex flex-col gap-2
-                                                transition-all
-                                                hover:border-brown-500/30 group">
-
-                                                <span class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-                                                    {{ $specification->title }}
-                                                </span>
-
-                                                                                        <span class="text-[11px] font-black text-gray-900 dark:text-white
-                                                    group-hover:text-brown-600 transition-colors">
-
-                                                    {{ $specification->value }}
-
-                                                </span>
-
+                                            <div class="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 p-3 rounded-2xl flex flex-col gap-2 transition-all hover:border-brown-500/30 group">
+                                        <span class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                                            {{ $specification->title }}
+                                        </span>
+                                                <span class="text-[11px] font-black text-gray-900 dark:text-white group-hover:text-brown-600 transition-colors">
+                                            {{ $specification->value }}
+                                        </span>
                                             </div>
-
                                         @endforeach
-
-
                                     </div>
                                 </div>
 
+                                {{-- Return policy --}}
                                 <div class="p-4 bg-brown-50 dark:bg-brown-600/5 border border-brown-100 dark:border-brown-600/20 rounded-2xl flex gap-4">
                                     <i class="fas fa-info-circle text-brown-600 mt-1"></i>
                                     <p class="text-[11px] font-bold text-brown-800 dark:text-brown-400 leading-relaxed">
@@ -637,10 +655,11 @@ new class extends Component
                                 </div>
                             </div>
 
-                            <!-- Meta -->
+                            {{-- ---------- Meta / buy box ---------- --}}
                             <div class="xl:col-span-5 space-y-4">
                                 <div class="bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 rounded-[2.5rem] p-6 space-y-6">
-                                    <!-- Detail -->
+
+                                    {{-- Seller + guarantees --}}
                                     <div class="space-y-6">
                                         <div class="flex items-center justify-between group cursor-pointer">
                                             <div class="flex items-center gap-4">
@@ -657,7 +676,7 @@ new class extends Component
                                                     </div>
                                                 </div>
 
-                                                <a  href="{{route('page.show','about-us')}}" class="cursor-pointer group">
+                                                <a href="{{ route('page.show', 'about-us') }}" class="cursor-pointer group">
                                                     <p class="text-[14px] font-black text-gray-900 dark:text-white group-hover:text-brown-600 transition-colors">فروشنده: زاراچرم</p>
                                                     <div class="flex items-center gap-2 mt-1">
                                                         <div class="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-100/50 dark:border-emerald-500/20">
@@ -669,11 +688,6 @@ new class extends Component
                                                         <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500">مشاهده اطلاعات فروشنده</span>
                                                     </div>
                                                 </a>
-
-                                                <!-- Seller Modal -->
-                                                <!-- End Seller Modal -->
-
-
                                             </div>
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-gray-300 group-hover:text-brown-500 transition-all transform group-hover:-translate-x-1">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path>
@@ -692,79 +706,102 @@ new class extends Component
                                                 <p class="text-[12px] font-bold text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">ضمانت اصالت و سلامت کالا</p>
                                             </div>
 
-                                            <div class="flex items-center gap-4 group">
-                                                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-50 dark:bg-white/[0.03] text-gray-400 group-hover:bg-secondary-50 dark:group-hover:bg-secondary-500/10 group-hover:text-secondary-600 transition-all duration-300">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.129-1.125V11.25c0-4.446-3.61-8.156-8.086-8.156H10.875c-.621 0-1.125.504-1.125 1.125v12.375c0 .621.504 1.125 1.125 1.125h1.125m10.125 0V14.25m-9 0h9"></path>
+                                            @if($inStock)
+                                                <div class="flex items-center gap-4 group">
+                                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-50 dark:bg-white/[0.03] text-gray-400 group-hover:bg-secondary-50 dark:group-hover:bg-secondary-500/10 group-hover:text-secondary-600 transition-all duration-300">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.129-1.125V11.25c0-4.446-3.61-8.156-8.086-8.156H10.875c-.621 0-1.125.504-1.125 1.125v12.375c0 .621.504 1.125 1.125 1.125h1.125m10.125 0V14.25m-9 0h9"></path>
+                                                        </svg>
+                                                    </div>
+                                                    <div class="flex flex-col">
+                                                        <p class="text-[12px] font-bold text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">ارسال سریع زاراچرم</p>
+                                                        <p class="text-[10px] text-emerald-600 dark:text-emerald-500/80 font-bold">تحویل سفارش در کوتاه‌ترین زمان</p>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    @if($inStock)
+
+                                        {{-- Price --}}
+                                        <div class="space-y-2 pt-4 border-t border-gray-200 dark:border-white/5">
+                                            @if($pricing['has_discount'])
+                                                <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-bold text-gray-400 line-through tabular-nums">
+                                                {{ number_format($pricing['before_discount']) }}
+                                            </span>
+                                                    <span class="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg tabular-nums">
+                                                {{ $pricing['discount_percent'] }}٪-
+                                            </span>
+                                                </div>
+                                            @endif
+
+                                            <div class="flex items-baseline justify-end gap-1.5">
+                                        <span id="product-final-price" class="text-3xl font-black text-gray-900 dark:text-white tabular-nums">
+                                            {{ number_format($pricing['after_discount']) }}
+                                        </span>
+                                                <span class="text-[11px] font-bold text-gray-500">تومان</span>
+                                            </div>
+                                        </div>
+
+                                        {{-- Add to cart --}}
+                                        <button wire:click="addToCart" id="add-to-cart-btn" class="w-full h-14 bg-brown-600 hover:bg-brown-700 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-brown-500/20 flex items-center justify-center gap-3 group/btn relative overflow-hidden active:scale-95">
+                                            <span class="relative z-10">افزودن به سبد خرید</span>
+                                            <svg class="w-5 h-5 relative z-10 group-hover/btn:translate-x-[-4px] transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                                        </button>
+
+                                    @else
+
+                                        {{-- Out of stock --}}
+                                        <div class="pt-4 border-t border-gray-200 dark:border-white/5 space-y-6">
+                                            <div class="space-y-4 flex flex-col items-center text-center">
+                                                <div class="w-16 h-16 rounded-3xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center text-zinc-400">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"></path>
                                                     </svg>
                                                 </div>
-                                                <div class="flex flex-col">
-                                                    <p class="text-[12px] font-bold text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">ارسال سریع زاراچرم</p>
-                                                    <p class="text-[10px] text-emerald-600 dark:text-emerald-500/80 font-bold">تحویل سفارش در کوتاه‌ترین زمان</p>
+                                                <div>
+                                                    <h3 class="text-lg font-black text-zinc-800 dark:text-white">این کالا فعلاً موجود نیست</h3>
+                                                    <p class="text-[11px] font-bold text-zinc-500 mt-2 leading-relaxed">
+                                                        می‌توانید با فعال‌سازی اطلاع‌رسانی، به محض موجود شدن کالا با خبر شوید.
+                                                    </p>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
 
-                                    <!-- Price -->
-                                    @php
-                                        $pricing=$selectedVariant->priceData();
-                                    @endphp
-
-                                    <div class="space-y-2 pt-4 border-t border-gray-200 dark:border-white/5">
-
-                                        @if($pricing['has_discount'])
-
-                                            <div class="flex items-center justify-between">
-
-            <span class="text-[11px] font-bold text-gray-400 line-through tabular-nums">
-                {{ number_format($pricing['before_discount']) }}
-            </span>
-
-                                                <span class="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg tabular-nums">
-                {{ $pricing['discount_percent'] }}٪-
-            </span>
-
-                                            </div>
-
-                                        @endif
-
-                                        <div class="flex items-baseline justify-end gap-1.5">
-
-        <span
-            id="product-final-price"
-            class="text-3xl font-black text-gray-900 dark:text-white tabular-nums"
-        >
-            {{ number_format($pricing['after_discount']) }}
-        </span>
-
-                                            <span class="text-[11px] font-bold text-gray-500">
-            تومان
-        </span>
+                                            <button wire:click="notifyMe" class="w-full h-14 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-2xl font-black text-sm transition-all shadow-lg shadow-zinc-500/10 flex items-center justify-center gap-3 group/btn active:scale-95">
+                                                <span>به من اطلاع بده</span>
+                                                <svg class="w-5 h-5 group-hover/btn:rotate-12 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                                            </button>
+                                            @if($product->primaryCategory)
+                                                <a href="{{ route('categories.show', $product->primaryCategory?->slug ?? 'Not Found') }}" class="flex items-center justify-center gap-2 py-2 text-[11px] font-black text-brown-600 hover:gap-3 transition-all">
+                                                    مشاهده کالاهای مشابه
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path>
+                                                    </svg>
+                                                </a>
+                                            @endif
 
                                         </div>
 
-                                    </div>
-
-                                    <!-- Add to cart -->
-                                    <button wire:click="addToCart" id="add-to-cart-btn" class="w-full h-14 bg-brown-600 hover:bg-brown-700 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-brown-500/20 flex items-center justify-center gap-3 group/btn relative overflow-hidden active:scale-95">
-                                        <span class="relative z-10">افزودن به سبد خرید</span>
-                                        <svg class="w-5 h-5 relative z-10 group-hover:translate-x-[-4px] transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                                    </button>
+                                    @endif
                                 </div>
 
-                                <!-- link -->
+                                {{-- Footer note --}}
                                 <div class="flex items-center justify-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                    <svg class="w-4 h-4 text-secondary-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                                    بهترین قیمت تضمین شده بازار
+                                    @if($inStock)
+                                        <svg class="w-4 h-4 text-secondary-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                        بهترین قیمت تضمین شده بازار
+                                    @else
+                                        <svg class="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                        توقف تولید یا عدم موجودی در انبار
+                                    @endif
                                 </div>
                             </div>
 
                         </div>
-
                     </div>
                 </div>
-
             </div>
         </section>
         <!-- END CONTENT -->
@@ -773,7 +810,7 @@ new class extends Component
 
         <!-- START SECTION DETAIL -->
         <section>
-            <div class="container">
+            <div class="">
                 <div class="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[3rem] shadow-lg shadow-gray-200/30 dark:shadow-none">
 
                     <div class="flex items-center gap-2 p-4 bg-gray-50/50 dark:bg-white/[0.02] border-b rounded-[3rem] border-gray-100 dark:border-white/5 overflow-x-auto no-scrollbar">
@@ -957,7 +994,7 @@ new class extends Component
                                                     <div class="w-8 h-8 rounded-lg bg-brown-600/10 flex items-center justify-center text-brown-600 group-hover:bg-brown-600 group-hover:text-white transition-all">
                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
                                                     </div>
-                                                    <span lass="text-xs font-black text-zinc-800 dark:text-zinc-300">{{$specification->title}}: <span class="text-xs font-black text-zinc-700 dark:text-zinc-300">{{$specification->value}}</span></span>
+                                                    <span class="text-xs font-black text-zinc-900 dark:text-white">{{$specification->title}}: <span class="text-xs font-black text-zinc-700 dark:text-zinc-300">{{$specification->value}}</span></span>
                                                 </div>
                                             @endforeach
 
@@ -965,9 +1002,23 @@ new class extends Component
                                         </div>
                                     </div>
 
-                                    <div class="lg:col-span-5 order-1 lg:order-2 relative group">
+                                    <div class="hidden lg:block lg:col-span-5 order-1 lg:order-2 relative group">
                                         <div class="absolute -inset-4 bg-gradient-to-tr from-brown-600/20 to-indigo-600/20 rounded-[3.5rem] blur-md opacity-50 group-hover:opacity-80 transition duration-1000"></div>
-                                        <img src="{{$product->featuredImageUrl}}" alt="Smartphone Overview" class="relative rounded-[3rem] w-full h-[450px] object-cover border border-white/30 shadow-2xl">
+
+                                        @if($product->featuredVideoUrl)
+                                            <video
+                                                src="{{ $product->featuredVideoUrl }}"
+                                                class="relative rounded-[3rem] w-full h-[450px] object-cover border border-white/30 shadow-2xl"
+                                                controls
+                                                preload="metadata"
+                                            ></video>
+                                        @else
+                                            <img
+                                                src="{{ $product->featuredImageUrl }}"
+                                                alt="{{ $product->title }}"
+                                                class="relative rounded-[3rem] w-full h-[450px] object-cover border border-white/30 shadow-2xl"
+                                            >
+                                        @endif
                                     </div>
                                 </div>
 
@@ -989,13 +1040,16 @@ new class extends Component
                                             <span class="w-12 h-1.5 bg-brown-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.4)]"></span>
                                             <h3 class="text-2xl font-black text-zinc-900 dark:text-white">{{$product->title}}</h3>
                                         </div>
-                                        <p class="text-sm font-medium text-zinc-600 dark:text-zinc-300 leading-9 text-justify">
+                                        <div class="
+    text-sm font-medium text-zinc-600 dark:text-white
+    leading-9 text-justify
+    [&_*]:dark:text-white
+">
                                             {!! $product->description !!}
-
-                                        </p>
+                                        </div>
 
                                     </div>
-                                    <div class="lg:col-span-5 relative">
+                                    <div class="hidden lg:block lg:col-span-5 relative">
                                         <div class="absolute -inset-4 bg-brown-600/10 rounded-[4rem] -rotate-3 backdrop-blur-sm"></div>
                                         <img src="{{$product->featuredImageUrl}}" class="relative rounded-[3rem] shadow-lg shadow-brown-500/10 object-cover h-[400px] w-full border border-white/20" alt="Titanium Frame Detail">
                                     </div>
@@ -2117,7 +2171,7 @@ new class extends Component
 
         <!-- SHOP FEATURE -->
         <section class="relative overflow-hidden transition-colors duration-500">
-            <div class="container pt-5">
+            <div class=" pt-5">
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
 
                     <div class="flex flex-col items-center text-center group">

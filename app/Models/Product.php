@@ -110,10 +110,21 @@ class Product extends Model
         return $this->morphOne(Media::class, 'mediable')
             ->where('collection', 'featured_image');
     }
+    public function featuredVideo()
+    {
+        return $this->morphOne(Media::class, 'mediable')
+            ->where('collection', 'featured_video');
+    }
     public function getFeaturedImageUrlAttribute()
     {
         return $this->featuredImage
             ? url('/storage/' . $this->featuredImage->file_path)
+            : null;
+    }
+    public function getFeaturedVideoUrlAttribute()
+    {
+        return $this->featuredVideo
+            ? $this->featuredVideo->external_url
             : null;
     }
     public function categories(): BelongsToMany

@@ -51,7 +51,7 @@ new class extends Component
             <div class="relative">
                 <div class="absolute -inset-4 bg-gradient-to-tr from-blue-600 to-purple-600 opacity-20 blur-md rounded-full"></div>
                 <div class="relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[4rem] p-4 shadow-lg overflow-hidden group">
-                    <img src="{{asset('storage/'.$this->photo?->file_path)}}" class="rounded-[3.2rem] w-full h-[450px] object-cover grayscale group-hover:grayscale-0 transition-all duration-700" alt="تیم مانا">
+                    <img src="{{asset('storage/'.$this->photo?->file_path)}}" class="rounded-[3.2rem] w-full h-[450px] object-cover grayscale group-hover:grayscale-0 transition-all duration-700" alt="تیم زارا">
                     <div class="absolute bottom-10 right-10 left-10 p-6 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-md rounded-3xl border border-white/20 shadow-xl">
                         <p class="text-xs font-black text-gray-800 dark:text-white">مجموعه زارا چرم </p>
                         <p class="text-[10px] text-gray-500 mt-1">دفتر مرکزی قم</p>

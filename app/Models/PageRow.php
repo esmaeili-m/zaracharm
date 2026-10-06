@@ -10,7 +10,7 @@ class PageRow extends Model
 
     public function sections()
     {
-        return $this->hasMany(RowSection::class);
+        return $this->hasMany(RowSection::class)->orderBy('sort');
     }
     public function classes()
     {

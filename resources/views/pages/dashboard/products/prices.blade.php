@@ -491,7 +491,6 @@ new class extends Component
                                 <th>SKU</th>
                                 <th>بارکد</th>
                                 <th>قیمت فروش</th>
-                                <th>قیمت قبل تخفیف</th>
                                 <th>قیمت خرید</th>
                                 <th>وضعیت</th>
                                 <th>عملیات</th>
@@ -588,16 +587,6 @@ new class extends Component
 
 
                                     {{-- قیمت قبل تخفیف --}}
-                                    <td>
-
-                                        <input
-                                            type="number"
-                                            class="form-control form-control-sm"
-                                            wire:model.lazy="variants.{{$item->id}}.compare_price"
-                                            placeholder="قبل تخفیف"
-                                        >
-
-                                    </td>
 
 
 

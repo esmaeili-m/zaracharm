@@ -4,7 +4,7 @@ use Livewire\Component;
 use App\Models\Menu;
 new class extends Component
 {
-    public $menu,$categories,$logo;
+    public $menu,$categories;
 
     public function mount(): void
     {
@@ -14,7 +14,7 @@ new class extends Component
                 'items.page',
             ])
             ->first();
-        $this->logo = \App\Models\Setting::where('key','logo')->with('media')->first();
+
     }
 
 };

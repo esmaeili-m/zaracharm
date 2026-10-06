@@ -68,8 +68,7 @@ new class extends Component
     }
 };
 ?>
-
-    <div class="xl:col-span-4 relative group bg-white dark:bg-black xl:bg-white/80 xl:dark:bg-[#0a0a0a]/40 xl:backdrop-blur-md rounded-[3rem] p-6 border border-gray-100 dark:border-white/5 flex flex-col transition-all duration-500 shadow-sm">
+<div class="xl:col-span-4 relative group bg-white dark:bg-black xl:bg-white/80 xl:dark:bg-[#0a0a0a]/40 xl:backdrop-blur-md rounded-[3rem] p-6 border border-gray-100 dark:border-white/5 flex flex-col transition-all duration-500 shadow-sm">
 
         <div class="flex justify-between items-center mb-6 relative z-10">
             <div class="flex items-center gap-3">
@@ -89,7 +88,7 @@ new class extends Component
 
                         @endphp
                     <div class="swiper-slide py-4 px-2">
-                        <a  href="{{ route('products.show', $product->product->slug) }}" class=" group/card block relative bg-gray-100 dark:bg-[#0c0c0e] p-4 rounded-[2.8rem] border border-gray-100 dark:border-white/5 transition-all duration-500  dark:hover:shadow-[0_20px_40px_-10px_rgba(59,130,246,0.15)] hover:-translate-y-2">
+                        <a  href="{{ route('products.show', $product->product->slug) }}" class=" group/card block relative bg-gray-100 dark:bg-[#0c0c0e] p-4 rounded-[1.8rem] border border-gray-100 dark:border-white/5 transition-all duration-500  dark:hover:shadow-[0_20px_40px_-10px_rgba(59,130,246,0.15)] hover:-translate-y-2">
 
                             <div class="absolute top-6 right-6 z-20">
                                 @if($prices['has_discount'] ?? false)
@@ -102,12 +101,35 @@ new class extends Component
                             </div>
 
                             <div class="flex items-center gap-6">
-                                <div class="relative w-28 h-28 bg-gray-50 dark:bg-white/5 rounded-[2.2rem] flex-shrink-0 p-3 transition-transform duration-700 group-hover/card:scale-105">
-                                    <img src="{{$product->product->featuredImageUrl}}" alt="محصول"
-                                         class="w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.1)] transition-all duration-700">
+                                @if(($data['view'] ?? 1) == 1)
 
-                                    <div class="absolute inset-0 bg-brown-500/10 blur-md rounded-full opacity-0 group-hover/card:opacity-100 transition-opacity"></div>
-                                </div>
+                                    {{-- تصویر ترنسپرنت --}}
+                                    <div class="relative w-28 h-28 flex-shrink-0 overflow-hidden rounded-[1rem] transition-transform duration-700 group-hover/card:scale-105">
+
+                                        <img
+                                            src="{{ $product->product->featuredImageUrl }}"
+                                            alt="{{ $product->product->title }}"
+                                            class="w-full h-full object-cover transition-all duration-700"
+                                        >
+
+                                    </div>
+
+                                @elseif(($data['view'] ?? 1) == 2)
+
+                                    {{-- تصویر با بک‌گراند --}}
+                                    <div class="relative w-28 h-28 bg-gray-50 dark:bg-white/5 rounded-[2.2rem] flex-shrink-0 p-3 overflow-hidden transition-transform duration-700 group-hover/card:scale-105">
+
+                                        <img
+                                            src="{{ $product->product->featuredImageUrl }}"
+                                            alt="{{ $product->product->title }}"
+                                            class="w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.1)] transition-all duration-700"
+                                        >
+
+                                        <div class="absolute inset-0 bg-brown-500/10 blur-md rounded-full opacity-0 group-hover/card:opacity-100 transition-opacity"></div>
+
+                                    </div>
+
+                                @endif
 
                                 <div class="flex flex-col flex-1 gap-1">
                                     <div class="flex items-center gap-2 mb-1">
@@ -160,10 +182,37 @@ new class extends Component
             <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 mr-1">دسترسی سریع</p>
             <div class="grid grid-cols-4 gap-3">
                 @foreach($products?->take(3) ?? [] as $product)
-                    <a href="{{ route('products.show', $product->product->slug) }}" class="relative aspect-square bg-gray-50 dark:bg-black rounded-2xl p-2.5 border border-gray-200 dark:border-white/10 transition-all duration-500 group overflow-hidden hover:border-brown/60 dark:hover:shadow-[0_0_15px_rgba(var(--color-brown),0.3)]">
-                        <div class="absolute inset-0 bg-brown/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <img src="{{$product->product->featuredImageUrl}}" class="relative z-10 w-full h-full object-contain group-hover:scale-110 transition-transform duration-500">
+
+                    <a
+                        href="{{ route('products.show', $product->product->slug) }}"
+                        class="relative aspect-square rounded-2xl border border-gray-200 dark:border-white/10 transition-all duration-500 group overflow-hidden hover:border-brown/60 dark:hover:shadow-[0_0_15px_rgba(var(--color-brown),0.3)]
+        {{ ($data['view'] ?? 1) == 2 ? 'bg-gray-50 dark:bg-black p-2.5' : '' }}"
+                    >
+
+                        @if(($data['view'] ?? 1) == 1)
+
+                            {{-- تصویر ترنسپرنت --}}
+                            <img
+                                src="{{ $product->product->featuredImageUrl }}"
+                                alt="{{ $product->product->title }}"
+                                class="relative z-10 w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-500"
+                            >
+
+                        @elseif(($data['view'] ?? 1) == 2)
+
+                            {{-- تصویر با بک‌گراند --}}
+                            <img
+                                src="{{ $product->product->featuredImageUrl }}"
+                                alt="{{ $product->product->title }}"
+                                class="relative z-10 w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
+                            >
+
+                        @endif
+
+                        <div class="absolute inset-0 bg-brown/5 opacity-0 group-hover:opacity-100 transition-opacity z-20"></div>
+
                     </a>
+
                 @endforeach
 
                 <a href="/products" class="aspect-square bg-brown hover:bg-brown-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-[0_10px_20px_rgba(var(--color-brown),0.3)] transition-all active:scale-90 group">

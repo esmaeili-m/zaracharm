@@ -92,6 +92,18 @@ new class extends Component {
 
     }
 
+    #[\Livewire\Attributes\On('updateOrder')]
+    public function updateOrder($ids)
+    {
+        abort_if(!auth()->user()->can('categories.edit'), 403);
+
+        foreach ($ids as $index => $id) {
+            $this->model->where('id', $id)->update([
+                'sort' => $index + 1
+            ]);
+        }
+        $this->loadData();
+    }
     public function loadForm()
     {
         match ($this->selectItem?->section?->key) {
@@ -817,10 +829,10 @@ new class extends Component {
                                 @endforeach
                             </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="simple-list">
                             @php($counter=1)
                             @foreach($data ?? [] as $item)
-                                <tr wire:key="{{$item->id}}">
+                                <tr data-id="{{ $item->id }}" wire:key="{{$item->id}}">
                                     <th scope="row">
                                         {{$counter}}
                                     </th>
@@ -1106,5 +1118,27 @@ new class extends Component {
             </div>
         </div>
     </div>
+    @push('scripts')
+
+        <script src="{{asset('dashboard')}}/libs/sortablejs/Sortable.min.js"></script>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const simple = document.getElementById('simple-list');
+                new Sortable(simple, {
+                    animation: 150,
+                    onEnd: function () {
+                        const ids = Array.from(simple.children)
+                            .map(item => item.dataset.id);
+
+                        Livewire.dispatch('updateOrder', {
+                            ids: ids
+                        });
+                    }
+                });
+
+            });
+        </script>
+    @endpush
 
 </div>

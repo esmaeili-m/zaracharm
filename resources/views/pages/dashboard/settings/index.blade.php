@@ -2,6 +2,7 @@
 
 use Livewire\Component;
 use App\Models\Setting;
+use Illuminate\Support\Facades\Cache;
 new class extends Component
 {
     use \Livewire\WithFileUploads;
@@ -33,53 +34,140 @@ new class extends Component
         abort_if(!auth()->user()->can('seo.view'), 403);
 
         $this->settings = Setting::whereNot('key','logo')->pluck('value', 'key')->toArray();
+        unset(
+            $this->settings['logo'],
+            $this->settings['favicon']
+        );
         $this->info['header']='لیست تنظیمات';
         $this->info['create']='افزودن تنظیمات';
         $this->info['delete']='حذف تنظیمات';
         $this->info['personal']='تنظیمات';
 
     }
+    function site_settings()
+    {
+        return Cache::rememberForever('settings', function () {
+            return Setting::pluck('value', 'key')->toArray();
+        });
 
+    }
     public function save()
     {
         abort_if(!auth()->user()->can('seo.create'), 403);
-
         $this->validate([
-            'settings.site_name' => 'required|string|max:255',
-            'settings.email'     => 'nullable|email',
-            'settings.phone'     => 'nullable|string|max:50',
-            'settings.about'     => 'nullable|string',
-            'settings.logo'      => 'nullable|mimes:jpg,jpeg,png,webp,svg|max:2048',
+            'settings.site_name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'settings.site_name_en' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'settings.email' => [
+                'nullable',
+                'email',
+                'max:255',
+            ],
+
+            'settings.phone' => [
+                'nullable',
+                'string',
+                'max:50',
+            ],
+
+            'settings.about' => [
+                'nullable',
+                'string',
+            ],
+
+            'settings.logo' => [
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,webp,svg',
+                'max:2048',
+            ],
+
+            'settings.favicon' => [
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,webp,svg,ico',
+                'max:2048',
+            ],
         ], [
+            // نام سایت
             'settings.site_name.required' => 'وارد کردن نام سایت الزامی است.',
             'settings.site_name.string'   => 'نام سایت باید به صورت متن وارد شود.',
             'settings.site_name.max'      => 'نام سایت نمی‌تواند بیشتر از ۲۵۵ کاراکتر باشد.',
 
-            'settings.email.email'        => 'آدرس ایمیل وارد شده معتبر نیست.',
+            // نام انگلیسی سایت
+            'settings.site_name_en.required' => 'وارد کردن نام انگلیسی سایت الزامی است.',
+            'settings.site_name_en.string'   => 'نام انگلیسی سایت باید به صورت متن وارد شود.',
+            'settings.site_name_en.max'      => 'نام انگلیسی سایت نمی‌تواند بیشتر از ۲۵۵ کاراکتر باشد.',
 
-            'settings.phone.string'       => 'شماره تماس باید به صورت متن وارد شود.',
-            'settings.phone.max'          => 'شماره تماس نمی‌تواند بیشتر از ۵۰ کاراکتر باشد.',
+            // ایمیل
+            'settings.email.email' => 'آدرس ایمیل وارد شده معتبر نیست.',
+            'settings.email.max'   => 'آدرس ایمیل نمی‌تواند بیشتر از ۲۵۵ کاراکتر باشد.',
 
-            'settings.logo.mimes'         => 'فرمت لوگو باید یکی از انواع JPG، JPEG، PNG، WEBP یا SVG باشد.',
-            'settings.logo.max'           => 'حجم لوگو نباید بیشتر از ۲ مگابایت باشد.',
+            // تلفن
+            'settings.phone.string' => 'شماره تماس باید به صورت متن وارد شود.',
+            'settings.phone.max'    => 'شماره تماس نمی‌تواند بیشتر از ۵۰ کاراکتر باشد.',
+
+            // لوگو
+            'settings.logo.file'  => 'فایل لوگو معتبر نیست.',
+            'settings.logo.mimes' => 'فرمت لوگو باید یکی از انواع JPG، JPEG، PNG، WEBP یا SVG باشد.',
+            'settings.logo.max'   => 'حجم لوگو نباید بیشتر از ۲ مگابایت باشد.',
+
+            // فاوآیکون
+            'settings.favicon.file'  => 'فایل فاوآیکون معتبر نیست.',
+            'settings.favicon.mimes' => 'فرمت فاوآیکون باید یکی از انواع JPG، JPEG، PNG، WEBP، SVG یا ICO باشد.',
+            'settings.favicon.max'   => 'حجم فاوآیکون نباید بیشتر از ۲ مگابایت باشد.',
         ]);
 
         foreach ($this->settings as $key => $value) {
             if ($key === 'logo' && $value) {
+
                 $item=Setting::updateOrCreate(
                     ['key' => $key],
                     ['value' => 'logo']
                 );
                 if ($value) {
-
                     $item->media()
                         ->where('collection', 'logo')
                         ->delete();
 
-                    $this->upload(
+                    $logo=$this->upload(
                         $value,
                         $item,
                         'logo'
+                    );
+                    $item->update(
+                        ['value' => $logo->file_path]
+                    );
+                }
+                continue;
+            }
+            if ($key === 'favicon' && $value) {
+
+                $item=Setting::updateOrCreate(
+                    ['key' => $key],
+                    ['value' => 'favicon']
+                );
+                if ($value) {
+                    $item->media()
+                        ->where('collection', 'favicon')
+                        ->delete();
+
+                    $logo=$this->upload(
+                        $value,
+                        $item,
+                        'favicon'
+                    );
+                    $item->update(
+                        ['value' => $logo->file_path]
                     );
                 }
                 continue;
@@ -90,7 +178,9 @@ new class extends Component
                 ['value' => $value]
             );
         }
+        Cache::forget('settings');
 
+        $this->site_settings();
         session()->flash('success', 'تنظیمات ذخیره شد');
     }
 
@@ -142,6 +232,16 @@ new class extends Component
                                                wire:model="settings.site_name">
 
                                         @error('settings.site_name')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">نام انگلیسی سایت</label>
+                                        <input type="text"
+                                               class="form-control @error('settings.site_name_en') is-invalid @enderror"
+                                               wire:model="settings.site_name_en">
+
+                                        @error('settings.site_name_en')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -229,6 +329,16 @@ new class extends Component
                                                wire:model.defer="settings.logo">
 
                                         @error('settings.logo')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">فاوآیکون</label>
+                                        <input type="file"
+                                               class="form-control @error('settings.favicon') is-invalid @enderror"
+                                               wire:model.defer="settings.favicon">
+
+                                        @error('settings.favicon')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>

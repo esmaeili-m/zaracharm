@@ -11,7 +11,7 @@ new class extends Component
     public $info=[];
     public $selectItem;
     public $data;
-    public $name;
+    public $first_name;
     public $mobile;
     public $email;
     public $password;
@@ -76,7 +76,7 @@ new class extends Component
     {
         $query = $this->model->query();
         if ($this->search) {
-            $query->where('name', 'LIKE' ,'%'.$this->search.'%')
+            $query->where('first_name', 'LIKE' ,'%'.$this->search.'%')
                 ->orWhere('email', 'LIKE' ,'%'.$this->search.'%')
                 ->orWhere('mobile', 'LIKE' ,'%'.$this->search.'%');
         }
@@ -87,7 +87,7 @@ new class extends Component
     public function get_data($id)
     {
         $this->selectItem= $this->model->findOrFail($id);
-        $this->name=$this->selectItem->name;
+        $this->first_name=$this->selectItem->first_name;
         $this->email=$this->selectItem->email;
         $this->mobile=$this->selectItem->mobile;
         $this->role = $this->selectItem
@@ -103,50 +103,14 @@ new class extends Component
             $this->dispatch('close-modal');
         }
     }
-    public function saveSocial()
-    {
-        abort_if(!auth()->user()->can('users.create'), 403);
 
-        $this->validate( [
-            'platform' => ['required'],
-            'url' => ['required', 'url'],
-        ],[
-            'platform.required' => 'لطفاً شبکه اجتماعی را انتخاب کنید.',
-
-            'url.required' => 'لطفاً لینک شبکه اجتماعی را وارد کنید.',
-            'url.url' => 'لینک وارد شده معتبر نیست.',
-        ]);
-
-        \App\Models\TeacherSocial::updateOrCreate(
-            [
-                'teacher_id' => $this->selectItem->id,
-                'platform'   => $this->platform,
-            ],
-            [
-                'url' => $this->url,
-            ]
-        );
-
-        $this->reset([
-            'platform',
-            'url',
-        ]);
-        $this->dispatch(
-            'alert',
-            type: 'success',
-            title: 'عملیات موفق',
-            text: 'کاربر با موفقیت آپدیت شد.'
-        );
-        $this->dispatch('close-modal');
-
-    }
     public function rules()
     {
         $userId = $this->selectItem?->id;
 
         return [
 
-            'name' => [
+            'first_name' => [
                 'nullable',
                 'string',
                 'max:255',
@@ -174,10 +138,6 @@ new class extends Component
                 'max:255',
             ],
 
-            'image' => [
-                'nullable',
-                'string',
-            ],
 
             'role' => [
                 'required',
@@ -192,9 +152,9 @@ new class extends Component
     {
         return [
 
-            // name
-            'name.string' => 'نام باید به صورت متن وارد شود.',
-            'name.max' => 'نام نمی‌تواند بیشتر از ۲۵۵ کاراکتر باشد.',
+            // first_name
+            'first_name.string' => 'نام باید به صورت متن وارد شود.',
+            'first_name.max' => 'نام نمی‌تواند بیشتر از ۲۵۵ کاراکتر باشد.',
 
             // mobile
             'mobile.required' => 'شماره موبایل الزامی است.',
@@ -221,19 +181,6 @@ new class extends Component
             'image.max' => 'حجم تصویر نباید بیشتر از ۲ مگابایت باشد.',
 
         ];
-    }
-    public function deleteSocial($id)
-    {
-        \App\Models\TeacherSocial::where('id', $id)
-            ->where('teacher_id', $this->selectItem->id)
-            ->delete();
-        $this->dispatch(
-            'alert',
-            type: 'success',
-            title: 'عملیات موفق',
-            text: ' اطلاعات کاربر با موفقیت آپدیت شد.'
-        );
-        $this->get_data($this->selectItem->id);
     }
     public function save()
     {
@@ -341,7 +288,7 @@ new class extends Component
                                         {{$item->mobile}}
                                     </td>
                                     <td>
-                                        {{$item->name}}
+                                        {{$item->first_name}}
                                     </td>
                                     <td>
                                         @if($item->id != 1)
@@ -357,10 +304,7 @@ new class extends Component
                                     <td>
                                         @if($item->id != 1)
                                             <div class="hstack gap-2 flex-wrap">
-                                                @can('users.create')
-                                                    <a data-bs-toggle="modal" href="#createSocial" wire:click="get_data({{$item->id}})"  class="text-warning fs-14 lh-1"><i
-                                                            class="ri-instagram-line"></i></a>
-                                                @endcan
+
                                                 @can('users.edit')
 
                                                     <a data-bs-toggle="modal" href="#create" wire:click="get_data({{$item->id}})"  class="text-info fs-14 lh-1"><i
@@ -387,185 +331,6 @@ new class extends Component
             </div>
         </div>
     </div>
-    <div wire:ignore.self class="modal fade" id="createSocial">
-        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-            <div class="modal-content modal-content-demo">
-
-                <hr>
-                <form wire:submit="saveSocial">
-
-                    <div class="modal-header">
-                        <h6 class="modal-title">
-                            افزودن شبکه اجتماعی مدرس
-                        </h6>
-
-                        <button aria-label="Close"
-                                class="btn-close"
-                                data-bs-dismiss="modal">
-                        </button>
-                    </div>
-
-                    <div class="modal-body text-start">
-
-                        <div class="row">
-
-                            {{-- ستون چپ: لیست --}}
-                            <div class="col-md-6 border-end">
-
-                                <h6 class="mb-3">شبکه‌های ثبت شده</h6>
-
-                                <div class="table-responsive">
-
-                                    <table class="table table-sm text-nowrap">
-
-                                        <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>پلتفرم</th>
-                                            <th>لینک</th>
-                                            <th></th>
-                                        </tr>
-                                        </thead>
-
-                                        <tbody>
-
-                                        @php($counter = 1)
-
-                                        @foreach(optional($selectItem)->socials ?? [] as $social)
-
-                                            <tr wire:key="social-{{ $social->id }}">
-
-                                                <td>{{ $counter }}</td>
-
-                                                <td>{{ $social->platform }}</td>
-
-                                                <td>
-                                                    <a href="{{ $social->url }}" target="_blank">
-                                                        لینک
-                                                    </a>
-                                                </td>
-
-                                                <td>
-                                                    <a wire:click="deleteSocial({{ $social->id }})"
-                                                       onclick="return confirm('حذف شود؟')"
-                                                       class="text-danger">
-                                                        حذف
-                                                    </a>
-                                                </td>
-
-                                            </tr>
-
-                                            @php($counter++)
-                                        @endforeach
-
-                                        </tbody>
-
-                                    </table>
-
-                                </div>
-
-                            </div>
-
-                            {{-- ستون راست: فرم --}}
-                            <div class="col-md-6">
-
-                                <h6 class="mb-3">افزودن شبکه اجتماعی</h6>
-
-                                <form wire:submit="saveSocial">
-
-                                    <div class="mb-3">
-
-                                        <label class="form-label">شبکه اجتماعی</label>
-
-                                        <select wire:model.lazy="platform"
-                                                class="form-control @error('platform') is-invalid @enderror">
-
-                                            <option value="">انتخاب کنید</option>
-
-                                            <option value="instagram">اینستاگرام</option>
-                                            <option value="telegram">تلگرام</option>
-                                            <option value="linkedin">لینکدین</option>
-                                            <option value="youtube">یوتیوب</option>
-                                            <option value="x">ایکس</option>
-                                            <option value="eitaa">ایتا</option>
-                                            <option value="bale">بله</option>
-                                            <option value="rubika">روبیکا</option>
-                                            <option value="aparat">آپارات</option>
-                                            <option value="website">وب سایت</option>
-
-                                        </select>
-
-                                        @error('platform')
-                                        <div class="invalid-feedback d-block">
-                                            {{ $message }}
-                                        </div>
-                                        @enderror
-
-                                    </div>
-
-                                    <div class="mb-3">
-
-                                        <label class="form-label">لینک</label>
-
-                                        <input wire:model.lazy="url"
-                                               type="text"
-                                               class="form-control @error('url') is-invalid @enderror"
-                                               placeholder="https://...">
-
-                                        @error('url')
-                                        <div class="invalid-feedback d-block">
-                                            {{ $message }}
-                                        </div>
-                                        @enderror
-
-                                    </div>
-
-                                    <button type="submit" class="btn btn-primary w-100">
-                                        ذخیره
-                                    </button>
-
-                                </form>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div class="modal-footer">
-
-                        <div wire:loading.remove wire:target="saveSocial">
-
-                            <button type="submit" class="btn btn-primary">
-                                ذخیره
-                            </button>
-
-                            <button class="btn btn-light"
-                                    data-bs-dismiss="modal"
-                                    type="button">
-                                بستن
-                            </button>
-
-                        </div>
-
-                        <div wire:loading
-                             wire:target="saveSocial"
-                             class="spinner-grow text-info"
-                             role="status">
-
-                        <span class="visually-hidden">
-                            در حال بارگذاری...
-                        </span>
-
-                        </div>
-
-                    </div>
-
-                </form>
-
-            </div>
-        </div>
-    </div>
     <div wire:ignore.self class="modal fade" id="create">
         <div class="modal-dialog modal-dialog-centered text-center modal-lg" role="document">
             <div class="modal-content modal-content-demo">
@@ -577,8 +342,8 @@ new class extends Component
                             <div class="row">
                                 <div class="col-xl-6">
                                     <label  for="input-rounded" class="form-label ">نام کاربر</label>
-                                        <input wire:model.lazy="name" type="text" class="form-control @error('name') is-invalid @enderror" id="input-rounded" placeholder="لطفا نام کاربر را وارد کنید">
-                                    @error('name')
+                                        <input wire:model.lazy="first_name" type="text" class="form-control @error('first_name') is-invalid @enderror" id="input-rounded" placeholder="لطفا نام کاربر را وارد کنید">
+                                    @error('first_name')
                                         <div  class="invalid-feedback">
                                             {{$message}}
                                         </div>
@@ -622,7 +387,7 @@ new class extends Component
                                 </div>
                                 <div class="col-xl-6 mt-3">
                                     <label for="formFile" class="form-label">نقش کاربر</label>
-                                    <select wire:model.lazy="role" class="form-control @error('role') is-invalid @enderror" data-trigger="" id="choices-single-default" name="choices-single-default">
+                                    <select wire:model.lazy="role" class="form-control @error('role') is-invalid @enderror" data-trigger="" id="choices-single-default" first_name="choices-single-default">
                                         <option value="">
                                             نقش کاربر را انتخاب کنید
                                         </option>
@@ -667,7 +432,7 @@ new class extends Component
         <div class="modal-dialog modal-dialog-centered text-center modal-lg" role="document">
             <div class="modal-content modal-content-demo">
                     <div class="modal-header">
-                        <h6 class="modal-title">{{$info['delete'] .' ' .$selectItem?->name}}</h6><button aria-label="Close" class="btn-close" data-bs-dismiss="modal"></button>
+                        <h6 class="modal-title">{{$info['delete'] .' ' .$selectItem?->first_name}}</h6><button aria-label="Close" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body text-start">
 

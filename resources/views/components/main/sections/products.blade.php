@@ -118,9 +118,9 @@ new class extends Component
     @if(($data['view'] ?? 1) == 1)
         <section class="relative transition-colors duration-500 overflow-hidden">
 
-            <div class="container mx-auto relative z-10">
+            <div class="lg:container mx-auto relative z-10">
 
-                <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-r-4 border-brown-600 pr-6">
+                <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-r-4 border-brown-600 pr-2 pl-2">
                     <div>
                         <h2 class="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white">{{$view}} <span class="text-brown-600">محصولات</span></h2>
                         <p class="text-gray-500 dark:text-gray-400 mt-2 font-bold text-sm">برترین های روز دنیا در دستان شما</p>
@@ -322,8 +322,8 @@ new class extends Component
     @elseif($data['view'] == 2)
         <section class="relative transition-colors duration-500 overflow-hidden">
 
-            <div class="container mx-auto relative z-10">
-                <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-r-4 border-brown-600 pr-6">
+            <div class="lg:container mx-auto relative z-10">
+                <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-r-4 border-brown-600 pr-2 pl-2">
                     <div>
                         <h2 class="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white">{{$view}}  <span class="text-brown-600">محصولات</span></h2>
                         <p class="text-gray-500 dark:text-gray-400 mt-2 font-bold text-sm">برترین تکنولوژی‌های روز دنیا در دستان شما</p>
@@ -406,7 +406,7 @@ new class extends Component
         </section>
     @elseif($data['view'] == 3)
         <section class="best-sellers-glass relative overflow-hidden transition-colors duration-700">
-            <div class="container pb-7 relative z-10">
+            <div class="lg:container pb-7 relative z-10">
 
                 <div class="flex items-end justify-between mb-6 gap-4 flex-wrap">
                     <div class="flex items-center gap-6">

@@ -1159,7 +1159,20 @@
                         </a>
 
                     </li>
+                    <li class="slide">
 
+                        <a class="side-menu__item {{ request()->routeIs('social-links.*') ? 'active' : '' }}"
+                           href="{{ route('social-links.index') }}">
+
+                            <i class="ri-share-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+            شبکه‌های اجتماعی
+        </span>
+
+                        </a>
+
+                    </li>
 
                     {{-- دیدگاه ها --}}
                     <li class="slide">
