@@ -21,6 +21,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
 		Schema::defaultStringLength(191);
+//        Artisan::call('migrate');
+        // نقش admin همه دسترسی‌ها را دارد (حتی دسترسی‌های جدیدی که هنوز seed نشده‌اند)
+        \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
+            return method_exists($user, 'hasRole') && $user->hasRole('admin') ? true : null;
+        });
 
 //         Artisan::call('migrate');
 

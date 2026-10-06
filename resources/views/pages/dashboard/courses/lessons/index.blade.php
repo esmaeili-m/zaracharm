@@ -66,6 +66,7 @@ new #[Layout('layouts.dashboard')] class extends Component
 
     public function mount(CourseSection $section, CourseLesson $model): void
     {
+        abort_if(!auth()->user()->can('courses.view'), 403);
         $this->section = $section;
         $this->model = $model;
         $this->info['header'] = 'مدیریت درس‌ها — '.$section->title;
@@ -85,6 +86,7 @@ new #[Layout('layouts.dashboard')] class extends Component
 
     public function change_status($id): void
     {
+        abort_if(!auth()->user()->can('courses.edit'), 403);
         $item = $this->scopedQuery()->findOrFail($id);
         $payload = ['status' => ! $item->status];
         if ($payload['status'] && ! $item->published_at) {
@@ -96,6 +98,7 @@ new #[Layout('layouts.dashboard')] class extends Component
 
     public function delete(): void
     {
+        abort_if(!auth()->user()->can('courses.delete'), 403);
         if ($this->selectItem) {
             $this->scopedQuery()->findOrFail($this->selectItem->id)->delete();
             $this->loadData();
@@ -145,6 +148,7 @@ new #[Layout('layouts.dashboard')] class extends Component
 
     public function save(): void
     {
+        abort_if(!auth()->user()->can($this->selectItem ? 'courses.edit' : 'courses.create'), 403);
         $data = $this->validate();
 
         $data['course_section_id'] = $this->section->id;
@@ -162,6 +166,7 @@ new #[Layout('layouts.dashboard')] class extends Component
 
     public function updateSort(array $orderedIds): void
     {
+        abort_if(!auth()->user()->can('courses.edit'), 403);
         foreach ($orderedIds as $index => $id) {
             $this->scopedQuery()
                 ->whereKey($id)
@@ -192,6 +197,7 @@ new #[Layout('layouts.dashboard')] class extends Component
     #[\Livewire\Attributes\On('updateOrder')]
     public function updateOrder($ids)
     {
+        abort_if(!auth()->user()->can('courses.edit'), 403);
         foreach ($ids as $index => $id) {
             CourseLesson::where('course_section_id',$this->section->id)->where('id', $id)->update([
                 'sort' => $index + 1
@@ -201,6 +207,7 @@ new #[Layout('layouts.dashboard')] class extends Component
     }
     public function saveMediaUpload(): void
     {
+        abort_if(!auth()->user()->can('courses.edit'), 403);
         $this->validate([
             'mediaUpload' => 'required|file|max:512000',
             'collection' => 'required|string|max:50',
@@ -261,6 +268,7 @@ new #[Layout('layouts.dashboard')] class extends Component
 
     public function saveExternalMedia(): void
     {
+        abort_if(!auth()->user()->can('courses.edit'), 403);
         $this->externalUrl=str_replace(" ","",$this->externalUrl);
         $this->validate([
             'externalUrl' => 'required|url|max:2000',
@@ -311,6 +319,7 @@ new #[Layout('layouts.dashboard')] class extends Component
 
     public function deleteLessonMedia($mediaId): void
     {
+        abort_if(!auth()->user()->can('courses.edit'), 403);
         $media = Media::query()
             ->whereKey($mediaId)
             ->where('mediable_type', $this->model->getMorphClass())

@@ -2,9 +2,12 @@
 
 use Livewire\Component;
 use App\Enums\CampaignType;
+use App\Enums\PictureMode;
 
 new class extends Component
 {
+    use \App\Traits\HandlesWishlist;
+
     public $campaign;
     public $data;
     public $products;
@@ -34,12 +37,14 @@ new class extends Component
         }
 
         $this->campaignType = CampaignType::tryFrom($this->campaign->getRawOriginal('type'));
-        $this->imageStyle = $data['image_style'] ?? 'transparent';
+        $this->imageStyle = PictureMode::forSection('campaigns', $data)->value;
 
         $this->products = $this->campaign
             ->targetProducts()
             ->take($data['limit'] ?? 8)
             ->get();
+
+        $this->loadWishlistIds($this->products->pluck('id'));
     }
 
     /**
@@ -207,13 +212,13 @@ new class extends Component
                                                                 </div>
 
                                                                 <div class="relative flex items-center group/tooltip">
-                                                                    <button class="w-10 h-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md text-gray-900 dark:text-white rounded-xl flex items-center justify-center shadow-sm border border-white dark:border-gray-700 hover:text-red-500 transition-all duration-200">
-                                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                                                                        </svg>
-                                                                    </button>
+                                                                    <x-main.wishlist-button
+                                                                        :product-id="$product->id"
+                                                                        :active="$this->isWishlisted($product->id)"
+                                                                        class="w-10 h-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm border border-white dark:border-gray-700 transition-all duration-200"
+                                                                    />
                                                                     <span class="absolute right-full mr-3 whitespace-nowrap bg-gray-900 text-white text-[10px] py-1.5 px-3 rounded-lg opacity-0 pointer-events-none translate-x-2 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-x-0 transition-all duration-200 after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:-right-1 after:border-4 after:border-transparent after:border-l-gray-900">
-                                                                افزودن به علاقه‌مندی
+                                                                {{ $this->isWishlisted($product->id) ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی' }}
                                                             </span>
                                                                 </div>
 
@@ -346,22 +351,28 @@ new class extends Component
                                                 </div>
 
                                                 <div class="relative flex items-center group/tooltip">
-                                                    <button class="w-10 h-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md text-gray-900 dark:text-white rounded-xl flex items-center justify-center shadow-sm border border-white dark:border-gray-700 hover:text-red-500 transition-all">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                                                        </svg>
-                                                    </button>
+                                                    <x-main.wishlist-button
+                                                        :product-id="$product->id"
+                                                        :active="$this->isWishlisted($product->id)"
+                                                        class="w-10 h-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm border border-white dark:border-gray-700 transition-all"
+                                                    />
                                                     <span class="absolute right-full mr-3 whitespace-nowrap bg-gray-900 text-white text-[10px] py-1.5 px-3 rounded-lg opacity-0 pointer-events-none translate-x-2 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-x-0 transition-all duration-300 after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:-right-1 after:border-4 after:border-transparent after:border-l-gray-900">
-                                                        افزودن به علاقه‌مندی
+                                                        {{ $this->isWishlisted($product->id) ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی' }}
                                                     </span>
                                                 </div>
 
                                             </div>
 
-                                            <div class="relative -mt-24 mb-6 transition-transform duration-700 group-hover:scale-110">
-                                                <div class="absolute inset-0 bg-brown-500/20 blur-[60px] rounded-full scale-75"></div>
-                                                <img src="{{ $product->featuredImageUrl }}" class="w-40 drop-shadow-[0_20px_40px_rgba(0,0,0,0.2)] relative z-10" alt="{{ $product->title }}">
-                                            </div>
+                                            @if($imageStyle === 'transparent')
+                                                <div class="relative -mt-24 mb-6 transition-transform duration-700 group-hover:scale-110">
+                                                    <div class="absolute inset-0 bg-brown-500/20 blur-[60px] rounded-full scale-75"></div>
+                                                    <img src="{{ $product->featuredImageUrl }}" class="w-40 drop-shadow-[0_20px_40px_rgba(0,0,0,0.2)] relative z-10" alt="{{ $product->title }}">
+                                                </div>
+                                            @else
+                                                <div class="relative -mt-24 mb-6 w-40 h-40 rounded-[2rem] overflow-hidden shadow-lg ring-1 ring-inset ring-black/5 dark:ring-white/10 transition-transform duration-700 group-hover:scale-105">
+                                                    <img src="{{ $product->featuredImageUrl }}" class="w-full h-full object-cover" alt="{{ $product->title }}">
+                                                </div>
+                                            @endif
 
                                             @if($prices2['has_discount'])
                                                 <div class="absolute top-8 left-8 {{ $this->campaignBadge['dot'] }} text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg transform -rotate-12">

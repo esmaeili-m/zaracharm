@@ -140,6 +140,19 @@ class Product extends Model
     {
         return $this->morphMany(Comment::class, 'commentable')->where('is_approved', 1);;
     }
+    public function questions(): HasMany
+    {
+        return $this->hasMany(ProductQuestion::class);
+    }
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+    public function wishlistedBy(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'wishlists')
+            ->withTimestamps();
+    }
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class);

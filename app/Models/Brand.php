@@ -53,6 +53,41 @@ class Brand extends Model
             ->orderBy('sort');
     }
 
+    // لوگوی برند (در داشبورد برندها با collection = featured_image آپلود می‌شود)
+    public function logo()
+    {
+        return $this->morphOne(Media::class, 'mediable')
+            ->where('collection', 'featured_image');
+    }
+
+    public function bannerImage()
+    {
+        return $this->morphOne(Media::class, 'mediable')
+            ->where('collection', 'banner_image');
+    }
+
+    public function getLogoUrlAttribute()
+    {
+        return $this->logo
+            ? url('/storage/' . $this->logo->file_path)
+            : null;
+    }
+
+    public function getBannerImageUrlAttribute()
+    {
+        return $this->bannerImage
+            ? url('/storage/' . $this->bannerImage->file_path)
+            : null;
+    }
+
+    // محصولات قابل نمایش برند در فروشگاه
+    public function activeProducts(): HasMany
+    {
+        return $this->hasMany(Product::class)
+            ->active()
+            ->has('variants');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Scopes

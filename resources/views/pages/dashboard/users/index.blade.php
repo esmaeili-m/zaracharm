@@ -46,6 +46,13 @@ new class extends Component
     {
         abort_if(!auth()->user()->can('users.edit'), 403);
         $item = $this->model->findOrFail($id);
+
+        // غیرفعال کردن حساب خود یا مدیر کل (توسط غیرمدیر) مجاز نیست
+        if ($item->is(auth()->user()) || ($item->hasRole('admin') && !auth()->user()->hasRole('admin'))) {
+            $this->dispatch('alert', type: 'error', title: 'غیرمجاز', text: 'تغییر وضعیت این حساب مجاز نیست.');
+            return;
+        }
+
         $item->update(['status' => !$item->status]);
         $this->loadData();
         $this->dispatch(
@@ -60,6 +67,13 @@ new class extends Component
         abort_if(!auth()->user()->can('users.delete'), 403);
         if ($this->selectItem){
             $item = $this->model->findOrFail($this->selectItem->id);
+
+            // حساب خود و حساب مدیر کل (توسط غیرمدیر) قابل حذف نیست
+            if ($item->is(auth()->user()) || ($item->hasRole('admin') && !auth()->user()->hasRole('admin'))) {
+                $this->dispatch('alert', type: 'error', title: 'غیرمجاز', text: 'حذف این حساب مجاز نیست.');
+                return;
+            }
+
             $item->delete();
             $this->dispatch(
                 'alert',
@@ -184,7 +198,7 @@ new class extends Component
     }
     public function save()
     {
-        abort_if(!auth()->user()->can('users.create'), 403);
+        abort_if(!auth()->user()->can($this->selectItem ? 'users.edit' : 'users.create'), 403);
         $data = $this->validate();
         if (!empty($data['password'])) {
             $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
@@ -192,6 +206,19 @@ new class extends Component
             unset($data['password']);
         }
         unset($data['role']);
+
+        // فقط مدیر کل می‌تواند نقش admin بدهد یا نقش یک مدیر کل را تغییر دهد
+        $touchesAdmin = $this->role === 'admin' || ($this->selectItem && $this->selectItem->hasRole('admin'));
+        if ($touchesAdmin && !auth()->user()->hasRole('admin')) {
+            $this->addError('role', 'فقط مدیر کل می‌تواند نقش «admin» را واگذار یا تغییر دهد.');
+            return;
+        }
+
+        // مدیر کل نقش admin خودش را حذف نکند (قفل شدن پنل)
+        if ($this->selectItem && $this->selectItem->is(auth()->user()) && $this->selectItem->hasRole('admin') && $this->role !== 'admin') {
+            $this->addError('role', 'نمی‌توانید نقش مدیر کل را از حساب خودتان بردارید.');
+            return;
+        }
 
         $user = $this->selectItem
             ? tap($this->selectItem)->update($data)

@@ -89,6 +89,8 @@
         </select>
 
     </div>
+    @include('dashboard.forms.partials.picture-mode')
+
     {{-- تنظیمات نمایش کمپین --}}
     <div class="col-md-12">
 

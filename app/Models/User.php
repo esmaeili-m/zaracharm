@@ -103,6 +103,17 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Course::class, 'wishlists');
     }
+    public function wishlistProducts()
+    {
+        return $this->belongsToMany(Product::class, 'wishlists')
+            ->withTimestamps();
+    }
+    public function hasInWishlist($productId): bool
+    {
+        return $this->wishlists()
+            ->where('product_id', $productId)
+            ->exists();
+    }
     protected function avatarUrl(): Attribute
     {
         return Attribute::make(

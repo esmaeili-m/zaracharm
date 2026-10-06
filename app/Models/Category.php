@@ -27,6 +27,14 @@ class Category extends Model
     {
         return $this->hasMany(Category::class,'parent_id');
     }
+    public function parent(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Category::class,'parent_id');
+    }
+    public function faqs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Faq::class);
+    }
     public function getAllDescendantIds()
     {
         $ids = collect();

@@ -19,6 +19,7 @@ new class extends Component
     public string $prosInput = '';
     public string $consInput = '';
     public array $selectedOptions = [];
+    public bool $isWishlisted = false;
     public function mount($product)
     {
         $this->product = Product::active()->where('slug',$product)
@@ -30,6 +31,37 @@ new class extends Component
         $this->selectedVariant = $this->product->cheapestVariant
             ?? $this->product->variants->first();
 
+        $this->isWishlisted = Auth::check()
+            && Auth::user()->hasInWishlist($this->product->id);
+    }
+    public function toggleWishlist()
+    {
+        // مهمان: بعد از ورود به همین صفحه برمی‌گردد
+        if (! Auth::check()) {
+            session()->put('url.intended', route('products.show', $this->product->slug));
+
+            return $this->redirectRoute('login');
+        }
+
+        $wishlist = Auth::user()->wishlists()
+            ->where('product_id', $this->product->id)
+            ->first();
+
+        if ($wishlist) {
+            $wishlist->delete();
+            $this->isWishlisted = false;
+
+            $this->dispatch('alert', type: 'success', message: 'محصول از علاقه‌مندی‌ها حذف شد.');
+            return;
+        }
+
+        // unique(user_id, product_id) جلوی رکورد تکراری را می‌گیرد
+        Auth::user()->wishlists()->createOrFirst([
+            'product_id' => $this->product->id,
+        ]);
+        $this->isWishlisted = true;
+
+        $this->dispatch('alert', type: 'success', message: 'محصول به علاقه‌مندی‌ها اضافه شد.');
     }
     public function findVariant()
     {
@@ -470,11 +502,11 @@ new class extends Component
                                 <div class="flex items-center gap-1.5 p-1.5 bg-white/40 dark:bg-black/40 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/10 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-[-15px] group-hover:translate-y-0 flex-row-reverse">
 
                                     <div class="relative group/tooltip">
-                                        <button onclick="toggleModal('wishlistModal')" class="w-10 h-10 rounded-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-red-500 hover:text-white transition-all duration-300">
-                                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                                        <button type="button" wire:click="toggleWishlist" wire:loading.attr="disabled" wire:target="toggleWishlist" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 {{ $isWishlisted ? 'bg-red-500 text-white' : 'text-gray-700 dark:text-gray-200 hover:bg-red-500 hover:text-white' }}">
+                                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="{{ $isWishlisted ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                                         </button>
                                         <span class="absolute top-full mt-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 dark:bg-zinc-800 text-white text-[10px] font-black rounded-lg whitespace-nowrap opacity-0 -translate-y-1 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-y-0 transition-all duration-300 pointer-events-none shadow-lg z-[110] border border-white/10">
-                                    علاقه‌مندی
+                                    {{ $isWishlisted ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی' }}
                                     <span class="absolute bottom-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-b-gray-900 dark:border-b-zinc-800"></span>
                                 </span>
                                     </div>
@@ -575,7 +607,17 @@ new class extends Component
                                     <span class="text-gray-400 font-bold mr-1">({{ $product->comments->count() }} دیدگاه)</span>
                                 </div>
                                 <div class="w-[1px] h-4 bg-gray-200 dark:bg-white/10"></div>
-                                <a href="#" class="text-brown-500 text-[11px] font-bold hover:underline">پرسش و پاسخ (0)</a>
+                                <a href="#tab-faq" wire:click="$set('activeTab', 'faq')" class="text-brown-500 text-[11px] font-bold hover:underline">پرسش و پاسخ ({{ $product->questions()->active()->count() }})</a>
+                                <div class="w-[1px] h-4 bg-gray-200 dark:bg-white/10"></div>
+                                <button
+                                    type="button"
+                                    wire:click="toggleWishlist"
+                                    wire:loading.attr="disabled"
+                                    wire:target="toggleWishlist"
+                                    class="flex items-center gap-1.5 text-[11px] font-bold transition-colors disabled:opacity-50 {{ $isWishlisted ? 'text-red-500' : 'text-gray-400 hover:text-red-500' }}">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="{{ $isWishlisted ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                                    {{ $isWishlisted ? 'در علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی' }}
+                                </button>
                             </div>
                         </div>
 
@@ -2003,164 +2045,11 @@ new class extends Component
                         </div>
 
                         <!--Questions and Answers-->
-                        <div id="tab-faq" class="tab-content hidden animate-fadeIn pb-24 w-full">
-                            <div class="w-full space-y-12" dir="rtl">
-
-                                <section class="relative overflow-hidden bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md border-2 border-gray-200 dark:border-white/10 rounded-[3rem] p-8 lg:p-12 shadow-lg shadow-gray-200/50 dark:shadow-none">
-                                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-                                        <div class="space-y-2">
-                                            <div class="flex items-center gap-3">
-                                                <span class="w-2 h-8 bg-brown-600 rounded-full"></span>
-                                                <h3 class="text-[20px] font-black text-zinc-900 dark:text-white uppercase">پرسش خود را بنویسید</h3>
-                                            </div>
-                                            <p class="text-[13px] font-bold text-zinc-400 mr-5">سوالات شما توسط کارشناسان مانا و خریداران پاسخ داده می‌شود.</p>
-                                        </div>
-                                        <div class="hidden md:flex w-16 h-16 items-center justify-center rounded-2xl bg-brown-600/10 text-brown-600 border border-brown-600/20">
-                                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
-                                        </div>
-                                    </div>
-
-                                    <form id="faqForm" class="space-y-6">
-                                        <div class="relative group">
-                                            <textarea rows="4" required="" class="w-full bg-white/60 dark:bg-black/40 border-2 border-gray-200 dark:border-white/5 rounded-[2.5rem] px-8 py-7 text-[15px] font-bold text-zinc-900 dark:text-white outline-none focus:border-brown-600 focus:ring-4 focus:ring-brown-600/10 transition-all placeholder:text-zinc-400 resize-none" placeholder="پرسش خود را اینجا مطرح کنید..."></textarea>
-                                        </div>
-
-                                        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                                            <label class="flex items-center gap-3 cursor-pointer select-none">
-                                                <input type="checkbox" class="w-5 h-5 rounded-lg border-2 border-gray-200 dark:border-white/10 text-brown-600 focus:ring-brown-600 bg-transparent">
-                                                <span class="text-[12px] font-black text-zinc-500 dark:text-zinc-400">ارسال پرسش به صورت ناشناس</span>
-                                            </label>
-                                            <button type="submit" class="relative overflow-hidden group w-full md:w-auto px-12 py-5 bg-brown-600 text-white rounded-[2rem] font-black text-[14px] shadow-[0_15px_30px_-5px_rgba(37,99,235,0.4)] hover:shadow-[0_25px_50px_-10px_rgba(37,99,235,0.6)] hover:bg-brown-700 transition-all duration-500 active:scale-95 flex items-center justify-center gap-3">
-
-                                                <div class="absolute inset-0 bg-gradient-to-tr from-brown-400/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                                                <span class="relative z-10 tracking-wide">ثبت و انتشار پرسش</span>
-
-                                                <div class="relative z-10 w-6 h-6 rounded-xl bg-white/20 flex items-center justify-center group-hover:rotate-12 group-hover:scale-110 transition-all duration-500">
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                                                    </svg>
-                                                </div>
-                                            </button>
-                                        </div>
-                                    </form>
-                                </section>
-
-                                <div class="grid grid-cols-1 gap-10">
-
-                                    <div class="relative group p-1 lg:p-2 bg-transparent">
-                                        <div class="flex flex-col md:flex-row gap-8">
-                                            <div class="flex-shrink-0 flex md:flex-col items-center gap-4">
-                                                <div class="w-14 h-14 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-2xl flex items-center justify-center text-[20px] font-black shadow-xl">
-                                                    Q
-                                                </div>
-                                                <div class="w-1 h-16 bg-brown-600/20 rounded-full hidden md:block"></div>
-                                            </div>
-
-                                            <div class="flex-1 space-y-6">
-                                                <div class="space-y-3">
-                                                    <h4 class="text-[18px] font-black text-zinc-900 dark:text-white leading-8">آیا این کالا نسخه گلوبال است یا ریجن خاصی دارد؟</h4>
-                                                    <div class="flex items-center gap-4 text-[11px] font-bold text-zinc-400">
-                                                        <span class="flex items-center gap-1.5"><i class="far fa-user"></i> امیر رضایی</span>
-                                                        <span class="w-1.5 h-1.5 bg-zinc-200 dark:bg-white/10 rounded-full"></span>
-                                                        <span class="flex items-center gap-1.5"><i class="far fa-calendar-alt"></i> ۲۴ فروردین ۱۴۰۳</span>
-                                                    </div>
-                                                </div>
-
-                                                <div class="relative bg-white/40 dark:bg-zinc-900/60 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-[2.5rem] p-8 lg:p-10 shadow-lg transition-all duration-500 hover:shadow-2xl">
-                                                    <div class="flex items-center gap-3 mb-5">
-                                                        <div class="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[11px] font-black rounded-lg uppercase">
-                                                            پاسخ کارشناس مانا
-                                                        </div>
-                                                    </div>
-                                                    <p class="text-[14px] font-bold text-zinc-600 dark:text-zinc-300 leading-8">
-                                                        بله، تمامی محصولات ما نسخه گلوبال آنلاک فکتوری هستند. این مدل دارای پشتیبانی کامل از منوی فارسی و سرویس‌های گوگل به صورت پیش‌فرض می‌باشد.
-                                                    </p>
-
-                                                    <div class="mt-8 pt-6 border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
-                                                        <p class="text-[11px] font-black text-zinc-400">آیا این پاسخ مفید بود؟</p>
-                                                        <div class="flex items-center gap-4">
-                                                            <button class="flex items-center gap-2 group/btn transition-all">
-                                                                <span class="text-[12px] font-black text-zinc-400 group-hover/btn:text-brown-600">۱۸</span>
-                                                                <div class="p-2.5 rounded-xl bg-gray-100 dark:bg-white/5 text-zinc-400 group-hover/btn:bg-brown-600/10 group-hover/btn:text-brown-600 border border-transparent group-hover/btn:border-brown-600/20">
-                                                                    <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path d="M4 21h1V8H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2zM20 8h-7l1.122-3.368A2 2 0 0 0 12.225 2H12L7 7.438V21h11l3.912-8.596L22 12v-2a2 2 0 0 0-2-2z" fill="currentColor"></path></svg>                                                            </div>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="relative p-1 lg:p-2 bg-transparent opacity-60">
-                                        <div class="flex flex-col md:flex-row gap-8">
-                                            <div class="flex-shrink-0 flex md:flex-col items-center gap-4">
-                                                <div class="w-14 h-14 bg-gray-100 dark:bg-zinc-800 text-zinc-400 rounded-2xl flex items-center justify-center text-[20px] font-black">
-                                                    ?
-                                                </div>
-                                            </div>
-                                            <div class="flex-1 space-y-4 pt-2">
-                                                <h4 class="text-[17px] font-black text-zinc-900 dark:text-white leading-8">این محصول شامل چند ماه خدمات پس از فروش است؟</h4>
-                                                <div class="flex items-center gap-3">
-                                                    <span class="text-[10px] font-black text-brown-600 bg-brown-600/10 px-3 py-1.5 rounded-lg border border-brown-600/20">در انتظار پاسخ کارشناس مانا</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="relative group p-1 lg:p-2 bg-transparent">
-                                        <div class="flex flex-col md:flex-row gap-8">
-                                            <div class="flex-shrink-0 flex md:flex-col items-center gap-4">
-                                                <div class="w-14 h-14 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-2xl flex items-center justify-center text-[20px] font-black shadow-xl">
-                                                    Q
-                                                </div>
-                                                <div class="w-1 h-16 bg-brown-600/20 rounded-full hidden md:block"></div>
-                                            </div>
-
-                                            <div class="flex-1 space-y-6">
-                                                <div class="space-y-3">
-                                                    <h4 class="text-[18px] font-black text-zinc-900 dark:text-white leading-8">اقلام داخل جعبه دقیقاً شامل چه مواردی است؟</h4>
-                                                    <div class="flex items-center gap-4 text-[11px] font-bold text-zinc-400 uppercase tracking-tighter">
-                                                        <span>کاربر مهمان</span>
-                                                        <span class="w-1.5 h-1.5 bg-zinc-200 rounded-full"></span>
-                                                        <span>۱ روز پیش</span>
-                                                    </div>
-                                                </div>
-
-                                                <div class="relative bg-white/40 dark:bg-zinc-900/60 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-[2.5rem] p-8 lg:p-10 shadow-lg transition-all duration-500">
-                                                    <div class="flex items-center gap-3 mb-5">
-                                                        <div class="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[11px] font-black rounded-lg uppercase">
-                                                            پاسخ کارشناس مانا
-                                                        </div>
-                                                    </div>
-                                                    <p class="text-[14px] font-bold text-zinc-600 dark:text-zinc-300 leading-8">
-                                                        درون جعبه علاوه بر خود محصول، کابل شارژ اصلی، دفترچه راهنما، سوزن سیم‌کارت و یک عدد کاور ژله‌ای شفاف با کیفیت قرار دارد.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-center pt-10">
-                                    <button class="group relative px-14 py-5 bg-brown-600 rounded-[2rem] overflow-hidden transition-all duration-500 shadow-[0_15px_30px_-5px_rgba(37,99,235,0.4)] hover:shadow-[0_20px_40px_-5px_rgba(37,99,235,0.6)] hover:scale-[1.03] active:scale-95">
-
-                                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shine"></div>
-
-                                        <div class="absolute inset-0 rounded-[2rem] border border-white/20 pointer-events-none"></div>
-
-                                        <div class="relative flex items-center justify-center gap-3">
-                                            <svg class="w-5 h-5 text-white/80 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-
-                                            <span class="text-[14px] font-black text-white uppercase tracking-wider">
-                                            مشاهده پرسش‌های بیشتر
-                                        </span>
-                                        </div>
-                                    </button>
-                                </div>
-                            </div>
+                        <div
+                            id="tab-faq"
+                            class="tab-content {{ $activeTab === 'faq' ? 'block' : 'hidden' }} animate-fadeIn pb-24 w-full"
+                        >
+                            <livewire:main.products.questions :product-id="$product->id" :key="'product-questions-'.$product->id" />
                         </div>
 
                     </div>

@@ -196,7 +196,7 @@ new class extends Component
     }
     public function save()
     {
-        abort_if(!auth()->user()->can('menus.create'), 403);
+        abort_if(!auth()->user()->can($this->selectItem ? 'menus.edit' : 'menus.create'), 403);
 
         $data = $this->validate();
         $data['menu_id']=$this->ids;

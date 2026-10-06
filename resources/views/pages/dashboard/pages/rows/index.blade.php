@@ -146,7 +146,7 @@ new class extends Component
     }
     public function save()
     {
-        abort_if(!auth()->user()->can('sections.create'), 403);
+        abort_if(!auth()->user()->can($this->selectItem ? 'sections.edit' : 'sections.create'), 403);
 
         $data = $this->validate();
         $data['page_id'] = $this->page->id;

@@ -26,6 +26,8 @@ Route::livewire('/search', 'pages::main.search.index')->name('search');
 Route::livewire('/articles/{slug}', 'pages::main.blogs.show')->name('articles.show');
 Route::livewire('/services/{slug}', 'pages::main.services.show')->name('services.show');
 Route::livewire('/categories/{slug}', 'pages::main.categories.show')->name('categories.show');
+Route::livewire('/brands', 'pages::main.brands.index')->name('brands.list');
+Route::livewire('/brands/{slug}', 'pages::main.brands.show')->name('brands.show');
 Route::livewire('/tags/{slug}', 'pages::main.tags.show')->name('tags.show');
 
 Route::livewire('/courses/{course}/learn', 'pages::main.courses.learn')->name('courses.learn');
@@ -57,9 +59,14 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/services', 'pages::dashboard.services.index')->name('services.index');
     Route::livewire('/invoices', 'pages::dashboard.invoices.index')->name('invoices.index');
     Route::livewire('/{id}/invoices', 'pages::dashboard.invoices.details')->name('invoices.details');
+    Route::livewire('/invoices/create', 'pages::dashboard.invoices.form')->name('invoices.create');
+    Route::livewire('/invoices/{invoice}/edit', 'pages::dashboard.invoices.form')->name('invoices.edit');
+    Route::livewire('/returns', 'pages::dashboard.returns.index')->name('returns.index');
     Route::livewire('/tickets', 'pages::dashboard.tickets.index')->name('tickets.index');
     Route::livewire('/messages', 'pages::dashboard.contact.index')->name('messages.index');
     Route::livewire('/comments', 'pages::dashboard.comments.index')->name('comments.index');
+    Route::livewire('/product-questions', 'pages::dashboard.product-questions.index')->name('product-questions.index');
+    Route::livewire('/product-questions/trash', 'pages::dashboard.product-questions.trash')->name('product-questions.trash');
     Route::livewire('/services/trash', 'pages::dashboard.services.trash')->name('services.trash');
 
     Route::livewire('/courses', 'pages::dashboard.courses.index')->name('orders.index');

@@ -16,11 +16,26 @@ new class extends Component
         $this->orderFilter = $filter;
     }
 
+    // بعد از ثبت/لغو مرجوعی، وضعیت کارت‌ها بروز شود
+    #[\Livewire\Attributes\On('return-request-updated')]
+    public function refreshOrders(): void
+    {
+        unset($this->orders);
+    }
+
+    // سفارش‌هایی که دکمه «درخواست مرجوعی» دارند
+    public function canRequestReturn($order): bool
+    {
+        return app(\App\Services\Returns\ReturnRequestService::class)->eligibility($order)['allowed'];
+    }
+
     public function getOrdersProperty()
     {
         return $this->user->orders()
             ->with([
                 'items.variant.product',
+                'shipment',
+                'returnRequests' => fn ($q) => $q->latest(),
             ])
             ->when($this->orderFilter === 'current', function ($query) {
                 $query->whereIn('status', [
@@ -30,7 +45,7 @@ new class extends Component
                 ]);
             })
             ->when($this->orderFilter === 'delivered', function ($query) {
-                $query->where('status', 'delivered');
+                $query->whereIn('status', ['delivered', 'completed']);
             })
             ->latest()
             ->paginate(5);
@@ -64,7 +79,7 @@ new class extends Component
                         'dot' => 'bg-purple-500',
                     ],
 
-                    'delivered' => [
+                    'delivered', 'completed' => [
                         'title' => 'تحویل شده',
                         'class' => 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
                         'dot' => 'bg-emerald-500',
@@ -128,7 +143,7 @@ new class extends Component
                             </span>
 
                                 <span class="text-[13px] font-black text-primary-500 tabular-nums">
-                                {{ number_format($order->total) }}
+                                {{ number_format($order->total_amount) }}
                                 تومان
                             </span>
 
@@ -150,6 +165,16 @@ new class extends Component
 
 
                         {{-- Status --}}
+                        <div class="flex flex-wrap items-center gap-2">
+
+                            @if($latestReturn = $order->returnRequests->first())
+                                <button type="button"
+                                        wire:click="$dispatch('open-return-request', { orderId: {{ $order->id }} })"
+                                        class="px-3 py-2 rounded-xl border text-[10px] font-black {{ $latestReturn->status_class }}">
+                                    مرجوعی: {{ $latestReturn->status_label }}
+                                </button>
+                            @endif
+
                         <div class="flex items-center gap-2 px-4 py-2 rounded-xl {{ $status['class'] }} border">
 
                             <span class="w-2.5 h-2.5 rounded-full {{ $status['dot'] }}"></span>
@@ -157,6 +182,8 @@ new class extends Component
                             <span class="text-[11px] font-black">
                             {{ $status['title'] }}
                         </span>
+
+                        </div>
 
                         </div>
 
@@ -254,14 +281,28 @@ new class extends Component
 
                             @elseif($order->status === 'pending')
 
-                                <button
-                                    type="button"
-                                    class="px-6 py-3 rounded-2xl bg-amber-500 text-white text-[11px]
+                                {{-- همان شرایطی که صفحه checkout برای پرداخت می‌پذیرد --}}
+                                @if($order->payment_status === 'unpaid' && $order->expires_at?->isFuture())
+
+                                    <a
+                                        href="{{ route('checkout', $order->order_number) }}"
+                                        class="px-6 py-3 rounded-2xl bg-amber-500 text-white text-[11px]
                        font-black shadow-lg shadow-amber-500/20
                        hover:bg-amber-600 transition-all active:scale-95 whitespace-nowrap"
-                                >
-                                    پرداخت سفارش
-                                </button>
+                                    >
+                                        پرداخت سفارش
+                                    </a>
+
+                                @elseif($order->payment_status === 'unpaid')
+
+                                    <span
+                                        class="px-6 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 text-gray-400 text-[11px]
+                       font-black whitespace-nowrap"
+                                    >
+                                        مهلت پرداخت تمام شده
+                                    </span>
+
+                                @endif
 
                             @elseif($order->status === 'returned')
 
@@ -272,6 +313,32 @@ new class extends Component
                        hover:bg-amber-600 transition-all active:scale-95 whitespace-nowrap"
                                 >
                                     جزئیات استرداد
+                                </button>
+
+                            @endif
+
+                            {{-- مرجوعی --}}
+                            @if($this->canRequestReturn($order))
+
+                                <button
+                                    type="button"
+                                    wire:click="$dispatch('open-return-request', { orderId: {{ $order->id }} })"
+                                    class="px-6 py-3 rounded-2xl bg-white/70 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 text-[11px]
+                       font-black hover:border-amber-500/50 hover:text-amber-600 transition-all active:scale-95 whitespace-nowrap"
+                                >
+                                    درخواست مرجوعی
+                                </button>
+
+                            @elseif($order->returnRequests->isNotEmpty())
+
+                                <button
+                                    type="button"
+                                    wire:click="$dispatch('open-return-request', { orderId: {{ $order->id }} })"
+                                    class="px-6 py-3 rounded-2xl bg-amber-500 text-white text-[11px]
+                       font-black shadow-lg shadow-amber-500/20
+                       hover:bg-amber-600 transition-all active:scale-95 whitespace-nowrap"
+                                >
+                                    جزئیات مرجوعی
                                 </button>
 
                             @endif
@@ -316,4 +383,7 @@ new class extends Component
         @endforelse
 
     </div>
+
+    {{-- مودال مرجوعی (یک نمونه برای همه سفارش‌ها) --}}
+    <livewire:main.users.return-request />
 </div>

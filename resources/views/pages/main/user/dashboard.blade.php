@@ -17,6 +17,9 @@ new class extends Component
             'orders',
             'cart.items',
         ]);
+
+        // امکان باز کردن مستقیم یک بخش، مثل ?tab=wishlist
+        $this->changeStatus(request()->query('tab', 'dashboard'));
     }
     public function changeStatus($status)
     {
@@ -27,6 +30,7 @@ new class extends Component
             'wallet'    => 3,
             'settings'  => 4,
             'tickets' => 5,
+            'wishlist'  => 6,
             default     => 1,
         };
 
@@ -231,6 +235,27 @@ new class extends Component
                             </a>
 
 
+                            {{-- Wishlist --}}
+                            <a wire:click.prevent="changeStatus('wishlist')" href="#"
+                               class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all
+                            {{ $status === 6 ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30 scale-[1.02]' : 'text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-white/5 hover:text-primary-500' }} group">
+                                <svg class="w-5 h-5 {{ $status === 6 ? '' : 'group-hover:scale-110 transition-transform' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                </svg>
+                                <span class="text-xs font-black">علاقه‌مندی‌ها</span>
+                            </a>
+
+                            {{-- Admin panel (فقط کاربرانی که دسترسی ورود به پنل دارند) --}}
+                            @can('settings.dashboard')
+                            <a href="{{ route('dashboard') }}"
+                               class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-white/5 hover:text-primary-500 group">
+                                <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                                </svg>
+                                <span class="text-xs font-black">پنل مدیریت</span>
+                            </a>
+                            @endcan
+
                             {{-- Logout --}}
                             <div class="pt-4 mt-4 border-t border-gray-200/30 dark:border-white/5">
 
@@ -399,6 +424,27 @@ new class extends Component
                                         <span class="text-xs font-black">تیکت ها</span>
                                     </a>
 
+                                    {{-- Wishlist --}}
+                                    <a wire:click.prevent="changeStatus('wishlist')" href="#"
+                                       class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all
+                                    {{ $status === 6 ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30 scale-[1.02]' : 'text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-white/5 hover:text-primary-500' }} group">
+                                        <svg class="w-5 h-5 {{ $status === 6 ? '' : 'group-hover:scale-110 transition-transform' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                        </svg>
+                                        <span class="text-xs font-black">علاقه‌مندی‌ها</span>
+                                    </a>
+
+                                    {{-- Admin panel (فقط کاربرانی که دسترسی ورود به پنل دارند) --}}
+                                    @can('settings.dashboard')
+                                    <a href="{{ route('dashboard') }}"
+                                       class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-white/5 hover:text-primary-500 group">
+                                        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                                        </svg>
+                                        <span class="text-xs font-black">پنل مدیریت</span>
+                                    </a>
+                                    @endcan
+
                                     {{-- Logout --}}
                                     <div class="pt-4 mt-4 border-t border-gray-200/30 dark:border-white/5">
                                         <a wire:click.prevent="logout" href="#"
@@ -456,6 +502,9 @@ new class extends Component
 
                 @elseif($status == 5)
                     <livewire:main.users.tickets :user="$user"/>
+
+                @elseif($status == 6)
+                    <livewire:main.users.wishlist :user="$user"/>
                 @endif
             </main>
 

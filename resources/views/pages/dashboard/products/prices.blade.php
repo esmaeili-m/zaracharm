@@ -24,6 +24,8 @@ new class extends Component
     public $inventory_id;
     public $quantity;
     public $minimum_quantity;
+    // فقط نمایشی؛ رزرو فقط توسط سفارش‌ها تغییر می‌کند
+    public $reserved_quantity = 0;
     public $status;
     public $inventories;
     public $data;
@@ -34,7 +36,7 @@ new class extends Component
     #[\Livewire\Attributes\Layout('layouts.dashboard')]
     public function mount(Product $product,ProductVariant $model)
     {
-        abort_if(!auth()->user()->can('categories.view'), 403);
+        abort_if(!auth()->user()->can('products.view'), 403);
         $this->model=$model;
         $this->product=$product;
         $this->inventories = \App\Models\Inventory::active()->orderBy('sort')->get();
@@ -182,7 +184,7 @@ new class extends Component
     }
     public function change_status($id)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('products.edit'), 403);
 
         $item = $this->model->findOrFail($id);
         $item->update(['status' => !$item->status]);
@@ -196,7 +198,7 @@ new class extends Component
     }
     public function delete()
     {
-        abort_if(!auth()->user()->can('categories.delete'), 403);
+        abort_if(!auth()->user()->can('products.delete'), 403);
 
         if ($this->selectItem){
             $item = $this->model->findOrFail($this->selectItem->id);
@@ -280,24 +282,27 @@ new class extends Component
     }
     public function set_stock()
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('inventories.edit'), 403);
 
         $data = $this->validate();
 
-        \App\Models\InventoryItem::updateOrCreate(
+        // تغییر موجودی از طریق سرویس انبار: ثبت در دفتر حرکات + جلوگیری از کمتر شدن از مقدار رزرو
+        try {
+            $row = app(\App\Services\Inventory\InventoryService::class)->setQuantity(
+                $this->selectItem->id,
+                (int) $data['inventory_id'],
+                (int) $data['quantity'],
+                'اصلاح موجودی از صفحه قیمت و موجودی'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->addError('quantity', collect($e->errors())->flatten()->first());
+            return;
+        }
 
-            [
-                'inventory_id' => $data['inventory_id'],
-                'product_variant_id' => $this->selectItem->id,
-            ],
-
-            [
-                'quantity' => $data['quantity'],
-                'minimum_quantity' => $data['minimum_quantity'],
-                'status' => $data['status'],
-            ]
-
-        );
+        $row->update([
+            'minimum_quantity' => $data['minimum_quantity'],
+            'status' => $data['status'],
+        ]);
 
         $this->resetData('close');
 
@@ -317,12 +322,14 @@ new class extends Component
         if ($stock) {
 
             $this->quantity = $stock->quantity;
+            $this->reserved_quantity = $stock->reserved_quantity;
             $this->minimum_quantity = $stock->minimum_quantity;
             $this->status = $stock->status;
 
         } else {
 
             $this->quantity = 0;
+            $this->reserved_quantity = 0;
             $this->minimum_quantity = 0;
             $this->status = true;
 
@@ -331,7 +338,7 @@ new class extends Component
     #[\Livewire\Attributes\On('updateOrder')]
     public function updateOrder($ids)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('products.edit'), 403);
 
         foreach ($ids as $index => $id) {
             $this->model->where('id', $id)->update([
@@ -420,7 +427,7 @@ new class extends Component
 
         </div>
         <div class="btn-list">
-            @can('categories.view')
+            @can('products.view')
 
                 <a href="{{route('brands.trash')}}" class="btn btn-warning-light btn-wave me-2">
                     <i class="bx bx-trash align-middle">
@@ -428,7 +435,7 @@ new class extends Component
                     سطل آشغال
                 </a>
             @endcan
-            @can('categories.create')
+            @can('products.create')
                 <button wire:click="resetData()" data-bs-effect="effect-flip-horizontal" data-bs-toggle="modal" href="#create" class="btn btn-success-light btn-wave me-0">
                     <i class="ri-add-line align-middle">
                     </i>
@@ -732,11 +739,13 @@ new class extends Component
                             <div class="col-md-4 mt-3">
                                 <label class="form-label">موجودی رزرو شده</label>
 
+                                {{-- رزرو فقط توسط سفارش‌های باز تغییر می‌کند --}}
                                 <input
                                     type="number"
-                                    min="0"
-                                    wire:model.lazy="reserved_quantity"
-                                    class="form-control @error('reserved_quantity') is-invalid @enderror">
+                                    value="{{ (int) $reserved_quantity }}"
+                                    disabled
+                                    class="form-control">
+                                <div class="form-text">قابل فروش: {{ max(0, (int) $quantity - (int) $reserved_quantity) }}</div>
 
                                 @error('reserved_quantity')
                                 <div class="invalid-feedback">

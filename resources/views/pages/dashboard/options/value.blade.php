@@ -23,7 +23,7 @@ new class extends Component
     #[\Livewire\Attributes\Layout('layouts.dashboard')]
     public function mount(Option $option,OptionValue $model)
     {
-        abort_if(!auth()->user()->can('categories.view'), 403);
+        abort_if(!auth()->user()->can('options.view'), 403);
         $this->model=$model;
         $this->option=$option;
         $this->info['header']='لیست مقدار ویژگی ها';
@@ -42,7 +42,7 @@ new class extends Component
 
     public function change_status($id)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('options.edit'), 403);
 
         $item = $this->model->findOrFail($id);
         $item->update(['status' => !$item->status]);
@@ -56,7 +56,7 @@ new class extends Component
     }
     public function delete()
     {
-        abort_if(!auth()->user()->can('categories.delete'), 403);
+        abort_if(!auth()->user()->can('options.delete'), 403);
 
         if ($this->selectItem){
             $item = $this->model->findOrFail($this->selectItem->id);
@@ -167,7 +167,7 @@ new class extends Component
     }
 
     public function save(){
-        abort_if(!auth()->user()->can('categories.create'), 403);
+        abort_if(!auth()->user()->can($this->selectItem ? 'options.edit' : 'options.create'), 403);
         $data= $this->validate();
         $data['option_id']=$this->option->id;
         $item = $this->selectItem
@@ -188,7 +188,7 @@ new class extends Component
     #[\Livewire\Attributes\On('updateOrder')]
     public function updateOrder($ids)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('options.edit'), 403);
 
         foreach ($ids as $index => $id) {
             $this->model->where('id', $id)->update([
@@ -210,7 +210,7 @@ new class extends Component
 
         </div>
         <div class="btn-list">
-            @can('categories.view')
+            @can('options.view')
 
                 <a href="{{route('brands.trash')}}" class="btn btn-warning-light btn-wave me-2">
                     <i class="bx bx-trash align-middle">
@@ -218,7 +218,7 @@ new class extends Component
                     سطل آشغال
                 </a>
             @endcan
-            @can('categories.create')
+            @can('options.create')
                 <button wire:click="resetData()" data-bs-effect="effect-flip-horizontal" data-bs-toggle="modal" href="#create" class="btn btn-success-light btn-wave me-0">
                     <i class="ri-add-line align-middle">
                     </i>
@@ -266,7 +266,7 @@ new class extends Component
                                         {{$item->title}}
                                     </td>
                                     <td>
-                                        @can('categories.edit')
+                                        @can('options.edit')
 
                                             <span style="cursor: pointer" wire:click="change_status({{$item->id}})"
                                                   wire:loading.attr="disabled"
@@ -279,12 +279,12 @@ new class extends Component
                                     <td>
 
                                         <div class="hstack gap-2 flex-wrap">
-                                            @can('categories.create')
+                                            @can('options.create')
 
                                                 <a data-bs-toggle="modal" href="#create" wire:click="get_data({{$item->id}})"  class="text-info fs-14 lh-1"><i
                                                         class="ri-edit-line"></i></a>
                                             @endcan
-                                            @can('categories.delete')
+                                            @can('options.delete')
 
                                                 <a  data-bs-toggle="modal" href="#delete" wire:click="get_data({{$item->id}})"  class="text-danger fs-14 lh-1"><i
                                                         class="ri-delete-bin-5-line"></i></a>

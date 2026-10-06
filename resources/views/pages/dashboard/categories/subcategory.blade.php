@@ -227,7 +227,7 @@ new class extends Component
         ];
     }
     public function save(){
-        abort_if(!auth()->user()->can('categories.create'), 403);
+        abort_if(!auth()->user()->can($this->selectItem ? 'categories.edit' : 'categories.create'), 403);
 
         $data= $this->validate();
         $data['parent_id'] = $this->parent_id;

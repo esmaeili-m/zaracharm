@@ -481,6 +481,7 @@ new class extends Component
                     $variantId  = $cartItem->variant_id ?? ($attributes['variant_id'] ?? null);
 
                     $variant = null;
+                    $inventoryRow = null;
 
                     if ($variantId) {
                         $variant = ProductVariant::query()->with('product')->lockForUpdate()->find($variantId);
@@ -531,6 +532,8 @@ new class extends Component
                         'unit_price'  => $unitPrice,
                         'quantity'    => $quantity,
                         'total_price' => $lineTotal,
+                        // ردیف انباری که رزرو روی آن انجام شد (برای آزادسازی/قطعی شدن بعدی)
+                        'inventory_row' => $inventoryRow,
                     ];
                 }
 
@@ -633,16 +636,39 @@ new class extends Component
                     'total_amount'    => $totalAmount,
                 ]);
 
-                foreach ($order->items as $item) {
-                    $invoice->items()->create([
-                        'variant_id'   => $item->variant_id,
-                        'product_name' => $item->product_name,
-                        'variant_name' => $item->variant_name,
-                        'quantity'     => $item->quantity,
-                        'unit_price'   => $item->price,
-                        'total_price'  => $item->total_price,
-                        'attributes'   => $item->attributes,
+                foreach ($order->items as $index => $item) {
+                    $reservedRow = $preparedItems[$index]['inventory_row'] ?? null;
+
+                    $invoiceItem = $invoice->items()->create([
+                        'variant_id'     => $item->variant_id,
+                        'inventory_id'   => $reservedRow?->inventory_id,
+                        'product_name'   => $item->product_name,
+                        'variant_name'   => $item->variant_name,
+                        'quantity'       => $item->quantity,
+                        'stock_reserved' => $reservedRow ? $item->quantity : 0,
+                        'unit_price'     => $item->price,
+                        'total_price'    => $item->total_price,
+                        'attributes'     => $item->attributes,
                     ]);
+
+                    // ثبت رزرو در دفتر حرکات انبار
+                    if ($reservedRow) {
+                        \App\Models\StockMovement::create([
+                            'inventory_item_id'  => $reservedRow->id,
+                            'product_variant_id' => $item->variant_id,
+                            'inventory_id'       => $reservedRow->inventory_id,
+                            'type'               => 'reserve',
+                            'quantity_change'    => 0,
+                            'reserved_change'    => (int) $item->quantity,
+                            'quantity_after'     => (int) $reservedRow->quantity,
+                            'reserved_after'     => (int) $reservedRow->reserved_quantity + (int) $item->quantity,
+                            'reference_type'     => $invoice->getMorphClass(),
+                            'reference_id'       => $invoice->id,
+                            'reference_line_id'  => $invoiceItem->id,
+                            'user_id'            => Auth::id(),
+                            'note'               => 'رزرو سفارش ' . $order->order_number,
+                        ]);
+                    }
                 }
 
                 // ---------------------------------------------------------------

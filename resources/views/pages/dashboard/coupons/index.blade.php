@@ -31,7 +31,7 @@ new class extends Component
     #[\Livewire\Attributes\Layout('layouts.dashboard')]
     public function mount(Coupon $model)
     {
-        abort_if(!auth()->user()->can('categories.view'), 403);
+        abort_if(!auth()->user()->can('coupons.view'), 403);
         $this->model=$model;
         $this->discounts=\App\Models\Discount::active()->get();
         $this->info['header']='لیست کوپن ها';
@@ -52,7 +52,7 @@ new class extends Component
 
     public function change_status($id)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('coupons.edit'), 403);
 
         $item = $this->model->findOrFail($id);
         $item->update(['status' => !$item->status]);
@@ -66,7 +66,7 @@ new class extends Component
     }
     public function delete()
     {
-        abort_if(!auth()->user()->can('categories.delete'), 403);
+        abort_if(!auth()->user()->can('coupons.delete'), 403);
 
         if ($this->selectItem){
             $item = $this->model->findOrFail($this->selectItem->id);
@@ -246,7 +246,7 @@ new class extends Component
     }
 
     public function save(){
-        abort_if(!auth()->user()->can('categories.create'), 403);
+        abort_if(!auth()->user()->can($this->selectItem ? 'coupons.edit' : 'coupons.create'), 403);
         $data= $this->validate();
 
         $item = $this->selectItem
@@ -281,7 +281,7 @@ new class extends Component
 
         </div>
         <div class="btn-list">
-            @can('categories.view')
+            @can('coupons.view')
 
                 <a href="{{route('brands.trash')}}" class="btn btn-warning-light btn-wave me-2">
                     <i class="bx bx-trash align-middle">
@@ -289,7 +289,7 @@ new class extends Component
                     سطل آشغال
                 </a>
             @endcan
-            @can('categories.create')
+            @can('coupons.create')
                 <button wire:click="resetData()" data-bs-effect="effect-flip-horizontal" data-bs-toggle="modal" href="#create" class="btn btn-success-light btn-wave me-0">
                     <i class="ri-add-line align-middle">
                     </i>
@@ -367,7 +367,7 @@ new class extends Component
                                     {{-- وضعیت --}}
                                     <td>
 
-                                        @can('categories.edit')
+                                        @can('coupons.edit')
 
                                             <span
                                                 style="cursor:pointer"
@@ -400,7 +400,7 @@ new class extends Component
                                         <div class="hstack gap-2 flex-wrap">
 
 
-                                            @can('categories.edit')
+                                            @can('coupons.edit')
 
                                                 <a
                                                     data-bs-toggle="modal"
@@ -416,7 +416,7 @@ new class extends Component
 
 
 
-                                            @can('categories.delete')
+                                            @can('coupons.delete')
 
                                                 <a
                                                     data-bs-toggle="modal"

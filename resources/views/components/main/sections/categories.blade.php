@@ -2,15 +2,18 @@
 
 use Livewire\Component;
 use App\Models\Category;
+use App\Enums\PictureMode;
 new class extends Component
 {
     public $data;
+    public string $pictureMode = 'background';
     public $categories=[];
     public $colors=[];
     public function mount($data)
     {
         $this->colors = ['brown', 'red', 'green', 'purple', 'pink', 'cyan', 'yellow', 'indigo'];
         $this->data = $data;
+        $this->pictureMode = PictureMode::forSection('categories', $data)->value;
         if ($data){
             if ($data['mode'] == 'sales') {
                 $this->categories = Category::query()
@@ -139,7 +142,7 @@ new class extends Component
                 @if((int) $data['view'] == 1)
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-6">
                     @foreach($categories ?? [] as $category)
-                        @if(($data['pictureMode'] ?? 'background') === 'background')
+                        @if($pictureMode === 'background')
                             {{-- Background Image --}}
                             <a href="#" class="group relative flex flex-col items-center">
 
@@ -245,9 +248,15 @@ new class extends Component
                                             </a>
                                         </div>
 
-                                        <div class="absolute -left-10 bottom-3 w-1/2 transform translate-y-10 group-hover:translate-y-0 group-hover:-rotate-6 transition-all duration-700 pointer-events-none">
-                                            <img src="{{$category->featuredImageUrl}}" class="w-full h-auto drop-shadow-[0_20px_40px_rgba(0,0,0,0.2)]" alt="Work Category">
-                                        </div>
+                                        @if($pictureMode === 'transparent')
+                                            <div class="absolute -left-10 bottom-3 w-1/2 transform translate-y-10 group-hover:translate-y-0 group-hover:-rotate-6 transition-all duration-700 pointer-events-none">
+                                                <img src="{{$category->featuredImageUrl}}" class="w-full h-auto drop-shadow-[0_20px_40px_rgba(0,0,0,0.2)]" alt="{{ $category->title }}">
+                                            </div>
+                                        @else
+                                            <div class="absolute left-8 bottom-8 w-2/5 aspect-square rounded-[3rem] overflow-hidden shadow-lg ring-1 ring-inset ring-black/5 dark:ring-white/10 transition-all duration-700 group-hover:-rotate-3 group-hover:scale-105 pointer-events-none">
+                                                <img src="{{$category->featuredImageUrl}}" class="w-full h-full object-cover" alt="{{ $category->title }}">
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
 

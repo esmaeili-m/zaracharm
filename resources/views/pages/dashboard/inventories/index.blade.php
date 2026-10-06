@@ -23,7 +23,7 @@ new class extends Component
     #[\Livewire\Attributes\Layout('layouts.dashboard')]
     public function mount(Inventory $model)
     {
-        abort_if(!auth()->user()->can('categories.view'), 403);
+        abort_if(!auth()->user()->can('inventories.view'), 403);
         $this->model=$model;
         $this->info['header']='لیست انبار ها';
         $this->info['create']='افزودن انبار';
@@ -41,7 +41,7 @@ new class extends Component
 
     public function change_status($id)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('inventories.edit'), 403);
 
         $item = $this->model->findOrFail($id);
         $item->update(['status' => !$item->status]);
@@ -55,7 +55,7 @@ new class extends Component
     }
     public function delete()
     {
-        abort_if(!auth()->user()->can('categories.delete'), 403);
+        abort_if(!auth()->user()->can('inventories.delete'), 403);
 
         if ($this->selectItem){
             $item = $this->model->findOrFail($this->selectItem->id);
@@ -187,7 +187,7 @@ new class extends Component
     }
 
     public function save(){
-        abort_if(!auth()->user()->can('categories.create'), 403);
+        abort_if(!auth()->user()->can($this->selectItem ? 'inventories.edit' : 'inventories.create'), 403);
         $data= $this->validate();
         $item = $this->selectItem
             ? tap($this->selectItem)->update($data)
@@ -210,7 +210,7 @@ new class extends Component
     #[\Livewire\Attributes\On('updateOrder')]
     public function updateOrder($ids)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('inventories.edit'), 403);
 
         foreach ($ids as $index => $id) {
             $this->model->where('id', $id)->update([
@@ -232,7 +232,7 @@ new class extends Component
 
         </div>
         <div class="btn-list">
-            @can('categories.view')
+            @can('inventories.view')
 
                 <a href="{{route('inventories.trash')}}" class="btn btn-warning-light btn-wave me-2">
                     <i class="bx bx-trash align-middle">
@@ -240,7 +240,7 @@ new class extends Component
                     سطل آشغال
                 </a>
             @endcan
-            @can('categories.create')
+            @can('inventories.create')
                 <button wire:click="resetData()" data-bs-effect="effect-flip-horizontal" data-bs-toggle="modal" href="#create" class="btn btn-success-light btn-wave me-0">
                     <i class="ri-add-line align-middle">
                     </i>
@@ -288,7 +288,7 @@ new class extends Component
                                         {{$item->title}}
                                     </td>
                                     <td>
-                                        @can('categories.edit')
+                                        @can('inventories.edit')
 
                                             <span style="cursor: pointer" wire:click="change_status({{$item->id}})"
                                                   wire:loading.attr="disabled"
@@ -301,12 +301,12 @@ new class extends Component
                                     <td>
 
                                         <div class="hstack gap-2 flex-wrap">
-                                            @can('categories.create')
+                                            @can('inventories.create')
 
                                                 <a data-bs-toggle="modal" href="#create" wire:click="get_data({{$item->id}})"  class="text-info fs-14 lh-1"><i
                                                         class="ri-edit-line"></i></a>
                                             @endcan
-                                            @can('categories.delete')
+                                            @can('inventories.delete')
 
                                                 <a  data-bs-toggle="modal" href="#delete" wire:click="get_data({{$item->id}})"  class="text-danger fs-14 lh-1"><i
                                                         class="ri-delete-bin-5-line"></i></a>

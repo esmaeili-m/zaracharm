@@ -57,7 +57,7 @@ new class extends Component
     }
     public function change_status($id)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('tags.edit'), 403);
 
         $item = $this->model->findOrFail($id);
         $item->update(['status' => !$item->status]);
@@ -152,7 +152,7 @@ new class extends Component
     }
 
     public function save(){
-        abort_if(!auth()->user()->can('tags.create'), 403);
+        abort_if(!auth()->user()->can($this->selectItem ? 'tags.edit' : 'tags.create'), 403);
 
         $data= $this->validate();
 
@@ -231,7 +231,7 @@ new class extends Component
                                         {{$item->title}}
                                     </td>
                                     <td>
-                                        @can('categories.edit')
+                                        @can('tags.edit')
                                             <span style="cursor: pointer" wire:click="change_status({{$item->id}})"
                                                   wire:loading.attr="disabled"
                                                   class="badge bg-outline-{{$item->status == 1 ? 'success' : 'danger'}}">

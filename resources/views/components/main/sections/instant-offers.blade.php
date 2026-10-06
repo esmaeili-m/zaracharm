@@ -2,10 +2,14 @@
 
 use Livewire\Component;
 use App\Models\ProductVariant;
+use App\Enums\PictureMode;
 new class extends Component
 {
+    use \App\Traits\HandlesWishlist;
+
     public  $products;
     public  $data ;
+    public string $pictureMode = 'background';
 
 
     public function mount($data)
@@ -13,6 +17,9 @@ new class extends Component
         $this->data = $data;
         if ($data){
             $this->loadProductVariants();
+
+            $this->pictureMode = PictureMode::forSection('instantOffers', $data)->value;
+            $this->loadWishlistIds($this->products->pluck('product_id'));
         }
     }
 
@@ -87,7 +94,14 @@ new class extends Component
                             $prices=$product->priceData();
 
                         @endphp
-                    <div class="swiper-slide py-4 px-2">
+                    <div class="swiper-slide py-4 px-2 relative">
+                        {{-- Wishlist --}}
+                        <x-main.wishlist-button
+                            :product-id="$product->product_id"
+                            :active="$this->isWishlisted($product->product_id)"
+                            icon-class="w-4 h-4"
+                            class="absolute top-8 left-6 z-30 w-8 h-8 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm transition-all"
+                        />
                         <a  href="{{ route('products.show', $product->product->slug) }}" class=" group/card block relative bg-gray-100 dark:bg-[#0c0c0e] p-4 rounded-[1.8rem] border border-gray-100 dark:border-white/5 transition-all duration-500  dark:hover:shadow-[0_20px_40px_-10px_rgba(59,130,246,0.15)] hover:-translate-y-2">
 
                             <div class="absolute top-6 right-6 z-20">
@@ -101,9 +115,9 @@ new class extends Component
                             </div>
 
                             <div class="flex items-center gap-6">
-                                @if(($data['view'] ?? 1) == 1)
+                                @if($pictureMode === 'background')
 
-                                    {{-- تصویر ترنسپرنت --}}
+                                    {{-- تصویر با پس‌زمینه --}}
                                     <div class="relative w-28 h-28 flex-shrink-0 overflow-hidden rounded-[1rem] transition-transform duration-700 group-hover/card:scale-105">
 
                                         <img
@@ -114,9 +128,9 @@ new class extends Component
 
                                     </div>
 
-                                @elseif(($data['view'] ?? 1) == 2)
+                                @else
 
-                                    {{-- تصویر با بک‌گراند --}}
+                                    {{-- تصویر بدون پس‌زمینه (ترنسپرنت) --}}
                                     <div class="relative w-28 h-28 bg-gray-50 dark:bg-white/5 rounded-[2.2rem] flex-shrink-0 p-3 overflow-hidden transition-transform duration-700 group-hover/card:scale-105">
 
                                         <img
@@ -186,21 +200,21 @@ new class extends Component
                     <a
                         href="{{ route('products.show', $product->product->slug) }}"
                         class="relative aspect-square rounded-2xl border border-gray-200 dark:border-white/10 transition-all duration-500 group overflow-hidden hover:border-brown/60 dark:hover:shadow-[0_0_15px_rgba(var(--color-brown),0.3)]
-        {{ ($data['view'] ?? 1) == 2 ? 'bg-gray-50 dark:bg-black p-2.5' : '' }}"
+        {{ $pictureMode === 'transparent' ? 'bg-gray-50 dark:bg-black p-2.5' : '' }}"
                     >
 
-                        @if(($data['view'] ?? 1) == 1)
+                        @if($pictureMode === 'background')
 
-                            {{-- تصویر ترنسپرنت --}}
+                            {{-- تصویر با پس‌زمینه --}}
                             <img
                                 src="{{ $product->product->featuredImageUrl }}"
                                 alt="{{ $product->product->title }}"
                                 class="relative z-10 w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-500"
                             >
 
-                        @elseif(($data['view'] ?? 1) == 2)
+                        @else
 
-                            {{-- تصویر با بک‌گراند --}}
+                            {{-- تصویر بدون پس‌زمینه (ترنسپرنت) --}}
                             <img
                                 src="{{ $product->product->featuredImageUrl }}"
                                 alt="{{ $product->product->title }}"

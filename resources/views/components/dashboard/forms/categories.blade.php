@@ -82,6 +82,8 @@
 
 
     {{-- انتخاب دستی دسته بندی --}}
+    @include('dashboard.forms.partials.picture-mode')
+
     @if(($formData['mode'] ?? null) === 'manual')
 
         <div class="col-md-12">

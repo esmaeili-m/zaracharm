@@ -26,7 +26,7 @@ new class extends Component
     #[\Livewire\Attributes\Layout('layouts.dashboard')]
     public function mount(SocialLink $model)
     {
-        abort_if(!auth()->user()->can('categories.view'), 403);
+        abort_if(!auth()->user()->can('social-links.view'), 403);
 
         $this->model = $model;
         $this->info['header'] = 'لیست شبکه‌های اجتماعی';
@@ -58,7 +58,7 @@ new class extends Component
 
     public function change_status($id)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('social-links.edit'), 403);
 
         $item = $this->model->findOrFail($id);
         $item->update(['is_active' => !$item->is_active]);
@@ -166,9 +166,9 @@ new class extends Component
     public function save()
     {
         if ($this->selectItem) {
-            abort_if(!auth()->user()->can('categories.edit'), 403);
+            abort_if(!auth()->user()->can('social-links.edit'), 403);
         } else {
-            abort_if(!auth()->user()->can('categories.create'), 403);
+            abort_if(!auth()->user()->can('social-links.create'), 403);
         }
 
         $validated = $this->validate();
@@ -221,7 +221,7 @@ new class extends Component
 
     public function delete()
     {
-        abort_if(!auth()->user()->can('categories.delete'), 403);
+        abort_if(!auth()->user()->can('social-links.delete'), 403);
 
         if ($this->selectItem) {
             $item = $this->model->findOrFail($this->selectItem->id);
@@ -247,7 +247,7 @@ new class extends Component
     #[\Livewire\Attributes\On('updateOrder')]
     public function updateOrder($ids)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('social-links.edit'), 403);
 
         foreach ($ids as $index => $id) {
             $this->model->where('id', $id)->update([
@@ -267,7 +267,7 @@ new class extends Component
             </h1>
         </div>
         <div class="btn-list">
-            @can('categories.create')
+            @can('social-links.create')
                 <button wire:click="resetData()" data-bs-effect="effect-flip-horizontal" data-bs-toggle="modal"
                         href="#create" class="btn btn-success-light btn-wave me-0">
                     <i class="ri-add-line align-middle"></i>
@@ -326,7 +326,7 @@ new class extends Component
                                         </a>
                                     </td>
                                     <td>
-                                        @can('categories.edit')
+                                        @can('social-links.edit')
                                             <span style="cursor: pointer" wire:click="change_status({{ $item->id }})"
                                                   wire:loading.attr="disabled"
                                                   class="badge bg-outline-{{ $item->is_active ? 'success' : 'danger' }}">
@@ -337,12 +337,12 @@ new class extends Component
                                     </td>
                                     <td>
                                         <div class="hstack gap-2 flex-wrap">
-                                            @can('categories.edit')
+                                            @can('social-links.edit')
                                                 <a data-bs-toggle="modal" href="#create"
                                                    wire:click="get_data({{ $item->id }})"
                                                    class="text-info fs-14 lh-1"><i class="ri-edit-line"></i></a>
                                             @endcan
-                                            @can('categories.delete')
+                                            @can('social-links.delete')
                                                 <a data-bs-toggle="modal" href="#delete"
                                                    wire:click="get_data({{ $item->id }})"
                                                    class="text-danger fs-14 lh-1"><i class="ri-delete-bin-5-line"></i></a>

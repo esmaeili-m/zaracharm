@@ -14,7 +14,7 @@ new class extends Component
     #[\Livewire\Attributes\Layout('layouts.dashboard')]
     public function mount(Option $model)
     {
-        abort_if(!auth()->user()->can('categories.view'), 403);
+        abort_if(!auth()->user()->can('options.view'), 403);
 
         $this->model=$model;
         $this->info['header']='لیست ویژگی های حذف شده';
@@ -39,7 +39,7 @@ new class extends Component
     }
     public function delete()
     {
-        abort_if(!auth()->user()->can('categories.delete'), 403);
+        abort_if(!auth()->user()->can('options.delete'), 403);
 
         if ($this->selectItem){
             $this->selectItem->forceDelete();
@@ -57,7 +57,7 @@ new class extends Component
 
     public function restore()
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('options.edit'), 403);
 
         if ($this->selectItem){
             $item = $this->model->withTrashed()->findOrFail($this->selectItem->id);

@@ -66,25 +66,7 @@
         </select>
 
     </div>
-    <div class="col-md-3">
-
-        <label class="form-label">
-            تعداد نمایش
-        </label>
-
-        <select
-            wire:model="formData.pictureMode"
-            class="form-select">
-
-            <option value="background">
-                تصاویر با بکگراند
-            </option>
-            <option value="transparent">
-                بدون بکگراند
-            </option>
-        </select>
-
-    </div>
+    @include('dashboard.forms.partials.picture-mode')
     <div class="col-md-3">
 
         <label class="form-label">
@@ -112,6 +94,70 @@
     </div>
 
 
+    {{-- منبع محصولات: همه یا یک برند --}}
+    <div class="col-md-3">
+
+        <label class="form-label">
+            منبع محصولات
+        </label>
+
+        <select
+            wire:model.live="formData.source"
+            class="form-select @error('formData.source') is-invalid @enderror">
+
+            <option value="all">
+                همه محصولات
+            </option>
+
+            <option value="brand">
+                محصولات یک برند
+            </option>
+
+        </select>
+
+        @error('formData.source')
+        <div class="invalid-feedback d-block">
+            {{ $message }}
+        </div>
+        @enderror
+
+    </div>
+
+    @if(($formData['source'] ?? 'all') === 'brand')
+
+        <div class="col-md-3">
+
+            <label class="form-label">
+                برند
+            </label>
+
+            <select
+                wire:model.live="formData.brand_id"
+                class="form-select @error('formData.brand_id') is-invalid @enderror">
+
+                <option value="">
+                    انتخاب برند
+                </option>
+
+                @foreach($brands ?? [] as $brand)
+                    <option value="{{ $brand->id }}">
+                        {{ $brand->title }}
+                    </option>
+                @endforeach
+
+            </select>
+
+            @error('formData.brand_id')
+            <div class="invalid-feedback d-block">
+                {{ $message }}
+            </div>
+            @enderror
+
+        </div>
+
+    @endif
+
+
     {{-- انتخاب دستی محصولات --}}
     @if(($formData['mode'] ?? null) === 'manual')
 
@@ -128,7 +174,14 @@
                 class="form-select"
                 style="height:220px">
 
-                @foreach($products ?? [] as $product)
+                @php
+                    $manualProducts = collect($products ?? []);
+                    if (($formData['source'] ?? 'all') === 'brand') {
+                        $manualProducts = $manualProducts->where('brand_id', (int) ($formData['brand_id'] ?? 0));
+                    }
+                @endphp
+
+                @foreach($manualProducts as $product)
 
                     <option value="{{ $product->id }}">
                         {{ $product->title }}

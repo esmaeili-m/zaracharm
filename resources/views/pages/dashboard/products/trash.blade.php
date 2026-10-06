@@ -4,7 +4,11 @@ use Livewire\Component;
 
 new class extends Component
 {
-    //
+    #[\Livewire\Attributes\Layout('layouts.dashboard')]
+    public function mount()
+    {
+        abort_if(!auth()->user()->can('products.view'), 403);
+    }
 };
 ?>
 

@@ -64,6 +64,13 @@ new class extends Component
             ->where('expires_at', '>', now())
             ->first();
 
+        // سفارش پرداخت‌شده، منقضی یا ناموجود => بازگشت به سفارش‌های من (به‌جای خطای ۵۰۰)
+        if (!$order) {
+            session()->flash('error', 'این سفارش قابل پرداخت نیست یا مهلت پرداخت آن به پایان رسیده است.');
+            $this->redirectRoute('user.dashboard', ['tab' => 'orders']);
+            return;
+        }
+
         abort_unless($order->user_id === Auth::id(), 403);
 
         if ($order->status !== 'pending' || ($order->expires_at && $order->expires_at->isPast())) {

@@ -123,118 +123,7 @@
             </div>
 
             <!-- Search -->
-            <div id="search-wrapper" class="hidden md:flex flex-1 max-w-4xl relative group/search mx-auto">
-
-                <div class="relative w-full z-[10000]">
-                    <input type="text" id="main-search-input"
-                           class="w-full bg-gray-200/60 dark:bg-[var(--color-primary-950)]/60 backdrop-blur-md border border-gray-300/30 dark:border-white/5 rounded-2xl py-4 pr-12 pl-40 text-sm font-bold text-right outline-none focus:bg-white dark:focus:bg-[var(--color-primary-950)] focus:ring-4 ring-[var(--color-primary-500)]/40 transition-all placeholder:text-gray-500 shadow-sm"
-                           placeholder="جستجوی سراسری در محصولات ...">
-
-                    <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-gray-500">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2.5"/></svg>
-                    </div>
-
-                    <div class="absolute left-2 top-1/2 -translate-y-1/2 flex items-center h-[75%] gap-2">
-                        <div class="h-full w-px bg-gray-300/40 dark:bg-white/10 ml-1"></div>
-                        <button class="h-full px-4 flex items-center gap-3 rounded-xl transition-all duration-300 group/archive
-                           bg-white border border-gray-200 text-gray-700 shadow-sm hover:border-[var(--color-primary-500)]
-                           dark:bg-[var(--color-primary-800)]/60 dark:border-white/10 dark:text-gray-200 dark:hover:bg-[var(--color-primary-500)]/10">
-                            <div class="flex items-center justify-center w-6 h-6 rounded-lg bg-gray-100 dark:bg-white/10 group-hover/archive:bg-[var(--color-primary-500)] group-hover/archive:text-white transition-all duration-300">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/>
-                                </svg>
-                            </div>
-                            <span class="text-[11px] font-black whitespace-nowrap">آرشیو محصولات</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div id="mega-search-panel"
-                     class="absolute top-[30px] left-[-15px] right-[-15px] pt-[65px] bg-white/90 dark:bg-[var(--color-primary-950)]/90 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.6)] opacity-0 invisible translate-y-4 group-focus-within/search:opacity-100 group-focus-within/search:visible group-focus-within/search:translate-y-0 transition-all duration-500 z-[9999]">
-
-{{--                    <div class="p-8">--}}
-{{--                        <div class="flex items-center justify-start gap-3 mb-6">--}}
-{{--                            <div class="p-1.5 bg-[var(--color-primary-500)]/10 rounded-lg text-[var(--color-primary-500)]">--}}
-{{--                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-width="2"/></svg>--}}
-{{--                            </div>--}}
-{{--                            <span class="text-[13px] font-black text-gray-800 dark:text-gray-100 uppercase tracking-tighter">محصولات پربازدید هفته</span>--}}
-{{--                        </div>--}}
-
-{{--                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">--}}
-{{--                            <div class="group/card relative flex items-center p-2 bg-white/40 dark:bg-white/[0.03] border border-gray-200/50 dark:border-white/5 rounded-[1.8rem] hover:bg-white dark:hover:bg-[var(--color-primary-900)] transition-all duration-500 cursor-pointer shadow-sm">--}}
-{{--                                <div class="relative w-20 h-20 bg-gray-100 dark:bg-[var(--color-primary-800)] rounded-[1.5rem] p-2 flex-shrink-0">--}}
-{{--                                    <img src="assets/images/product/mobile-3.png" class="w-full h-full object-contain group-hover/card:scale-110 transition-transform duration-500">--}}
-{{--                                </div>--}}
-{{--                                <div class="flex-1 pr-4">--}}
-{{--                                    <h4 class="text-[12px] font-bold text-gray-800 dark:text-gray-100 mb-2 group-hover/card:text-[var(--color-primary-500)] transition-colors line-clamp-1">--}}
-{{--                                        ساعت هوشمند مدل Watch Ultra 2 بند تیتانیوم--}}
-{{--                                    </h4>--}}
-{{--                                    <div class="flex items-center justify-between">--}}
-{{--                                        <div class="px-3 py-1 bg-gray-100 dark:bg-white/5 rounded-xl text-[14px] font-black text-gray-900 dark:text-white">۳,۳۲۰,۰۰۰ <span class="text-[9px] text-gray-400 mr-1 font-bold">تومان</span></div>--}}
-{{--                                        <svg class="w-4 h-4 ml-2 text-[var(--color-primary-500)] opacity-0 -translate-x-2 group-hover/card:opacity-100 group-hover/card:translate-x-0 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="3"/></svg>--}}
-{{--                                    </div>--}}
-{{--                                </div>--}}
-{{--                            </div>--}}
-{{--                            <div class="group/card relative flex items-center p-2 bg-white/40 dark:bg-white/[0.03] border border-gray-200/50 dark:border-white/5 rounded-[1.8rem] hover:bg-white dark:hover:bg-[var(--color-primary-900)] transition-all duration-500 cursor-pointer shadow-sm">--}}
-{{--                                <div class="relative w-20 h-20 bg-gray-100 dark:bg-[var(--color-primary-800)] rounded-[1.5rem] p-2 flex-shrink-0">--}}
-{{--                                    <img src="assets/images/product/mobile-4.png" class="w-full h-full object-contain group-hover/card:scale-110 transition-transform duration-500">--}}
-{{--                                </div>--}}
-{{--                                <div class="flex-1 pr-4">--}}
-{{--                                    <h4 class="text-[12px] font-bold text-gray-800 dark:text-gray-100 mb-2 group-hover/card:text-[var(--color-primary-500)] transition-colors line-clamp-1">--}}
-{{--                                        ساعت هوشمند مدل Watch Ultra 2 بند تیتانیوم--}}
-{{--                                    </h4>--}}
-{{--                                    <div class="flex items-center justify-between">--}}
-{{--                                        <div class="px-3 py-1 bg-gray-100 dark:bg-white/5 rounded-xl text-[14px] font-black text-gray-900 dark:text-white">۳,۳۲۰,۰۰۰ <span class="text-[9px] text-gray-400 mr-1 font-bold">تومان</span></div>--}}
-{{--                                        <svg class="w-4 h-4 ml-2 text-[var(--color-primary-500)] opacity-0 -translate-x-2 group-hover/card:opacity-100 group-hover/card:translate-x-0 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="3"/></svg>--}}
-{{--                                    </div>--}}
-{{--                                </div>--}}
-{{--                            </div>--}}
-
-{{--                        </div>--}}
-
-{{--                        <div class="border-t border-dashed border-gray-200 dark:border-white/10 pt-8 grid grid-cols-1 md:grid-cols-2 gap-10">--}}
-{{--                            <div class="space-y-4">--}}
-{{--                                <div class="flex items-center gap-2 text-secondary-500">--}}
-{{--                                    <span class="animate-pulse">--}}
-{{--                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 128 128"><path fill="#ed6c30" d="M98.59 51.16c-4.23.92-7.88 3.28-9.59 7.35c-1.03 2.47-2.47 8.85-6.42 7.2c-1.89-.78-1.86-3.49-1.64-5.18c.47-3.47 2.03-6.64 3.1-9.94c1.1-3.42 2.05-6.86 2.73-10.4c2.28-11.72 1.65-25.22-6.64-34.59C78.73 4 75.2.3 72.87.22c-1.44-.04-.02 1.66.38 2.23c.81 1.17 1.49 2.44 2.01 3.77c6.13 15.64-8.98 27.55-18.91 36.82c-4.76 4.45-8.56 9.17-11.98 14.68c-.34.53-1.09 2.31-2.06 1.94c-1.15-.44-1.27-3.07-1.63-4.05c-.68-1.88-1.73-3.93-3.08-5.4c-2.61-2.86-6.26-4.79-10.21-4.53c-.15.01-.58.08-1.11.2c-.83.18-3.05.47-2.45 1.81c.31.69 1.22.63 1.87.82c8.34 2.56 8.15 11.3 6.8 18.32c-2.44 12.78-9.2 24.86-4.4 38c5.66 15.49 23.38 25.16 39.46 22.5c4.39-.72 9.45-2.14 13.39-4.26c4.19-2.26 8.78-5.35 12.05-8.83c4.21-4.47 6.89-10.2 7.68-16.27c.93-7.02-1.31-13.64-3.35-20.27c-2.46-8-5.29-21.06 4.93-24.97c.5-.2 1.5-.35 1.85-.88c1.3-1.94-4.94-.81-5.52-.69"/><path fill="#fcc21b" d="M68.13 106.07c2.12 1.78 5.09.91 7.09-.61c1.07-.81 1.99-1.85 2.59-3.06c.25-.52.54-1.18.54-1.77c0-.79-.47-1.57-.27-2.38c1.68-.33 3.76 4.5 3.97 5.62c1.68 8.83-6.64 16.11-14.67 17.52c-13.55 2.37-21.34-9.5-19.78-20.04c.97-6.56 5.37-11.07 9.85-15.57c3.71-3.73 7.15-6.93 8.35-11.78c.21-.86.16-2.18-.09-3.03c-.21-.73-.61-1.4-.63-2.19c-.06-1.66 1.55.51 1.92.93c4.46 5.03 5.73 12.46 4.54 18.96c-.77 4.2-3.77 7.2-4.82 11.22c-.61 2.29-.55 4.52 1.41 6.18"/></svg>--}}
-{{--                                    </span>--}}
-{{--                                    <span class="text-[13px] font-black text-gray-800 dark:text-gray-200 uppercase tracking-tighter">جستجوهای ترند</span>--}}
-{{--                                </div>--}}
-{{--                                <div class="flex flex-wrap gap-2">--}}
-{{--                                    <a href="#" class="px-4 py-2 bg-gray-100 dark:bg-white/5 text-[11px] font-bold text-gray-500 dark:text-gray-400 rounded-full hover:border-[var(--color-primary-500)] hover:text-[var(--color-primary-500)] border border-transparent transition-all">گوشی iphone 17</a>--}}
-{{--                                    <a href="#" class="px-4 py-2 bg-gray-100 dark:bg-white/5 text-[11px] font-bold text-gray-500 dark:text-gray-400 rounded-full hover:border-[var(--color-primary-500)] hover:text-[var(--color-primary-500)] border border-transparent transition-all">گوشی iphone 16</a>--}}
-{{--                                    <a href="#" class="px-4 py-2 bg-gray-100 dark:bg-white/5 text-[11px] font-bold text-gray-500 dark:text-gray-400 rounded-full hover:border-[var(--color-primary-500)] hover:text-[var(--color-primary-500)] border border-transparent transition-all">گوشی S25</a>--}}
-
-{{--                                    <a href="#" class="px-4 py-2 bg-gray-100 dark:bg-white/5 text-[11px] font-bold text-gray-500 dark:text-gray-400 rounded-full hover:border-[var(--color-primary-500)] hover:text-[var(--color-primary-500)] border border-transparent transition-all">گوشی iphone 17</a>--}}
-{{--                                    <a href="#" class="px-4 py-2 bg-gray-100 dark:bg-white/5 text-[11px] font-bold text-gray-500 dark:text-gray-400 rounded-full hover:border-[var(--color-primary-500)] hover:text-[var(--color-primary-500)] border border-transparent transition-all">گوشی iphone 16</a>--}}
-{{--                                    <a href="#" class="px-4 py-2 bg-gray-100 dark:bg-white/5 text-[11px] font-bold text-gray-500 dark:text-gray-400 rounded-full hover:border-[var(--color-primary-500)] hover:text-[var(--color-primary-500)] border border-transparent transition-all">گوشی S25</a>--}}
-{{--                                </div>--}}
-{{--                            </div>--}}
-{{--                            <div class="space-y-4 border-r border-gray-100 dark:border-white/5 pr-8">--}}
-{{--                                <div class="flex items-center gap-2 text-gray-800 dark:text-gray-200">--}}
-{{--                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2.5"/></svg>--}}
-{{--                                    <span class="text-[12px] font-black">جستجوهای اخیر شما</span>--}}
-{{--                                </div>--}}
-{{--                                <ul class="space-y-2">--}}
-{{--                                    <li class="flex items-center justify-between group/h cursor-pointer text-[12px] font-bold text-gray-600 dark:text-gray-400 hover:text-[var(--color-primary-500)]">--}}
-{{--                                        <span>مک بوک</span>--}}
-{{--                                        <button class="opacity-0 group-hover/h:opacity-100 text-red-400">×</button>--}}
-{{--                                    </li>--}}
-{{--                                    <li class="flex items-center justify-between group/h cursor-pointer text-[12px] font-bold text-gray-600 dark:text-gray-400 hover:text-[var(--color-primary-500)]">--}}
-{{--                                        <span>گوشی شیائومی</span>--}}
-{{--                                        <button class="opacity-0 group-hover/h:opacity-100 text-red-400">×</button>--}}
-{{--                                    </li>--}}
-{{--                                    <li class="flex items-center justify-between group/h cursor-pointer text-[12px] font-bold text-gray-600 dark:text-gray-400 hover:text-[var(--color-primary-500)]">--}}
-{{--                                        <span>گوشی سامسونگ</span>--}}
-{{--                                        <button class="opacity-0 group-hover/h:opacity-100 text-red-400">×</button>--}}
-{{--                                    </li>--}}
-
-{{--                                </ul>--}}
-{{--                            </div>--}}
-{{--                        </div>--}}
-{{--                    </div>--}}
-                </div>
-            </div>
+            <livewire:layout.search />
 
             <!-- Register and action button-->
             <div class="flex items-center gap-3">
@@ -330,10 +219,11 @@
             <div class="space-y-8">
                 <h3 class="footer-title">راهنمای خرید</h3>
                 <ul class="space-y-5">
-                    <li><a href="#" class="footer-link">پیگیری سفارش</a></li>
-                    <li><a href="#" class="footer-link">شرایط مرجوعی</a></li>
-                    <li><a href="#" class="footer-link">سوالات متداول</a></li>
-                    <li><a href="#" class="footer-link">تماس با پشتیبانی</a></li>
+                    {{-- پیگیری سفارش و پشتیبانی: داشبورد کاربر (middleware auth؛ مهمان به ورود هدایت و سپس برگردانده می‌شود) --}}
+                    <li><a href="{{ route('user.dashboard', ['tab' => 'orders']) }}" class="footer-link">پیگیری سفارش</a></li>
+                    <li><a href="{{ route('page.show', \App\Support\Sections\ReturnPolicy::PAGE_SLUG) }}" class="footer-link">شرایط مرجوعی</a></li>
+                    <li><a href="{{ route('page.show', 'faq') }}" class="footer-link">سوالات متداول</a></li>
+                    <li><a href="{{ route('user.dashboard', ['tab' => 'tickets']) }}" class="footer-link">تماس با پشتیبانی</a></li>
                 </ul>
             </div>
 
@@ -425,7 +315,7 @@
 
             <!-- Wishlist -->
             <li>
-                <a href="#" class="flex flex-col items-center gap-1 px-4 py-1 text-gray-500 dark:text-gray-400">
+                <a href="{{ route('user.dashboard', ['tab' => 'wishlist']) }}" class="flex flex-col items-center gap-1 px-4 py-1 text-gray-500 dark:text-gray-400">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                     </svg>
@@ -468,88 +358,7 @@
             </button>
         </div>
 
-        <div class="p-5">
-            <div class="relative w-full">
-                <input type="text" id="modal-search-input"
-                       class="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl py-4 pr-12 pl-4 text-sm font-bold dark:text-white outline-none focus:ring-2 ring-primary-500 transition-all shadow-xl"
-                       placeholder="نام محصول، برند یا دسته...">
-                <div class="absolute inset-y-0 right-4 flex items-center text-primary-500">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2.5"/></svg>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex-1 overflow-y-auto px-5 pb-10 custom-scrollbar">
-
-            <div class="mb-8">
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="p-1.5 bg-primary-500/10 rounded-lg text-primary-500">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-width="2"/></svg>
-                    </div>
-                    <span class="text-[13px] font-black text-gray-800 dark:text-gray-100 uppercase tracking-tighter">محصولات پربازدید هفته</span>
-                </div>
-
-                <div class="grid grid-cols-1 gap-4">
-                    <a href="">
-                        <div class="flex items-center p-2 bg-white/40 dark:bg-white/[0.03] border border-gray-200/50 dark:border-white/5 rounded-[1.8rem] shadow-sm">
-                            <div class="w-16 h-16 bg-gray-100 dark:bg-primary-800/20 rounded-[1.2rem] p-2 flex-shrink-0">
-                                <img src="assets/images/product/mobile-3.png" class="w-full h-full object-contain">
-                            </div>
-                            <div class="flex-1 pr-3">
-                                <h4 class="text-[11px] font-bold text-gray-800 dark:text-gray-100 line-clamp-1">ساعت هوشمند مدل Watch Ultra 2</h4>
-                                <div class="text-[13px] font-black text-primary-500 mt-1">۳,۳۲۰,۰۰۰ <span class="text-[9px] text-gray-400">تومان</span></div>
-                            </div>
-                        </div>
-                    </a>
-                    <a href="">
-                        <div class="flex items-center p-2 bg-white/40 dark:bg-white/[0.03] border border-gray-200/50 dark:border-white/5 rounded-[1.8rem] shadow-sm">
-                            <div class="w-16 h-16 bg-gray-100 dark:bg-primary-800/20 rounded-[1.2rem] p-2 flex-shrink-0">
-                                <img src="assets/images/product/mobile-4.png" class="w-full h-full object-contain">
-                            </div>
-                            <div class="flex-1 pr-3">
-                                <h4 class="text-[11px] font-bold text-gray-800 dark:text-gray-100 line-clamp-1">هدفون بی سیم مدل Pro 2</h4>
-                                <div class="text-[13px] font-black text-primary-500 mt-1">۱,۸۵۰,۰۰۰ <span class="text-[9px] text-gray-400">تومان</span></div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            </div>
-
-            <div class="mb-8 p-5 bg-primary-500/5 rounded-3xl border border-primary-500/10">
-                <div class="flex items-center gap-2 mb-4">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    <span class="text-[13px] font-black uppercase">جستجوهای ترند</span>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <a href="#" class="px-4 py-2 bg-white dark:bg-white/5 text-[10px] font-bold text-gray-500 dark:text-gray-400 rounded-full border border-gray-100 dark:border-white/5">گوشی iphone 17</a>
-                    <a href="#" class="px-4 py-2 bg-white dark:bg-white/5 text-[10px] font-bold text-gray-500 dark:text-gray-400 rounded-full border border-gray-100 dark:border-white/5">سامسونگ S25</a>
-                    <a href="#" class="px-4 py-2 bg-white dark:bg-white/5 text-[10px] font-bold text-gray-500 dark:text-gray-400 rounded-full border border-gray-100 dark:border-white/5">مک بوک M3</a>
-                </div>
-            </div>
-
-            <div class="mb-5">
-                <div class="flex items-center gap-2 text-gray-800 dark:text-gray-200 mb-4">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2.5"/></svg>
-                    <span class="text-[12px] font-black">جستجوهای اخیر</span>
-                </div>
-                <ul class="space-y-3">
-                    <li class="flex items-center justify-between text-[12px] font-bold text-gray-600 dark:text-gray-400">
-                        <span>مک بوک پرو ۲۰۲۴</span>
-                        <button class="text-red-400 text-lg">×</button>
-                    </li>
-                    <li class="flex items-center justify-between text-[12px] font-bold text-gray-600 dark:text-gray-400">
-                        <span>گوشی شیائومی</span>
-                        <button class="text-red-400 text-lg">×</button>
-                    </li>
-                </ul>
-            </div>
-
-            <button class="w-full py-4 mt-4 bg-primary-500 text-white rounded-2xl font-black text-sm shadow-lg shadow-primary-500/30 flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                مشاهده آرشیو کامل محصولات
-            </button>
-
-        </div>
+        <livewire:layout.search variant="mobile" />
     </div>
 </div>
 <!-- END SEARCH MODAL -->

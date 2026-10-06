@@ -91,6 +91,30 @@ class SectionTableSeeder extends Seeder
                 'component' => 'main.sections.stories',
                 'is_livewire' => 1,
             ],
+            [
+                'name' => 'برندها',
+                'key' => 'brands',
+                'component' => 'main.sections.brands',
+                'is_livewire' => 1,
+            ],
+            [
+                'name' => 'محصولات با فیلتر برند',
+                'key' => 'brandProducts',
+                'component' => 'main.sections.brand-products',
+                'is_livewire' => 1,
+            ],
+            [
+                'name' => 'سوالات متداول',
+                'key' => 'faq',
+                'component' => 'main.sections.faq',
+                'is_livewire' => 1,
+            ],
+            [
+                'name' => 'شرایط مرجوعی',
+                'key' => 'returnPolicy',
+                'component' => 'main.sections.return-policy',
+                'is_livewire' => 1,
+            ],
 
 
         ];

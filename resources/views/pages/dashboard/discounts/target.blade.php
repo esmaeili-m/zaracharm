@@ -28,7 +28,7 @@ new class extends Component
     #[\Livewire\Attributes\Layout('layouts.dashboard')]
     public function mount(Discount $discount,DiscountTarget $model)
     {
-        abort_if(!auth()->user()->can('categories.view'), 403);
+        abort_if(!auth()->user()->can('discounts.view'), 403);
         $this->model=$model;
         $this->discount=$discount;
         $this->info['header']='لیست اقلام تخفیف خورده';
@@ -64,7 +64,7 @@ new class extends Component
     }
     public function change_status($id)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('discounts.edit'), 403);
 
         $item = $this->model->findOrFail($id);
         $item->update(['status' => !$item->status]);
@@ -78,7 +78,7 @@ new class extends Component
     }
     public function delete()
     {
-        abort_if(!auth()->user()->can('categories.delete'), 403);
+        abort_if(!auth()->user()->can('discounts.delete'), 403);
 
         if ($this->selectItem){
             $item = $this->model->findOrFail($this->selectItem->id);
@@ -187,7 +187,7 @@ new class extends Component
     }
 
     public function save(){
-        abort_if(!auth()->user()->can('categories.create'), 403);
+        abort_if(!auth()->user()->can($this->selectItem ? 'discounts.edit' : 'discounts.create'), 403);
         $data= $this->validate();
         $data['discount_id']= $this->discount->id;
         $data['target_type'] = match ($this->target_type) {
@@ -226,7 +226,7 @@ new class extends Component
 
         </div>
         <div class="btn-list">
-            @can('categories.view')
+            @can('discounts.view')
 
                 <a href="{{route('brands.trash')}}" class="btn btn-warning-light btn-wave me-2">
                     <i class="bx bx-trash align-middle">
@@ -234,7 +234,7 @@ new class extends Component
                     سطل آشغال
                 </a>
             @endcan
-            @can('categories.create')
+            @can('discounts.create')
                 <button wire:click="resetData()" data-bs-effect="effect-flip-horizontal" data-bs-toggle="modal" href="#create" class="btn btn-success-light btn-wave me-0">
                     <i class="ri-add-line align-middle">
                     </i>
@@ -363,7 +363,7 @@ new class extends Component
                                         <div class="hstack gap-2 flex-wrap">
 
 
-                                            @can('categories.delete')
+                                            @can('discounts.delete')
 
                                                 <a
                                                     data-bs-toggle="modal"

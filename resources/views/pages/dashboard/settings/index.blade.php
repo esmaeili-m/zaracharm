@@ -31,7 +31,7 @@ new class extends Component
 
     public function mount()
     {
-        abort_if(!auth()->user()->can('seo.view'), 403);
+        abort_if(!auth()->user()->can('settings.view'), 403);
 
         $this->settings = Setting::whereNot('key','logo')->pluck('value', 'key')->toArray();
         unset(
@@ -53,7 +53,7 @@ new class extends Component
     }
     public function save()
     {
-        abort_if(!auth()->user()->can('seo.create'), 403);
+        abort_if(!auth()->user()->can('settings.edit'), 403);
         $this->validate([
             'settings.site_name' => [
                 'required',

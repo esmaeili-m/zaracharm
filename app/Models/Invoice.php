@@ -4,10 +4,56 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Invoice extends Model
 {
+    // جدول invoices از ابتدا ستون deleted_at داشته است
+    use SoftDeletes;
+
     protected $guarded=[];
+
+    protected $casts = [
+        'paid_at' => 'datetime',
+    ];
+
+    public const STATUSES = [
+        'draft'     => 'پیش‌نویس',
+        'unpaid'    => 'پرداخت‌نشده',
+        'paid'      => 'پرداخت‌شده',
+        'cancelled' => 'لغو شده',
+        'refunded'  => 'بازگشت وجه',
+    ];
+
+    public const SOURCES = [
+        'online' => 'سفارش سایت',
+        'manual' => 'صادرشده توسط مدیر',
+        'pos'    => 'فروش حضوری',
+    ];
+
+    public function isOnline(): bool
+    {
+        return $this->order_id !== null;
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function stockMovements()
+    {
+        return $this->morphMany(StockMovement::class, 'reference')->latest('id');
+    }
+
+    public function getCustomerLabelAttribute(): string
+    {
+        if ($this->user) {
+            return trim($this->user->full_name) ?: (string) $this->user->mobile;
+        }
+
+        return $this->customer_name ?: ($this->customer_mobile ?: 'مشتری حضوری');
+    }
 
     public function user()
     {

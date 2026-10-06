@@ -44,6 +44,9 @@ class PageTableSeeder extends Seeder
             ],[
                 'title'=>'محصولات',
                 'slug'=>'products',
+            ],[
+                'title'=>'سوالات متداول',
+                'slug'=>'faq',
             ],
 
         ];

@@ -245,25 +245,24 @@ new class extends Component
             return;
         }
 
-        $existing = DB::table('likes')
-            ->where('user_id', Auth::id())
-            ->where('likeable_type', Product::class)
-            ->where('likeable_id', $productId)
+        // فقط محصول فعال قابل افزودن است
+        if (! Product::active()->whereKey($productId)->exists()) {
+            return;
+        }
+
+        $existing = Auth::user()->wishlists()
+            ->where('product_id', $productId)
             ->first();
 
         if ($existing) {
-            DB::table('likes')->where('id', $existing->id)->delete();
+            $existing->delete();
         } else {
-            DB::table('likes')->insert([
-                'user_id' => Auth::id(),
-                'likeable_type' => Product::class,
-                'likeable_id' => $productId,
-                'created_at' => now(),
-                'updated_at' => now(),
+            Auth::user()->wishlists()->createOrFirst([
+                'product_id' => $productId,
             ]);
         }
 
-        // چون likes روی favorites تأثیر می‌گذارد و آن پراپرتی هم Computed و کش‌شده در همین درخواست است، پاکش می‌کنیم
+        // چون wishlists روی favorites تأثیر می‌گذارد و آن پراپرتی هم Computed و کش‌شده در همین درخواست است، پاکش می‌کنیم
         unset($this->favoriteProductIds);
     }
 
@@ -525,11 +524,10 @@ new class extends Component
             return [];
         }
 
-        return DB::table('likes')
+        return DB::table('wishlists')
             ->where('user_id', Auth::id())
-            ->where('likeable_type', Product::class)
-            ->whereIn('likeable_id', $this->paginator->pluck('id'))
-            ->pluck('likeable_id')
+            ->whereIn('product_id', $this->paginator->pluck('id'))
+            ->pluck('product_id')
             ->all();
     }
 

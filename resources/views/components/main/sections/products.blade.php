@@ -1,14 +1,20 @@
 <?php
 
 use Livewire\Component;
-use App\Models\Product;
+use App\Models\Brand;
+use App\Enums\PictureMode;
 
 new class extends Component
 {
+    use \App\Traits\HandlesWishlist;
+    use \App\Traits\QueriesSectionProducts;
+
     public $products;
+    public string $pictureMode = 'background';
     public $data;
     public $view;
     public $categories = [];
+    public $brand = null;
 
     public function mount($data)
     {
@@ -18,7 +24,15 @@ new class extends Component
             return;
         }
 
+        // منبع محصولات: all (پیش‌فرض) یا brand
+        if (($data['source'] ?? 'all') === 'brand') {
+            $this->brand = Brand::active()->find($data['brand_id'] ?? null);
+        }
+
         $this->loadProducts();
+
+        $this->pictureMode = PictureMode::forSection('products', $data)->value;
+        $this->loadWishlistIds($this->products->pluck('id'));
 
         $this->categories = $this->products
             ->pluck('categories')
@@ -42,74 +56,32 @@ new class extends Component
     }
 
     /**
-     * کوئری پایه با تمام روابطی که در بلید (هر ۳ مود) استفاده می‌شوند
-     * تا N+1 Query نداشته باشیم.
+     * محدود کردن کوئری به برند انتخاب‌شده‌ی سکشن (در صورت source = brand)
+     * محصولات بدون برند هیچ‌وقت در سکشن برند نمایش داده نمی‌شوند.
      */
-    protected function baseQuery()
+    protected function scopeSectionProducts($query)
     {
-        return Product::query()
-            ->has('variants')
-            ->with([
-                'categories',
-                'brand',
-                'media',
-                'cheapestVariant',
-                'displayVariant',
-                'specifications' => fn ($q) => $q->where('product_specifications.status', true),
-            ]);
-    }
+        if (($this->data['source'] ?? 'all') !== 'brand') {
+            return $query;
+        }
 
-    protected function getBestSellingProducts($limit)
-    {
-        $productIds = Product::query()
-            ->has('variants')
-            ->join('product_variants', 'product_variants.product_id', '=', 'products.id')
-            ->join('order_items', 'order_items.variant_id', '=', 'product_variants.id')
-            ->select('products.id')
-            ->selectRaw('SUM(order_items.quantity) as total_sales')
-            ->groupBy('products.id')
-            ->orderByDesc('total_sales')
-            ->limit($limit)
-            ->pluck('id');
+        // برند حذف/غیرفعال‌شده => هیچ محصولی
+        if (!$this->brand) {
+            return $query->whereRaw('1 = 0');
+        }
 
-        // حفظ ترتیب پرفروش‌ترین‌ها بعد از whereIn
-        return $this->baseQuery()
-            ->whereIn('id', $productIds)
-            ->get()
-            ->sortBy(fn ($product) => $productIds->search($product->id))
-            ->values();
+        return $query
+            ->whereNotNull('products.brand_id')
+            ->where('products.brand_id', $this->brand->id);
     }
 
     protected function loadProducts()
     {
-        $limit = $this->data['limit'] ?? 8;
-
-        $this->products = match ($this->data['mode'] ?? null) {
-
-            'latest' => $this->baseQuery()
-                ->latest()
-                ->limit($limit)
-                ->get(),
-
-            'sales' => $this->getBestSellingProducts($limit),
-
-            'views' => $this->baseQuery()
-                ->withCount('views')
-                ->orderByDesc('views_count')
-                ->limit($limit)
-                ->get(),
-
-            'random' => $this->baseQuery()
-                ->inRandomOrder()
-                ->limit($limit)
-                ->get(),
-
-            'manual' => $this->baseQuery()
-                ->whereIn('id', $this->data['product_ids'] ?? [])
-                ->get(),
-
-            default => collect(),
-        };
+        $this->products = $this->querySectionProducts(
+            $this->data['mode'] ?? null,
+            $this->data['limit'] ?? 8,
+            $this->data['product_ids'] ?? []
+        );
     }
 };
 ?>
@@ -122,7 +94,7 @@ new class extends Component
 
                 <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-r-4 border-brown-600 pr-2 pl-2">
                     <div>
-                        <h2 class="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white">{{$view}} <span class="text-brown-600">محصولات</span></h2>
+                        <h2 class="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white">{{$view}} <span class="text-brown-600">محصولات</span>@if($brand) <span class="text-brown-600">{{ $brand->title }}</span>@endif</h2>
                         <p class="text-gray-500 dark:text-gray-400 mt-2 font-bold text-sm">برترین های روز دنیا در دستان شما</p>
                     </div>
 
@@ -147,173 +119,13 @@ new class extends Component
 
                 <div id="product-grid" class="grid pb-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                     @foreach($products ?? [] as $product)
-                        @php
-                            $prices = $product->cheapestVariant?->priceData() ?? [
-                                'price' => 0,
-                                'after_discount' => 0,
-                                'has_discount' => false,
-                                'discount_percent' => 0,
-                            ];
-                        @endphp
-                        <div
-                            class="product-card group relative bg-white/70 dark:bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-gray-200 dark:border-white/10 p-2 transition-all duration-500 hover:shadow-lg hover:shadow-brown-600/20 hover:-translate-y-2"
+                        <x-main.products.card
+                            :product="$product"
+                            :picture-mode="$pictureMode"
+                            :wishlisted="$this->isWishlisted($product->id)"
+                            class="product-card"
                             data-categories="{{ $product->categories->pluck('slug')->implode(' ') }}"
-                        >
-                            <div class="flex h-[220px]">
-
-                                {{-- Product Image --}}
-                                <div class="w-2/5 relative rounded-[2rem] overflow-hidden m-1 transition-all duration-500 group-hover:scale-[0.98]">
-
-                                    @if(($data['pictureMode'] ?? 'background') === 'background')
-
-                                        <img
-                                            src="{{ $product->featuredImageUrl }}"
-                                            alt="{{ $product->title }}"
-                                            class="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-110 transition-transform duration-1000 ease-out"
-                                        >
-
-                                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-500"></div>
-
-                                    @else
-
-                                        {{-- Transparent / Product Mode --}}
-                                        <div class="w-full h-full relative bg-gradient-to-br from-gray-100 to-transparent dark:from-white/5 dark:to-transparent flex items-center justify-center">
-
-                                            <img
-                                                src="{{ $product->featuredImageUrl }}"
-                                                class="w-32 h-32 object-contain drop-shadow-md transition-transform duration-700 group-hover:scale-110 group-hover:-rotate-6"
-                                                alt="{{ $product->title }}"
-                                            >
-
-                                        </div>
-
-                                    @endif
-
-                                    {{-- Discount --}}
-                                    @if($prices['has_discount'])
-                                        <div class="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-lg shadow-red-500/40">
-                                            {{ $prices['discount_percent'] }}٪-
-                                        </div>
-                                    @endif
-
-                                </div>
-                                {{-- Product Info --}}
-                                <div class="w-3/5 p-5 flex flex-col justify-between">
-
-                                    <div>
-
-                                        <div class="flex justify-between items-start">
-
-                <span class="text-[10px] font-bold text-brown-600 dark:text-brown-400 tracking-tighter opacity-80 mb-1 block">
-                    {{ $product->brand?->title ?? 'محصول' }}
-                </span>
-
-                                            <div class="flex gap-1">
-                                                <div class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]"></div>
-                                                <div class="w-2 h-2 rounded-full bg-gray-800 shadow-[0_0_5px_rgba(0,0,0,0.5)]"></div>
-                                            </div>
-
-                                        </div>
-
-                                        <h3 class="font-black text-gray-900 dark:text-white text-base leading-tight mb-2">
-                                            {{ $product->title }}
-                                        </h3>
-
-                                        <div class="flex flex-wrap gap-1.5 mt-2">
-                                            @foreach($product->specifications->take(2) as $specification)
-
-                                                @php
-                                                    $value = match ($specification->type) {
-                                                        1 => $specification->pivot->text_value,
-                                                        2 => $specification->pivot->number_value,
-                                                        3 => $specification->pivot->decimal_value,
-                                                        4 => $specification->pivot->boolean_value !== null
-                                                            ? ($specification->pivot->boolean_value ? 'بله' : 'خیر')
-                                                            : null,
-                                                        5 => $specification->pivot->date_value,
-                                                        default => null,
-                                                    };
-                                                @endphp
-
-                                                @if($value !== null && $value !== '')
-                                                    <div
-                                                        class="inline-flex items-center gap-1
-                                                       px-2 py-1
-                                                       rounded-lg
-                                                       bg-gray-100/80 dark:bg-white/[0.05]
-                                                       border border-gray-200/70 dark:border-white/[0.08]
-                                                       shadow-sm
-                                                       text-[7px] font-bold
-                                                       text-gray-500 dark:text-gray-400
-                                                       transition-all duration-300
-                                                       hover:-translate-y-0.5
-                                                       hover:bg-brown-50 dark:hover:bg-brown-500/10
-                                                       hover:border-brown-200 dark:hover:border-brown-500/30
-                                                       hover:text-brown-600 dark:hover:text-brown-400
-                                                       hover:shadow-md hover:shadow-brown-500/10"
-                                                    >
-            <span class="opacity-70">
-                {{ $specification->title }}:
-            </span>
-
-                                                        <span class="font-black text-gray-700 dark:text-gray-200">
-                {{ $value }}
-            </span>
-                                                    </div>
-                                                @endif
-
-                                            @endforeach
-                                        </div>
-
-                                    </div>
-
-                                    <div class="mt-auto">
-
-                                        <div class="mb-3 text-left">
-
-                                            @if($prices['has_discount'])
-                                                <p class="text-[10px] text-gray-400 line-through mb-0.5">
-                                                    {{ number_format($prices['price'] ?? 0) }}
-                                                </p>
-                                            @endif
-
-                                            <div class="flex items-baseline justify-end gap-1">
-
-                    <span class="text-xl font-black text-gray-900 dark:text-white tracking-tighter">
-                        {{ number_format($prices['after_discount'] ?? 0) }}
-                    </span>
-
-                                                <span class="text-[10px] font-bold text-gray-500">
-                        تومان
-                    </span>
-
-                                            </div>
-
-                                        </div>
-
-
-                                       <a href="{{ route('products.show', $product->slug) }}"
-                                        class="w-full py-3 bg-brown-500 text-white rounded-xl text-[11px] font-black shadow-lg shadow-brown-500/20 hover:bg-brown-700 transition-all flex items-center justify-center gap-2 group/btn"
-                                        >
-                                        <span>خرید سریع</span>
-
-                                        <svg
-                                            class="w-4 h-4 transition-transform group-hover:translate-x-[-3px]"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path stroke-width="3" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                                        </svg>
-
-                                        </a>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-                        </div>
+                        />
 
                     @endforeach
                 </div>
@@ -325,7 +137,7 @@ new class extends Component
             <div class="lg:container mx-auto relative z-10">
                 <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-r-4 border-brown-600 pr-2 pl-2">
                     <div>
-                        <h2 class="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white">{{$view}}  <span class="text-brown-600">محصولات</span></h2>
+                        <h2 class="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white">{{$view}}  <span class="text-brown-600">محصولات</span>@if($brand) <span class="text-brown-600">{{ $brand->title }}</span>@endif</h2>
                         <p class="text-gray-500 dark:text-gray-400 mt-2 font-bold text-sm">برترین تکنولوژی‌های روز دنیا در دستان شما</p>
                     </div>
                 </div>
@@ -343,10 +155,10 @@ new class extends Component
                         <div class="group relative bg-white/70 dark:bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-gray-200 dark:border-white/10 p-2 transition-all duration-500 hover:shadow-lg hover:shadow-brown-600/20 hover:-translate-y-2"
                              data-categories="{{ $product->categories->pluck('slug')->implode(' ') }}">
                             <div class="flex h-[220px]">
-                                <div class="w-2/5 relative overflow-hidden rounded-[2rem] m-1">
+                                <div class="w-2/5 relative overflow-hidden rounded-[2rem] m-1 {{ $pictureMode === 'transparent' ? 'bg-gradient-to-br from-gray-100 to-transparent dark:from-white/5 dark:to-transparent flex items-center justify-center' : '' }}">
                                     <img
                                         src="{{ $product->featuredImageUrl }}"
-                                        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                        class="{{ $pictureMode === 'transparent' ? 'w-32 h-32 object-contain drop-shadow-md group-hover:-rotate-6' : 'w-full h-full object-cover' }} transition-transform duration-700 group-hover:scale-110"
                                         alt="{{ $product->title }}"
                                     >
 
@@ -355,6 +167,14 @@ new class extends Component
                                             {{ $prices['discount_percent'] }}٪-
                                         </div>
                                     @endif
+
+                                    {{-- Wishlist --}}
+                                    <x-main.wishlist-button
+                                        :product-id="$product->id"
+                                        :active="$this->isWishlisted($product->id)"
+                                        icon-class="w-4 h-4"
+                                        class="absolute top-3 left-3 z-20 w-8 h-8 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm transition-all"
+                                    />
                                 </div>
 
                                 <div class="w-3/5 p-5 flex flex-col justify-between">
@@ -418,7 +238,7 @@ new class extends Component
                             </div>
                         </div>
                         <div>
-                            <h2 class="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{{ $view }}</h2>
+                            <h2 class="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{{ $view }}@if($brand) <span class="text-brown-600">{{ $brand->title }}</span>@endif</h2>
                             <p class="text-[10px] font-black text-brown-500 uppercase tracking-[0.4em] mt-2 flex items-center gap-2">
                                 <span class="w-8 h-[2px] bg-brown-500/30"></span>
                                 Premium Selection
@@ -463,7 +283,7 @@ new class extends Component
 
                                             <div class="relative mb-8 flex items-center justify-center min-h-[180px]">
 
-                                                @if(($data['pictureMode'] ?? 'transparent') === 'background')
+                                                @if($pictureMode === 'background')
 
                                                     {{-- حالت عکس با بک‌گراند --}}
                                                     <div class="relative w-full h-44 rounded-[2rem] overflow-hidden">
@@ -501,13 +321,13 @@ new class extends Component
                                                     </div>
 
                                                     <div class="relative flex items-center group/tooltip">
-                                                        <button class="w-10 h-10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-gray-900 dark:text-white rounded-xl flex items-center justify-center shadow-sm border border-white dark:border-white/10 hover:text-red-500 transition-all">
-                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                                                            </svg>
-                                                        </button>
+                                                        <x-main.wishlist-button
+                                                            :product-id="$product->id"
+                                                            :active="$this->isWishlisted($product->id)"
+                                                            class="w-10 h-10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm border border-white dark:border-white/10 transition-all"
+                                                        />
                                                         <span class="absolute right-full mr-3 whitespace-nowrap bg-gray-900 dark:bg-zinc-800 text-white text-[10px] py-1.5 px-3 rounded-lg opacity-0 pointer-events-none translate-x-2 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-x-0 transition-all duration-300 border border-white/5 after:content-[''] after:absolute after:top-1/2 after:-translate-y-1/2 after:-right-1 after:border-4 after:border-transparent after:border-l-gray-900 dark:after:border-l-zinc-800">
-                افزودن به علاقه‌مندی
+                {{ $this->isWishlisted($product->id) ? 'حذف از علاقه‌مندی' : 'افزودن به علاقه‌مندی' }}
             </span>
                                                     </div>
                                                 </div>

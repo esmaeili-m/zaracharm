@@ -776,11 +776,13 @@
                     {{-- کاربران --}}
                     {{-- ========================================================= --}}
 
+                    @canany(['roles.view', 'users.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     کاربران
                 </span>
                     </li>
+                    @endcanany
 
                     <li class="slide has-sub {{ request()->routeIs('users.*') || request()->routeIs('roles.*') ? 'open active' : '' }}">
 
@@ -805,6 +807,7 @@
                             </li>
 
                             {{-- کاربران --}}
+                            @can('users.view')
                             <li class="slide">
 
                                 <a class="side-menu__item {{ request()->routeIs('users.*') ? 'active' : '' }}"
@@ -819,8 +822,10 @@
                                 </a>
 
                             </li>
+                            @endcan
 
                             {{-- نقش ها --}}
+                            @can('roles.view')
                             <li class="slide">
 
                                 <a class="side-menu__item {{ request()->routeIs('roles.*') ? 'active' : '' }}"
@@ -835,6 +840,7 @@
                                 </a>
 
                             </li>
+                            @endcan
 
                         </ul>
 
@@ -845,14 +851,17 @@
                     {{-- محتوا --}}
                     {{-- ========================================================= --}}
 
+                    @canany(['articles.view', 'faq.view', 'menus.view', 'pages.view', 'stories.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     محتوا
                 </span>
                     </li>
+                    @endcanany
 
 
                     {{-- صفحات --}}
+                    @can('pages.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('pages.*') ? 'active' : '' }}"
@@ -867,9 +876,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- مقالات --}}
+                    @can('articles.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('articles.*') ? 'active' : '' }}"
@@ -884,9 +895,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- استوری --}}
+                    @can('stories.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('stories.*') ? 'active' : '' }}"
@@ -901,6 +914,7 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- گالری --}}
@@ -908,6 +922,7 @@
 
 
                     {{-- سوالات متداول --}}
+                    @can('faq.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('faq.*') ? 'active' : '' }}"
@@ -922,9 +937,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- منوهای سایت --}}
+                    @can('menus.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('menus.*') ? 'active' : '' }}"
@@ -939,20 +956,24 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- ========================================================= --}}
                     {{-- فروشگاه --}}
                     {{-- ========================================================= --}}
 
+                    @canany(['brands.view', 'categories.view', 'inventories.view', 'options.view', 'products.view', 'specifications.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     فروشگاه
                 </span>
                     </li>
+                    @endcanany
 
 
                     {{-- محصولات --}}
+                    @can('products.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('products.*') ? 'active' : '' }}"
@@ -967,9 +988,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- دسته بندی --}}
+                    @can('categories.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('categories.*') ? 'active' : '' }}"
@@ -984,9 +1007,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- برندها --}}
+                    @can('brands.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('brands.*') ? 'active' : '' }}"
@@ -1001,9 +1026,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- ویژگی ها --}}
+                    @can('options.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('options.*') ? 'active' : '' }}"
@@ -1018,9 +1045,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- مشخصات فنی --}}
+                    @can('specifications.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('specifications.*') ? 'active' : '' }}"
@@ -1035,9 +1064,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- انبار --}}
+                    @can('inventories.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('inventories.*') ? 'active' : '' }}"
@@ -1052,20 +1083,24 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- ========================================================= --}}
                     {{-- بازاریابی --}}
                     {{-- ========================================================= --}}
 
+                    @canany(['campaigns.view', 'coupons.view', 'discounts.view', 'sliders.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     بازاریابی
                 </span>
                     </li>
+                    @endcanany
 
 
                     {{-- تخفیف ها --}}
+                    @can('discounts.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('discounts.*') ? 'active' : '' }}"
@@ -1080,9 +1115,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- کوپن --}}
+                    @can('coupons.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('coupons.*') ? 'active' : '' }}"
@@ -1097,9 +1134,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- کمپین --}}
+                    @can('campaigns.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('campaign.*') ? 'active' : '' }}"
@@ -1114,9 +1153,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- اسلایدر --}}
+                    @can('sliders.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('sliders.*') ? 'active' : '' }}"
@@ -1131,20 +1172,24 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- ========================================================= --}}
                     {{-- ارتباطات --}}
                     {{-- ========================================================= --}}
 
+                    @canany(['comments.view', 'messages.view', 'product-questions.view', 'social-links.view', 'tickets.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     ارتباطات
                 </span>
                     </li>
+                    @endcanany
 
 
                     {{-- پیام ها --}}
+                    @can('messages.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('messages.*') ? 'active' : '' }}"
@@ -1159,6 +1204,8 @@
                         </a>
 
                     </li>
+                    @endcan
+                    @can('social-links.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('social-links.*') ? 'active' : '' }}"
@@ -1173,8 +1220,10 @@
                         </a>
 
                     </li>
+                    @endcan
 
                     {{-- دیدگاه ها --}}
+                    @can('comments.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('comments.*') ? 'active' : '' }}"
@@ -1189,9 +1238,29 @@
                         </a>
 
                     </li>
+                    @endcan
+
+                    {{-- پرسش و پاسخ محصولات --}}
+                    @can('product-questions.view')
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('product-questions.*') ? 'active' : '' }}"
+                           href="{{ route('product-questions.index') }}">
+
+                            <i class="ri-questionnaire-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        پرسش و پاسخ محصولات
+                    </span>
+
+                        </a>
+
+                    </li>
+                    @endcan
 
 
                     {{-- تیکت --}}
+                    @can('tickets.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('tickets.*') ? 'active' : '' }}"
@@ -1206,20 +1275,24 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- ========================================================= --}}
                     {{-- مالی --}}
                     {{-- ========================================================= --}}
 
+                    @canany(['invoices.view', 'returns.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     مالی
                 </span>
                     </li>
+                    @endcanany
 
 
                     {{-- فاکتورها --}}
+                    @can('invoices.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('invoices.*') ? 'active' : '' }}"
@@ -1234,20 +1307,47 @@
                         </a>
 
                     </li>
+                    @endcan
+
+                    {{-- مرجوعی‌ها --}}
+                    @can('returns.view')
+                    <li class="slide">
+
+                        <a class="side-menu__item {{ request()->routeIs('returns.*') ? 'active' : '' }}"
+                           href="{{ route('returns.index') }}">
+
+                            <i class="ri-arrow-go-back-line side-menu__icon"></i>
+
+                            <span class="side-menu__label">
+                        مرجوعی‌ها
+                    </span>
+
+                            @php($pendingReturns = \App\Models\ReturnRequest::where('status', 'pending')->count())
+                            @if($pendingReturns)
+                                <span class="badge bg-warning ms-auto">{{ $pendingReturns }}</span>
+                            @endif
+
+                        </a>
+
+                    </li>
+                    @endcan
 
 
                     {{-- ========================================================= --}}
                     {{-- سئو --}}
                     {{-- ========================================================= --}}
 
+                    @canany(['seo.view', 'tags.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     سئو
                 </span>
                     </li>
+                    @endcanany
 
 
                     {{-- مدیریت سئو --}}
+                    @can('seo.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('seo.*') ? 'active' : '' }}"
@@ -1262,9 +1362,11 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- تگ ها --}}
+                    @can('tags.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('tags.*') ? 'active' : '' }}"
@@ -1279,23 +1381,27 @@
                         </a>
 
                     </li>
+                    @endcan
 
 
                     {{-- ========================================================= --}}
                     {{-- سیستم --}}
                     {{-- ========================================================= --}}
 
+                    @canany(['settings.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     سیستم
                 </span>
                     </li>
+                    @endcanany
 
 
 
 
 
                     {{-- تنظیمات --}}
+                    @can('settings.view')
                     <li class="slide">
 
                         <a class="side-menu__item {{ request()->routeIs('settings.*') ? 'active' : '' }}"
@@ -1310,6 +1416,7 @@
                         </a>
 
                     </li>
+                    @endcan
 
                 </ul>
 

@@ -48,7 +48,12 @@ new class extends Component {
     public $search;
     public $ids;
     public $categories;
+    public $brands;
+    public $faqs;
     public RowSection $model;
+
+    // سکشن‌هایی که تصویر محصول/دسته‌بندی دارند و تنظیم pictureMode می‌گیرند
+    const PICTURE_MODE_SECTIONS = ['categories', 'instantOffers', 'products', 'campaigns', 'brands', 'brandProducts'];
     use \Livewire\WithFileUploads;
     use \App\Traits\FileUploadTrait;
 
@@ -95,7 +100,7 @@ new class extends Component {
     #[\Livewire\Attributes\On('updateOrder')]
     public function updateOrder($ids)
     {
-        abort_if(!auth()->user()->can('categories.edit'), 403);
+        abort_if(!auth()->user()->can('sections.edit'), 403);
 
         foreach ($ids as $index => $id) {
             $this->model->where('id', $id)->update([
@@ -111,6 +116,8 @@ new class extends Component {
             'sliders' => $this->loadSliders(),
             'categories' => $this->loadCategories(),
             'products' => $this->loadProductsData(),
+            'brands', 'brandProducts' => $this->loadBrandsData(),
+            'faq' => $this->loadFaqData(),
             'campaigns' => $this->loadCampaignsData(),
             'articles' => $this->loadArticlesData(),
             'stories' => $this->loadStoriesData(),
@@ -148,6 +155,29 @@ new class extends Component {
         $this->products = \App\Models\Product::query()
             ->active()->get();
 
+        $this->brands = \App\Models\Brand::active()
+            ->orderBy('sort')
+            ->get(['id', 'title']);
+
+    }
+
+    private function loadFaqData()
+    {
+        $this->faqs = \App\Models\Faq::active()
+            ->orderBy('sort_order')
+            ->get(['id', 'question']);
+
+        $this->categories = \App\Models\Category::active()
+            ->whereHas('faqs')
+            ->orderBy('title')
+            ->get(['id', 'title']);
+    }
+
+    private function loadBrandsData()
+    {
+        $this->brands = \App\Models\Brand::active()
+            ->orderBy('sort')
+            ->get(['id', 'title']);
     }
 
     private function loadCampaignsData()
@@ -193,6 +223,14 @@ new class extends Component {
             $this->selectItem->section->key
         );
         $this->formData = array_merge($default, $dbData);
+
+        // نمایش مقدار واقعی حالت تصویر (حتی برای سکشن‌های قدیمی بدون pictureMode)
+        if (in_array($this->selectItem->section->key, self::PICTURE_MODE_SECTIONS, true)) {
+            $this->formData['pictureMode'] = \App\Enums\PictureMode::forSection(
+                $this->selectItem->section->key,
+                $dbData
+            )->value;
+        }
         $this->loadForm();
     }
 
@@ -258,6 +296,7 @@ new class extends Component {
                 'mode' => 'random',
                 'limit' => 8,
                 'view' => 1,
+                'pictureMode' => 'background',
 
             ],
 
@@ -266,12 +305,42 @@ new class extends Component {
                 'limit' => 8,
                 'view' => 1,
                 'pictureMode' => 'background',
+                'source' => 'all',
+                'brand_id' => null,
                 'product_ids' => [],
             ],
             'stories' => [
                 'mode' => 'latest',
                 'limit' => 8,
                 'story_ids' => [],
+            ],
+
+            'brands' => [
+                'mode' => 'popular',
+                'limit' => 6,
+                'pictureMode' => 'transparent',
+                'brand_ids' => [],
+            ],
+
+            'brandProducts' => [
+                'mode' => 'latest',
+                'limit' => 6,
+                'pictureMode' => 'background',
+                'brand_ids' => [],
+            ],
+
+            \App\Support\Sections\ReturnPolicy::KEY => \App\Support\Sections\ReturnPolicy::defaults(),
+
+            'faq' => [
+                'mode' => 'latest',
+                'limit' => 8,
+                'columns' => 1,
+                'description' => null,
+                'category_id' => null,
+                'faq_ids' => [],
+                'open_first' => true,
+                'show_search' => false,
+                'schema' => true,
             ],
 
             'articles' => [
@@ -285,6 +354,7 @@ new class extends Component {
                 'campaign_id' => null,
                 'limit' => 8,
                 'view' => 1,
+                'pictureMode' => 'transparent',
                 'show_title' => true,
                 'show_description' => true,
                 'show_image' => true,
@@ -461,6 +531,17 @@ new class extends Component {
                         'nullable',
                     ],
 
+                    'formData.source' => [
+                        'required',
+                        'in:all,brand'
+                    ],
+
+                    'formData.brand_id' => [
+                        'nullable',
+                        'required_if:formData.source,brand',
+                        'exists:brands,id'
+                    ],
+
                     'formData.product_ids' => [
                         'required_if:formData.mode,manual',
                         'array'
@@ -523,6 +604,95 @@ new class extends Component {
 
                     'formData.article_ids.*' => [
                         'exists:articles,id'
+                    ],
+                ],
+                'brands' => [
+                    'formData.mode' => [
+                        'required',
+                        'in:popular,latest,all,manual'
+                    ],
+
+                    'formData.limit' => [
+                        'required',
+                        'integer',
+                        'min:1',
+                        'max:30'
+                    ],
+
+                    'formData.brand_ids' => [
+                        'required_if:formData.mode,manual',
+                        'array'
+                    ],
+
+                    'formData.brand_ids.*' => [
+                        'exists:brands,id'
+                    ],
+                ],
+                \App\Support\Sections\ReturnPolicy::KEY => \App\Support\Sections\ReturnPolicy::rules(),
+
+                'faq' => [
+                    'formData.mode' => [
+                        'required',
+                        'in:latest,category,manual'
+                    ],
+
+                    'formData.limit' => [
+                        'required',
+                        'integer',
+                        'min:1',
+                        'max:50'
+                    ],
+
+                    'formData.columns' => [
+                        'required',
+                        'in:1,2'
+                    ],
+
+                    'formData.description' => [
+                        'nullable',
+                        'string',
+                        'max:255'
+                    ],
+
+                    'formData.category_id' => [
+                        'nullable',
+                        'required_if:formData.mode,category',
+                        'exists:categories,id'
+                    ],
+
+                    'formData.faq_ids' => [
+                        'required_if:formData.mode,manual',
+                        'array'
+                    ],
+
+                    'formData.faq_ids.*' => [
+                        'exists:faqs,id'
+                    ],
+
+                    'formData.open_first' => ['boolean'],
+                    'formData.show_search' => ['boolean'],
+                    'formData.schema' => ['boolean'],
+                ],
+                'brandProducts' => [
+                    'formData.mode' => [
+                        'required',
+                        'in:latest,sales,views,random'
+                    ],
+
+                    'formData.limit' => [
+                        'required',
+                        'integer',
+                        'min:1',
+                        'max:30'
+                    ],
+
+                    'formData.brand_ids' => [
+                        'nullable',
+                        'array'
+                    ],
+
+                    'formData.brand_ids.*' => [
+                        'exists:brands,id'
                     ],
                 ],
                 'campaigns' => [
@@ -598,15 +768,71 @@ new class extends Component {
 
                 ],
 
-            }
+            },
+
+            in_array($this->selectItem?->section->key, self::PICTURE_MODE_SECTIONS, true)
+                ? $this->pictureModeRules()
+                : []
         );
+    }
+
+    protected function pictureModeRules(): array
+    {
+        return [
+            'formData.pictureMode' => [
+                'required',
+                \Illuminate\Validation\Rule::in(\App\Enums\PictureMode::values()),
+            ],
+        ];
     }
 
     protected function messages(): array
     {
-        return [
+        return \App\Support\Sections\ReturnPolicy::messages() + [
 
             // عمومی
+
+            'formData.faq_ids.required_if' =>
+                'در حالت انتخاب دستی، انتخاب حداقل یک سوال الزامی است.',
+
+            'formData.faq_ids.*.exists' =>
+                'سوال انتخاب‌شده معتبر نیست.',
+
+            'formData.category_id.required_if' =>
+                'انتخاب دسته‌بندی الزامی است.',
+
+            'formData.category_id.exists' =>
+                'دسته‌بندی انتخاب‌شده معتبر نیست.',
+
+            'formData.columns.in' =>
+                'چیدمان انتخاب‌شده معتبر نیست.',
+
+            'formData.description.max' =>
+                'توضیح نمی‌تواند بیشتر از ۲۵۵ کاراکتر باشد.',
+
+            'formData.brand_ids.required_if' =>
+                'در حالت انتخاب دستی، انتخاب حداقل یک برند الزامی است.',
+
+            'formData.brand_ids.*.exists' =>
+                'برند انتخاب‌شده معتبر نیست.',
+
+            'formData.source.required' =>
+                'انتخاب منبع محصولات الزامی است.',
+
+            'formData.source.in' =>
+                'منبع محصولات معتبر نیست.',
+
+            'formData.brand_id.required_if' =>
+                'انتخاب برند الزامی است.',
+
+            'formData.brand_id.exists' =>
+                'برند انتخاب‌شده معتبر نیست.',
+
+            'formData.pictureMode.required' =>
+                'انتخاب حالت نمایش تصاویر الزامی است.',
+
+            'formData.pictureMode.in' =>
+                'حالت نمایش تصاویر معتبر نیست.',
 
             'title.max' =>
                 'عنوان نمی‌تواند بیشتر از ۲۵۵ کاراکتر باشد.',
@@ -705,7 +931,7 @@ new class extends Component {
 
     public function save()
     {
-        abort_if(!auth()->user()->can('sections.create'), 403);
+        abort_if(!auth()->user()->can($this->selectItem ? 'sections.edit' : 'sections.create'), 403);
         $data = $this->validate();
         $images=$data['formData']['images'] ?? [];
         unset($data['formData']['images']);
@@ -758,15 +984,61 @@ new class extends Component {
         $data['page_row_id'] = $this->parentModel->id;
         $section = \App\Models\Section::find($data['section_id']);
         $data['title'] = $section->name;
-        $this->model->create($data);
-        $this->resetData();
+        $item = $this->model->create($data);
+        $this->resetData('close');
         $this->loadData();
         $this->dispatch(
             'alert',
             type: 'success',
             title: 'عملیات موفق',
-            text: 'سکشن با موفقیت ایجاد شد.'
+            text: 'سکشن با موفقیت ایجاد شد. اکنون تنظیمات و محتوای آن را وارد کنید.'
         );
+
+        // بلافاصله فرم تنظیمات همان سکشن باز می‌شود تا محتوای آن وارد شود
+        $this->get_data($item->id);
+        $this->dispatch('open-section-settings');
+    }
+
+    /**
+     * افزودن/حذف آیتم در لیست‌های قابل تکرار فرم سکشن (مثل شرایط مرجوعی)
+     */
+    protected function repeatableLists(): array
+    {
+        return match ($this->selectItem?->section?->key) {
+            \App\Support\Sections\ReturnPolicy::KEY => \App\Support\Sections\ReturnPolicy::LISTS,
+            default => [],
+        };
+    }
+
+    public function addListItem(string $key): void
+    {
+        $lists = $this->repeatableLists();
+
+        if (!array_key_exists($key, $lists)) {
+            return;
+        }
+
+        $items = array_values((array) ($this->formData[$key] ?? []));
+
+        if (count($items) >= \App\Support\Sections\ReturnPolicy::MAX_ITEMS) {
+            return;
+        }
+
+        $items[] = $lists[$key];
+        $this->formData[$key] = $items;
+    }
+
+    public function removeListItem(string $key, int $index): void
+    {
+        if (!array_key_exists($key, $this->repeatableLists())) {
+            return;
+        }
+
+        $items = (array) ($this->formData[$key] ?? []);
+        unset($items[$index]);
+
+        $this->formData[$key] = array_values($items);
+        $this->resetValidation('formData.' . $key . '.*');
     }
 
 
@@ -931,6 +1203,22 @@ new class extends Component {
 
                                 @case('stories')
                                     @include('dashboard.forms.stories')
+                                    @break
+
+                                @case('brands')
+                                    @include('dashboard.forms.brands')
+                                    @break
+
+                                @case('brandProducts')
+                                    @include('dashboard.forms.brandProducts')
+                                    @break
+
+                                @case('faq')
+                                    @include('dashboard.forms.faq')
+                                    @break
+
+                                @case('returnPolicy')
+                                    @include('dashboard.forms.returnPolicy')
                                     @break
 
                                 @default
@@ -1138,6 +1426,19 @@ new class extends Component {
                 });
 
             });
+
+            // بعد از افزودن سکشن، فرم تنظیمات همان سکشن باز می‌شود
+            (function () {
+                const register = () => Livewire.on('open-section-settings', () => {
+                    // صبر تا بسته شدن کامل مودال افزودن
+                    setTimeout(() => {
+                        const el = document.getElementById('create');
+                        if (el) bootstrap.Modal.getOrCreateInstance(el).show();
+                    }, 400);
+                });
+
+                window.Livewire ? register() : document.addEventListener('livewire:init', register);
+            })();
         </script>
     @endpush
 

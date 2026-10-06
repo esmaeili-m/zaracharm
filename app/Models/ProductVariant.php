@@ -84,4 +84,12 @@ class ProductVariant extends Model
     {
         return $query->where('status', true);
     }
+
+    // عنوان تنوع: مقادیر ویژگی‌ها (مثلاً «قرمز / XL») یا SKU
+    public function getLabelAttribute(): string
+    {
+        $values = $this->relationLoaded('values') ? $this->values : $this->values()->get();
+
+        return $values->pluck('title')->filter()->implode(' / ') ?: ($this->sku ?: 'پیش‌فرض');
+    }
 }

@@ -228,7 +228,7 @@ new class extends Component
     }
     public function save()
     {
-        abort_if(!auth()->user()->can('services.create'), 403);
+        abort_if(!auth()->user()->can($this->selectItem ? 'services.edit' : 'services.create'), 403);
 
         $data = $this->validate();
 
