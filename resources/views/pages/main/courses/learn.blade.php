@@ -128,7 +128,7 @@ new class extends Component
             height: 100% !important;
         }
         .cvp-wrapper .vjs-big-play-button {
-            background: rgba(99,102,241,0.88) !important;
+            background: rgba(120,72,45,0.88) !important;
             border: none !important;
             border-radius: 50% !important;
             width: 68px !important;
@@ -139,7 +139,7 @@ new class extends Component
             transition: transform 0.2s ease, background 0.2s ease !important;
         }
         .cvp-wrapper .vjs-big-play-button:hover {
-            background: #6366f1 !important;
+            background: #8a5a3b !important;
             transform: scale(1.1) !important;
         }
         .cvp-wrapper .vjs-big-play-button .vjs-icon-placeholder::before {
@@ -171,16 +171,16 @@ new class extends Component
             height: 5px !important;
         }
         .cvp-wrapper .vjs-play-progress {
-            background: #6366f1 !important;
+            background: #8a5a3b !important;
             border-radius: 3px !important;
         }
         .cvp-wrapper .vjs-play-progress::before {
-            color: #6366f1 !important;
+            color: #8a5a3b !important;
             font-size: 11px !important;
             top: -5px !important;
         }
         .cvp-wrapper .vjs-load-progress div {
-            background: rgba(99,102,241,0.22) !important;
+            background: rgba(120,72,45,0.22) !important;
         }
         .cvp-wrapper .vjs-control-bar button,
         .cvp-wrapper .vjs-control-bar .vjs-time-control {
@@ -228,7 +228,7 @@ new class extends Component
         .cvp-wrapper .vjs-menu-item:hover,
         .cvp-wrapper .vjs-menu-item.vjs-selected {
             background: #1e1e40 !important;
-            color: #6366f1 !important;
+            color: #8a5a3b !important;
         }
         .cvp-wrapper .vjs-volume-panel {
             display: flex !important;
@@ -263,12 +263,12 @@ new class extends Component
             margin: 0 6px !important;
         }
         .cvp-wrapper .vjs-volume-level {
-            background: #6366f1 !important;
+            background: #8a5a3b !important;
             border-radius: 3px !important;
         }
         .cvp-wrapper .vjs-volume-level::before {
             font-size: 11px !important;
-            color: #6366f1 !important;
+            color: #8a5a3b !important;
             top: -4px !important;
             right: -6px !important;
         }
@@ -346,7 +346,7 @@ new class extends Component
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: #6366f1;
+            background: #8a5a3b;
             color: #fff !important;
             border: none;
             border-radius: 10px;
@@ -357,7 +357,7 @@ new class extends Component
             margin-top: 4px;
         }
         .cvp-download-btn:hover {
-            background: #4f46e5;
+            background: #78482d;
             color: #fff !important;
         }
 
@@ -520,7 +520,7 @@ new class extends Component
                                 {{ $iconInfo['icon'] }}
                             </div>
                             <h5>{{ $name }}</h5>
-                            <audio controls style="width:100%;margin-top:8px;accent-color:#6366f1">
+                            <audio controls style="width:100%;margin-top:8px;accent-color:#8a5a3b">
                                 <source src="{{ $fileUrl }}" >
                             </audio>
                         </div>

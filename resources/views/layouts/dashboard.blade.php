@@ -623,7 +623,9 @@
                 <div class="header-element">
                     <div class="horizontal-logo">
                         <a class="header-logo" href="/">
-                            @php($logo=\App\Models\Setting::where('key','logo')->with('media')->first())
+                            @php
+                                $logo=\App\Models\Setting::where('key','logo')->with('media')->first();
+                            @endphp
 
                             <img alt="لوگو" class="desktop-logo"
                                  src=""/>
@@ -1282,7 +1284,7 @@
                     {{-- مالی --}}
                     {{-- ========================================================= --}}
 
-                    @canany(['invoices.view', 'returns.view'])
+                    @canany(['payments.view', 'payment-settings.view', 'delivery.view', 'invoices.view', 'returns.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     مالی
@@ -1322,13 +1324,65 @@
                         مرجوعی‌ها
                     </span>
 
-                            @php($pendingReturns = \App\Models\ReturnRequest::where('status', 'pending')->count())
+                            @php
+                                $pendingReturns = \App\Models\ReturnRequest::where('status', 'pending')->count();
+                            @endphp
                             @if($pendingReturns)
                                 <span class="badge bg-warning ms-auto">{{ $pendingReturns }}</span>
                             @endif
 
                         </a>
 
+                    </li>
+                    @endcan
+                    @can('delivery.view')
+                    <li class="slide">
+                        <a class="side-menu__item {{ request()->routeIs('delivery.*') ? 'active' : '' }}"
+                           href="{{ route('delivery.index') }}">
+                            <i class="ri-truck-line side-menu__icon"></i>
+                            <span class="side-menu__label">زمان‌بندی ارسال</span>
+                        </a>
+                    </li>
+                    @endcan
+                    @can('payments.view')
+                    <li class="slide">
+                        <a class="side-menu__item {{ request()->routeIs('payments.index') ? 'active' : '' }}"
+                           href="{{ route('payments.index') }}">
+                            <i class="ri-exchange-dollar-line side-menu__icon"></i>
+                            <span class="side-menu__label">پرداخت‌ها</span>
+                            @php
+                                $pendingTransfers = \App\Models\Payment::where('status', 'pending')->where('method', 'transfer')->count();
+                            @endphp
+                            @if($pendingTransfers)
+                                <span class="badge bg-warning ms-auto">{{ $pendingTransfers }}</span>
+                            @endif
+                        </a>
+                    </li>
+                    @endcan
+                    @can('payment-settings.view')
+                    <li class="slide">
+                        <a class="side-menu__item {{ request()->routeIs('payments.settings') ? 'active' : '' }}"
+                           href="{{ route('payments.settings') }}">
+                            <i class="ri-bank-card-2-line side-menu__icon"></i>
+                            <span class="side-menu__label">تنظیمات پرداخت</span>
+                        </a>
+                    </li>
+                    @endcan
+                    @can('marketplaces.view')
+                    <li class="slide">
+                        <a class="side-menu__item {{ request()->routeIs('marketplaces.*') ? 'active' : '' }}"
+                           href="{{ route('marketplaces.index') }}">
+                            <i class="ri-store-2-line side-menu__icon"></i>
+                            <span class="side-menu__label">مارکت‌پلیس‌ها</span>
+                            @php
+                                $newMarketplaceOrders = \Illuminate\Support\Facades\Schema::hasTable('marketplace_orders')
+                                    ? \App\Models\MarketplaceOrder::where('status', 'new')->count()
+                                    : 0;
+                            @endphp
+                            @if($newMarketplaceOrders)
+                                <span class="badge bg-success ms-auto">{{ $newMarketplaceOrders }}</span>
+                            @endif
+                        </a>
                     </li>
                     @endcan
 

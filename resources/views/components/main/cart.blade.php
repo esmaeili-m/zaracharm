@@ -11,9 +11,10 @@ new class extends Component
         // فقط برای re-render شدن کامپوننت
     }
 
+    // جمع تعداد کالاهای سبد «فعال» (قبلاً تعداد ردیف‌ها و گاهی سبد تبدیل‌شده شمرده می‌شد)
     public function getCartCountProperty(): int
     {
-        return auth()->user()?->cart?->items()->count() ?? 0;
+        return app(\App\Services\Cart\CartService::class)->count(auth()->id());
     }
 };
 ?>

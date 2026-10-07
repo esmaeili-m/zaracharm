@@ -127,15 +127,19 @@ new class extends Component
                 ->value('stock');
 
             if ($item->quantity >= $stock) {
-                $this->dispatch('notify', type: 'error', message: 'به سقف موجودی این کالا رسیده‌اید.');
+                $this->dispatch('alert', type: 'error', message: 'به سقف موجودی این کالا رسیده‌اید.');
                 return;
             }
         }
 
         if ($item->quantity >= self::MAX_QTY_PER_ITEM) {
+            $this->dispatch('alert', type: 'error', message: 'حداکثر تعداد قابل سفارش برای این کالا ' . self::MAX_QTY_PER_ITEM . ' عدد است.');
             return;
         }
         DB::table('cart_items')->where('id', $cartItemId)->increment('quantity');
+
+        // بروزرسانی شمارنده هدر و صفحه سبد
+        $this->dispatch('cart-updated');
     }
 
     public function decrease(int $cartItemId): void
@@ -155,6 +159,8 @@ new class extends Component
         } else {
             DB::table('cart_items')->where('id', $cartItemId)->decrement('quantity');
         }
+
+        $this->dispatch('cart-updated');
     }
 
     public function remove(int $cartItemId): void
@@ -165,6 +171,8 @@ new class extends Component
         }
 
         DB::table('cart_items')->where('id', $cartItemId)->where('cart_id', $cartId)->delete();
+
+        $this->dispatch('cart-updated');
     }
 };
 ?>

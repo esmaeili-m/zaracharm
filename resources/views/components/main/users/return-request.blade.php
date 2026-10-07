@@ -194,7 +194,7 @@ new class extends Component
                                     <p class="text-[11px] font-bold text-gray-500 dark:text-gray-400">دلیل: {{ $returnRequest->reason_label }}</p>
 
                                     @if($returnRequest->status === 'approved')
-                                        <p class="text-[11px] font-bold text-blue-600 dark:text-blue-400">درخواست شما تأیید شد؛ لطفاً کالا را همراه تمام متعلقات و بسته‌بندی اصلی ارسال کنید.</p>
+                                        <p class="text-[11px] font-bold text-brown-600 dark:text-brown-400">درخواست شما تأیید شد؛ لطفاً کالا را همراه تمام متعلقات و بسته‌بندی اصلی ارسال کنید.</p>
                                     @elseif($returnRequest->status === 'refunded')
                                         <p class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">مبلغ {{ number_format($returnRequest->refund_amount) }} تومان به کیف پول شما بازگردانده شد.</p>
                                     @endif

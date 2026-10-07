@@ -182,7 +182,7 @@ new class extends Component
                                         <div class="flex justify-between items-start">
                                             <span class="text-[10px] font-bold text-brown-600 dark:text-brown-400 tracking-tighter opacity-80 mb-1 block">{{ $product->brand?->title ?? 'محصول' }}</span>
                                             <div class="flex gap-1">
-                                                <div class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]"></div>
+                                                <div class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(120,72,45,0.5)]"></div>
                                                 <div class="w-2 h-2 rounded-full bg-gray-800 shadow-[0_0_5px_rgba(0,0,0,0.5)]"></div>
                                             </div>
                                         </div>
@@ -270,7 +270,7 @@ new class extends Component
                             @endphp
                             <div class="swiper-slide h-auto p-4">
                                 <div class="group relative h-full pt-12">
-                                    <div class="absolute inset-0 bg-white/80 dark:bg-[#0a0f0a]/40 backdrop-blur-[20px] rounded-[3rem] border border-gray-100 dark:border-white/[0.08] shadow-[0_20px_50px_rgba(0,0,0,0.02)] transition-all duration-700 group-hover:border-brown-500/50 dark:group-hover:shadow-[0_0_60px_rgba(37,99,235,0.12)]"></div>
+                                    <div class="absolute inset-0 bg-white/80 dark:bg-[#0a0f0a]/40 backdrop-blur-[20px] rounded-[3rem] border border-gray-100 dark:border-white/[0.08] shadow-[0_20px_50px_rgba(0,0,0,0.02)] transition-all duration-700 group-hover:border-brown-500/50 dark:group-hover:shadow-[0_0_60px_rgba(120,72,45,0.12)]"></div>
 
                                     <div class="relative p-7 flex flex-col h-full z-10 transition-transform duration-500 group-hover:-translate-y-4">
                                         @if($prices['has_discount'])
@@ -299,7 +299,7 @@ new class extends Component
                                                 @else
 
                                                     {{-- حالت عکس بدون بک‌گراند (transparent) --}}
-                                                    <div class="absolute w-40 h-40 bg-brown-500/20 dark:bg-indigo-500/20 blur-[70px] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-1000"></div>
+                                                    <div class="absolute w-40 h-40 bg-brown-500/20 dark:bg-brown-500/20 blur-[70px] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-1000"></div>
 
                                                     <img src="{{ $product->featuredImageUrl }}"
                                                          class="relative z-10 w-full h-44 object-contain transition-all duration-700 group-hover:scale-110 group-hover:drop-shadow-brown"
@@ -348,7 +348,7 @@ new class extends Component
                                                 </div>
                                             </div>
 
-                                            <a href="{{ route('products.show', $product->slug) }}" class="w-14 h-14 bg-brown-500 dark:bg-brown-600 text-white rounded-[1.5rem] flex items-center justify-center shadow-lg dark:shadow-[0_0_25px_rgba(37,99,235,0.3)] hover:scale-110 active:scale-90 transition-all group/btn relative overflow-hidden">
+                                            <a href="{{ route('products.show', $product->slug) }}" class="w-14 h-14 bg-brown-500 dark:bg-brown-600 text-white rounded-[1.5rem] flex items-center justify-center shadow-lg dark:shadow-[0_0_25px_rgba(120,72,45,0.3)] hover:scale-110 active:scale-90 transition-all group/btn relative overflow-hidden">
                                                 <svg
                                                     class="w-5 h-5 rotate-180"
                                                     fill="none"

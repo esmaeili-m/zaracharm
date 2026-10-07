@@ -67,7 +67,7 @@ new class extends Component
             ],
             CampaignType::FreeShipping => [
                 'label' => 'ارسال رایگان',
-                'dot'   => 'bg-brown-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]',
+                'dot'   => 'bg-brown-500 shadow-[0_0_10px_rgba(120,72,45,0.5)]',
                 'ping'  => 'bg-brown-400',
                 'text'  => 'text-brown-500 dark:text-brown-400',
             ],

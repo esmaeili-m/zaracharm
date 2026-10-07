@@ -623,7 +623,7 @@ new class extends Component
                                         class="w-2 h-8
                            bg-primary-500
                            rounded-full
-                           shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                           shadow-[0_0_15px_rgba(120,72,45,0.5)]"
                                     ></div>
 
                                     <h3
@@ -1105,10 +1105,10 @@ new class extends Component
                        text-gray-500
                        dark:text-gray-400
                        transition-all
-                       peer-checked:bg-blue-500/10
-                       peer-checked:border-blue-500/30
-                       peer-checked:text-blue-500
-                       hover:border-blue-500/30"
+                       peer-checked:bg-brown-500/10
+                       peer-checked:border-brown-500/30
+                       peer-checked:text-brown-500
+                       hover:border-brown-500/30"
                                                 >
                                                     مرد
                                                 </div>
@@ -1559,8 +1559,8 @@ new class extends Component
                                                     3 => [
                                                         'title' => 'خوب',
                                                         'percent' => 75,
-                                                        'color' => 'bg-blue-500',
-                                                        'text' => 'text-blue-500',
+                                                        'color' => 'bg-brown-500',
+                                                        'text' => 'text-brown-500',
                                                     ],
 
                                                     4 => [
@@ -2042,7 +2042,7 @@ new class extends Component
 
                                     <div class="flex items-center gap-4">
 
-                                        <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                                        <div class="w-10 h-10 rounded-xl bg-brown-500/10 text-brown-500 flex items-center justify-center">
 
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path
@@ -2096,7 +2096,7 @@ new class extends Component
                             after:h-4
                             after:w-4
                             after:transition-all
-                            peer-checked:bg-blue-500"
+                            peer-checked:bg-brown-500"
                                         ></div>
 
                                     </label>
@@ -2179,7 +2179,7 @@ new class extends Component
 
                                     <div class="flex items-center gap-4">
 
-                                        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                                        <div class="w-10 h-10 rounded-xl bg-brown-500/10 text-brown-500 flex items-center justify-center">
 
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path
@@ -2228,7 +2228,7 @@ new class extends Component
                             after:h-4
                             after:w-4
                             after:transition-all
-                            peer-checked:bg-indigo-500"
+                            peer-checked:bg-brown-500"
                                         ></div>
 
                                     </label>

@@ -69,8 +69,8 @@ new class extends Component
 
                     'processing' => [
                         'title' => 'در حال آماده‌سازی',
-                        'class' => 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400',
-                        'dot' => 'bg-blue-500',
+                        'class' => 'bg-brown-500/10 border-brown-500/20 text-brown-600 dark:text-brown-400',
+                        'dot' => 'bg-brown-500',
                     ],
 
                     'shipped' => [
@@ -121,7 +121,7 @@ new class extends Component
                     {{-- Header --}}
                     <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-gray-100 dark:border-white/5">
 
-                        <div class="flex items-center gap-6">
+                        <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
 
                             <div class="flex flex-col gap-1">
 
@@ -160,6 +160,17 @@ new class extends Component
                             </span>
 
                             </div>
+
+                            @if($order->delivery_date)
+                                <div class="flex flex-col gap-1">
+                                <span class="text-[10px] font-black text-gray-400">
+                                    تاریخ ارسال
+                                </span>
+                                    <span class="text-[11px] font-bold text-brown-600 dark:text-brown-400">
+                                    {{ verta($order->delivery_date)->format('l j F') }}
+                                </span>
+                                </div>
+                            @endif
 
                         </div>
 

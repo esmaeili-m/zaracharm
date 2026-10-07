@@ -287,40 +287,23 @@ new class extends Component
             return;
         }
 
-        $stock = $this->stockForVariant($variant->id);
-        if ($stock <= 0) {
-            $this->dispatch('alert', type: 'error', message: 'موجودی این کالا تمام شده است.');
+        [$finalPrice] = $this->finalPriceForVariant($variant->id, $variant->price, $variant->product_id, $variant->product->brand_id ?? null);
+
+        // همان واریانت در سبد => فقط تعداد زیاد می‌شود؛ موجودیِ از قبل در سبد هم حساب می‌شود
+        $result = app(\App\Services\Cart\CartService::class)->add(
+            Auth::id(),
+            $variant->product_id,
+            $variant->id,
+            (int) $finalPrice
+        );
+
+        if (! $result['ok']) {
+            $this->dispatch('alert', type: 'error', message: $result['message']);
             return;
         }
 
-        $cartId = DB::table('carts')
-            ->where('user_id', Auth::id())
-            ->where('status', 'active')
-            ->value('id');
-
-        if (! $cartId) {
-            $cartId = DB::table('carts')->insertGetId([
-                'user_id' => Auth::id(),
-                'status' => 'active',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        [$finalPrice] = $this->finalPriceForVariant($variant->id, $variant->price, $variant->product_id, $variant->product->brand_id ?? null);
-
-        DB::table('cart_items')->insert([
-            'cart_id' => $cartId,
-            'product_id' => $variant->product_id,
-            'quantity' => 1,
-            'price' => $finalPrice,
-            'attributes' => json_encode(['variant_id' => $variant->id]),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
         $this->dispatch('cart-updated');
-        $this->dispatch('alert', type: 'success', message: 'به سبد خرید اضافه شد.');
+        $this->dispatch('alert', type: 'success', message: $result['message']);
     }
 
     /**
@@ -867,7 +850,7 @@ new class extends Component
                                shadow-[0_20px_50px_rgba(0,0,0,0.02)]
                                transition-all duration-700
                                group-hover:border-brown-500/50
-                               dark:group-hover:shadow-[0_0_60px_rgba(37,99,235,0.12)]"
+                               dark:group-hover:shadow-[0_0_60px_rgba(120,72,45,0.12)]"
                                     ></div>
 
 
@@ -907,7 +890,7 @@ new class extends Component
 
                                             <div
                                                 class="absolute w-40 h-40
-                                   bg-brown-500/20 dark:bg-indigo-500/20
+                                   bg-brown-500/20 dark:bg-brown-500/20
                                    blur-[70px] rounded-full
                                    opacity-0 group-hover:opacity-100
                                    transition-all duration-1000"
@@ -922,7 +905,7 @@ new class extends Component
                                                         class="relative z-10 w-full h-44 object-contain
                                            transition-all duration-700
                                            group-hover:scale-110
-                                           group-hover:drop-shadow-[0_15px_35px_rgba(37,99,235,0.3)]"
+                                           group-hover:drop-shadow-[0_15px_35px_rgba(120,72,45,0.3)]"
                                                         alt="{{ $product->title }}"
                                                     >
                                                 </a>

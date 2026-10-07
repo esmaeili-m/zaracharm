@@ -31,6 +31,10 @@ class Permissions
         'dashboard' => ['label' => 'داشبورد و گزارش‌ها', 'group' => 'سیستم', 'actions' => ['view']],
         'settings' => ['label' => 'تنظیمات سایت', 'group' => 'سیستم', 'actions' => ['view', 'edit']],
         'storage' => ['label' => 'فضای ذخیره‌سازی', 'group' => 'سیستم', 'actions' => ['view', 'create', 'delete']],
+        'delivery' => ['label' => 'زمان‌بندی ارسال', 'group' => 'فروش و مالی', 'actions' => ['view', 'edit']],
+        'payments' => ['label' => 'پرداخت‌ها و تراکنش‌ها', 'group' => 'فروش و مالی', 'actions' => ['view', 'edit']],
+        'payment-settings' => ['label' => 'تنظیمات پرداخت (درگاه / کارت)', 'group' => 'فروش و مالی', 'actions' => ['view', 'edit']],
+        'marketplaces' => ['label' => 'مارکت‌پلیس‌ها (دیجی‌کالا، باسلام، ترب)', 'group' => 'فروش و مالی', 'actions' => ['view', 'edit']],
 
         // کاربران
         'users' => ['label' => 'کاربران', 'group' => 'کاربران و دسترسی', 'actions' => self::CRUD],

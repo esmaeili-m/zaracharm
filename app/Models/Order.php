@@ -21,12 +21,20 @@ class Order extends Model
         'discount_amount',
         'shipping_amount',
         'expires_at',
-        'total_amount'
+        'total_amount',
+        // بدون این‌ها update() در Checkout آدرس، روز ارسال و روش پرداخت را ذخیره نمی‌کرد
+        'coupon_id',
+        'tax_amount',
+        'address_id',
+        'shipping_slot_id',
+        'delivery_date',
+        'payment_method',
 
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
+        'delivery_date' => 'date',
     ];
     public function items()
     {
@@ -61,6 +69,12 @@ class Order extends Model
     public function shipment()
     {
         return $this->hasOne(Shipment::class);
+    }
+
+    // فاکتور سفارش (Checkout مبلغ ارسال/کل را روی آن هم بروز می‌کند)
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class);
     }
 
     public function returnRequests(): HasMany

@@ -311,7 +311,7 @@ new class extends Component
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                <div class="lg:col-span-2 relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-500 to-primary-700 rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(59,130,246,0.3)] group">
+                <div class="lg:col-span-2 relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-500 to-primary-700 rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(120,72,45,0.3)] group">
                     <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
                         <svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="10" cy="10" r="30" fill="white"></circle><circle cx="90" cy="90" r="40" fill="white"></circle></svg>
                     </div>
@@ -589,7 +589,7 @@ new class extends Component
                 class="w-2 h-6
                        bg-primary-500
                        rounded-full
-                       shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                       shadow-[0_0_15px_rgba(120,72,45,0.5)]"
             ></span>
 
                         تاریخچه تراکنش‌ها
@@ -750,7 +750,7 @@ new class extends Component
                                                 'bg-red-500/10 text-red-500'
                                                     => $transactionData['color'] === 'red',
 
-                                                'bg-blue-500/10 text-blue-500'
+                                                'bg-brown-500/10 text-brown-500'
                                                     => $transactionData['color'] === 'blue',
 
                                                 'bg-orange-500/10 text-orange-500'

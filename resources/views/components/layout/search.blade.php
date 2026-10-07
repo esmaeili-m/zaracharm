@@ -38,10 +38,21 @@ new class extends Component
 };
 ?>
 
-@php($minLength = \App\Services\Search\GlobalSearchService::MIN_LENGTH)
+{{-- یک ریشه‌ی ثابت برای کامپوننت (Livewire باید روی همین المنت wire:id بگذارد؛ @if قبل از ریشه باعث تکثیر wrapper در آپدیت‌ها می‌شد) --}}
+<div id="{{ $variant === 'mobile' ? 'mobile-search-root' : 'search-wrapper' }}"
+     class="{{ $variant === 'mobile' ? 'flex-1 flex flex-col min-h-0' : 'hidden md:flex flex-1 max-w-4xl relative group/search mx-auto' }}"
+     @if($variant !== 'mobile')
+         {{-- باز/بسته شدن پنل با state (نه focus) تا با رندر مجدد Livewire بسته نشود --}}
+         x-data="{ open: false }"
+         x-on:focusin="open = true"
+         x-on:click.outside="open = false"
+         x-on:keydown.escape.window="open = false; $refs.input?.blur()"
+     @endif>
+    @php
+        $minLength = \App\Services\Search\GlobalSearchService::MIN_LENGTH;
+    @endphp
 
-@if($variant === 'mobile')
-    <div class="flex-1 flex flex-col min-h-0">
+    @if($variant === 'mobile')
         <div class="p-5">
             <form action="{{ route('search') }}" method="get" class="relative w-full" role="search">
                 <input type="search" id="modal-search-input" name="q"
@@ -59,16 +70,15 @@ new class extends Component
         <div class="flex-1 overflow-y-auto px-5 pb-10 custom-scrollbar">
             @include('components.layout.search-results', ['results' => $this->results, 'target' => 'q'])
         </div>
-    </div>
-@else
-    <div id="search-wrapper" class="hidden md:flex flex-1 max-w-4xl relative group/search mx-auto">
+    @else
 
         <form action="{{ route('search') }}" method="get" class="relative w-full z-[10000]" role="search">
             <input type="search" id="main-search-input" name="q"
+                   x-ref="input"
                    wire:model.live.debounce.400ms="q"
                    autocomplete="off"
                    maxlength="{{ \App\Services\Search\GlobalSearchService::MAX_LENGTH }}"
-                   class="w-full bg-gray-200/60 dark:bg-[var(--color-primary-950)]/60 backdrop-blur-md border border-gray-300/30 dark:border-white/5 rounded-2xl py-4 pr-12 pl-40 text-sm font-bold text-right outline-none focus:bg-white dark:focus:bg-[var(--color-primary-950)] focus:ring-4 ring-[var(--color-primary-500)]/40 transition-all placeholder:text-gray-500 shadow-sm [&::-webkit-search-cancel-button]:hidden"
+                   class="w-full bg-gray-200/60 dark:bg-[var(--color-primary-950)]/60 backdrop-blur-md border border-gray-300/30 dark:border-white/5 rounded-2xl py-4 pr-12 pl-40 text-sm font-bold text-right text-gray-900 dark:text-white outline-none focus:bg-white dark:focus:bg-[var(--color-primary-950)] focus:ring-4 ring-[var(--color-primary-500)]/40 transition-all placeholder:text-gray-500 shadow-sm [&::-webkit-search-cancel-button]:hidden"
                    placeholder="جستجوی سراسری در محصولات، برندها، مقالات ...">
 
             <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-gray-500">
@@ -92,10 +102,11 @@ new class extends Component
         </form>
 
         <div id="mega-search-panel"
-             class="absolute top-[30px] left-[-15px] right-[-15px] pt-[65px] bg-white/90 dark:bg-[var(--color-primary-950)]/90 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.6)] opacity-0 invisible translate-y-4 group-focus-within/search:opacity-100 group-focus-within/search:visible group-focus-within/search:translate-y-0 transition-all duration-500 z-[9999]">
+             x-bind:class="open ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible translate-y-4'"
+             class="absolute top-[30px] left-[-15px] right-[-15px] pt-[65px] bg-white/90 dark:bg-[var(--color-primary-950)]/90 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.6)] opacity-0 invisible translate-y-4 transition-all duration-500 z-[9999]">
             <div class="px-6 pb-6 pt-2 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 @include('components.layout.search-results', ['results' => $this->results, 'target' => 'q'])
             </div>
         </div>
-    </div>
-@endif
+    @endif
+</div>

@@ -316,6 +316,13 @@ new class extends Component
         );
     }
 
+    // تغییرات سبد از جای دیگر (سبد کشویی، صفحه محصول) => بروزرسانی همین صفحه
+    #[\Livewire\Attributes\On('cart-updated')]
+    public function refreshCart(): void
+    {
+        unset($this->items);
+    }
+
     /**
      * افزایش تعداد
      */
@@ -379,6 +386,9 @@ new class extends Component
             ->where('id', $cartItemId)
             ->where('cart_id', $cartId)
             ->increment('quantity');
+
+        // بروزرسانی شمارنده هدر و سبد کشویی
+        $this->dispatch('cart-updated');
     }
 
     /**
@@ -407,6 +417,8 @@ new class extends Component
                 ->where('cart_id', $cartId)
                 ->delete();
 
+            $this->dispatch('cart-updated');
+
             return;
         }
 
@@ -414,6 +426,8 @@ new class extends Component
             ->where('id', $cartItemId)
             ->where('cart_id', $cartId)
             ->decrement('quantity');
+
+        $this->dispatch('cart-updated');
     }
 
     /**
@@ -431,6 +445,8 @@ new class extends Component
             ->where('id', $cartItemId)
             ->where('cart_id', $cartId)
             ->delete();
+
+        $this->dispatch('cart-updated');
     }
 
     /**
@@ -703,13 +719,13 @@ new class extends Component
             <div class="max-w-4xl mx-auto mb-16 px-4" dir="rtl">
                 <div class="relative flex items-center justify-between">
                     <div class="absolute top-1/2 left-0 w-full h-1 bg-gray-200 dark:bg-white/5 -translate-y-1/2 rounded-full"></div>
-                    <div class="absolute top-1/2 right-0 w-0 h-1 bg-blue-500 -translate-y-1/2 rounded-full transition-all duration-700"></div>
+                    <div class="absolute top-1/2 right-0 w-0 h-1 bg-brown-500 -translate-y-1/2 rounded-full transition-all duration-700"></div>
 
                     <div class="relative z-10 flex flex-col items-center gap-3">
-                        <div class="w-14 h-14 bg-blue-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/40 border-4 border-white dark:border-[#0f172a]">
+                        <div class="w-14 h-14 bg-brown-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brown-500/40 border-4 border-white dark:border-[#0f172a]">
                             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                         </div>
-                        <span class="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">سبد خرید</span>
+                        <span class="text-[11px] font-black text-brown-600 dark:text-brown-400 uppercase tracking-widest">سبد خرید</span>
                     </div>
 
                     <div class="relative z-10 flex flex-col items-center gap-3 opacity-50">
@@ -742,7 +758,7 @@ new class extends Component
 
                             <div class="flex items-center gap-4">
 
-                                <div class="w-2 h-10 bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)]"></div>
+                                <div class="w-2 h-10 bg-brown-600 rounded-full shadow-[0_0_15px_rgba(120,72,45,0.5)]"></div>
 
                                 <h1 class="text-3xl font-black text-gray-900 dark:text-white">
                                     سبد خرید شما
@@ -750,7 +766,7 @@ new class extends Component
 
                             </div>
 
-                            <span class="px-5 py-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl text-xs font-black">
+                            <span class="px-5 py-2 bg-brown-500/10 text-brown-600 dark:text-brown-400 rounded-2xl text-xs font-black">
 
                                 {{ number_format($this->totalCount) }}
 
@@ -920,7 +936,7 @@ new class extends Component
                                                             wire:click="increase({{ $item->cart_item_id }})"
                                                             wire:loading.attr="disabled"
                                                             wire:target="increase({{ $item->cart_item_id }})"
-                                                            class="w-9 h-9 flex items-center justify-center bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/30 hover:scale-105 active:scale-90 transition-all disabled:opacity-50"
+                                                            class="w-9 h-9 flex items-center justify-center bg-brown-600 text-white rounded-lg shadow-lg shadow-brown-500/30 hover:scale-105 active:scale-90 transition-all disabled:opacity-50"
                                                         >
 
                                                             <svg
@@ -981,7 +997,7 @@ new class extends Component
                                                 {{-- PRICE --}}
                                                 <div class="text-center md:text-left">
 
-                                                    <span class="block text-2xl font-black text-blue-600 dark:text-blue-400 tracking-tighter">
+                                                    <span class="block text-2xl font-black text-brown-600 dark:text-brown-400 tracking-tighter">
 
                                                         {{ number_format($item->line_total) }}
 
@@ -1027,7 +1043,7 @@ new class extends Component
 
                             {{-- Decorative Glow --}}
                             <div
-                                class="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-[80px]"
+                                class="absolute -top-10 -left-10 w-40 h-40 bg-brown-500/10 rounded-full blur-[80px]"
                             ></div>
 
 
@@ -1165,7 +1181,7 @@ new class extends Component
 
                     <span
                         class="text-[10px] font-black
-                               text-blue-600 dark:text-blue-400
+                               text-brown-600 dark:text-brown-400
                                uppercase tracking-[5px]"
                     >
                         مبلغ قابل پرداخت
@@ -1312,7 +1328,7 @@ new class extends Component
                                        text-xs font-bold
                                        focus:outline-none
                                        focus:ring-2
-                                       focus:ring-blue-500/20
+                                       focus:ring-brown-500/20
                                        transition-all
                                        placeholder:text-gray-400"
                                                 />
@@ -1344,16 +1360,16 @@ new class extends Component
                                                     wire:target="applyCoupon"
                                                     class="absolute left-2 top-1/2
                                        -translate-y-1/2
-                                       bg-blue-600
+                                       bg-brown-600
                                        text-white
                                        text-[9px]
                                        font-black
                                        px-3 py-2
                                        rounded-xl
-                                       hover:bg-blue-700
+                                       hover:bg-brown-700
                                        transition-colors
                                        shadow-lg
-                                       shadow-blue-500/20
+                                       shadow-brown-500/20
                                        disabled:opacity-50"
                                                 >
 
@@ -1401,12 +1417,12 @@ new class extends Component
                                         wire:loading.attr="disabled"
                                         wire:target="proceedToPayment"
                                         class="group/pay relative w-full h-20
-                           bg-blue-600 dark:bg-blue-500
+                           bg-brown-600 dark:bg-brown-500
                            rounded-[2.2rem]
                            overflow-hidden
                            transition-all duration-500
-                           shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)]
-                           hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.7)]
+                           shadow-[0_20px_40px_-10px_rgba(120,72,45,0.5)]
+                           hover:shadow-[0_25px_50px_-12px_rgba(120,72,45,0.7)]
                            hover:-translate-y-1
                            active:scale-95
                            disabled:opacity-60"
@@ -1505,7 +1521,7 @@ new class extends Component
                             <div class="relative z-10 w-full h-full bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center justify-center">
 
                                 <svg
-                                    class="w-9 h-9 text-gray-700 dark:text-gray-300 group-hover:text-blue-500 transition-colors"
+                                    class="w-9 h-9 text-gray-700 dark:text-gray-300 group-hover:text-brown-500 transition-colors"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -1613,7 +1629,7 @@ new class extends Component
                             <div class="relative z-10 w-full h-full bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm flex items-center justify-center">
 
                                 <svg
-                                    class="w-9 h-9 text-gray-700 dark:text-gray-300 group-hover:text-indigo-500 transition-colors"
+                                    class="w-9 h-9 text-gray-700 dark:text-gray-300 group-hover:text-brown-500 transition-colors"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"

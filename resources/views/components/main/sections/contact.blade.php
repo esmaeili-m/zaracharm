@@ -225,7 +225,7 @@ new class extends Component
     <section class="container w-full my-20" dir="rtl">
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 px-6 mb-12">
             <div class="flex items-center gap-4">
-                <div class="w-2 h-12 bg-blue-600 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.6)]"></div>
+                <div class="w-2 h-12 bg-brown-600 rounded-full shadow-[0_0_20px_rgba(120,72,45,0.6)]"></div>
                 <div>
                     <h1 class="text-4xl font-black text-gray-900 dark:text-white tracking-tight">{{$data['title'] ?? 'تماس  با  زاراچرم'}}</h1>
                     <p class="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[6px] mt-2">Get In Touch With Us</p>
@@ -240,9 +240,9 @@ new class extends Component
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
             <div class="lg:col-span-4 space-y-6">
-                <div class="group bg-white/40 dark:bg-white/[0.03] backdrop-blur-[30px] border border-white/40 dark:border-white/10 rounded-[2.8rem] p-8 transition-all duration-500 hover:shadow-lg hover:shadow-blue-500/5">
+                <div class="group bg-white/40 dark:bg-white/[0.03] backdrop-blur-[30px] border border-white/40 dark:border-white/10 rounded-[2.8rem] p-8 transition-all duration-500 hover:shadow-lg hover:shadow-brown-500/5">
                     <div class="flex items-center gap-5">
-                        <div class="w-14 h-14 bg-blue-600/10 text-blue-600 rounded-2xl flex items-center justify-center border border-blue-600/20 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+                        <div class="w-14 h-14 bg-brown-600/10 text-brown-600 rounded-2xl flex items-center justify-center border border-brown-600/20 group-hover:bg-brown-600 group-hover:text-white transition-all duration-500">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
                         </div>
                         <div>
@@ -326,7 +326,7 @@ new class extends Component
                                     wire:model.blur="name"
                                     autocomplete="name"
                                     placeholder="مثلا: مهدی اسماعیلی"
-                                    class="w-full rounded-2xl border bg-white/50 px-6 py-4 text-sm font-bold transition-all placeholder:text-gray-400 focus:border-blue-600 focus:outline-none dark:bg-white/5 dark:text-white
+                                    class="w-full rounded-2xl border bg-white/50 px-6 py-4 text-sm font-bold transition-all placeholder:text-gray-400 focus:border-brown-600 focus:outline-none dark:bg-white/5 dark:text-white
                 {{ $errors->has('name')
                     ? 'border-red-500 focus:border-red-500'
                     : 'border-gray-200/50 dark:border-white/5' }}"
@@ -358,7 +358,7 @@ new class extends Component
                                     autocomplete="email"
                                     dir="ltr"
                                     placeholder="0912XXXXXXX یا example@gmail.com"
-                                    class="w-full rounded-2xl border bg-white/50 px-6 py-4 text-left text-sm font-bold transition-all placeholder:text-gray-400 focus:border-blue-600 focus:outline-none dark:bg-white/5 dark:text-white
+                                    class="w-full rounded-2xl border bg-white/50 px-6 py-4 text-left text-sm font-bold transition-all placeholder:text-gray-400 focus:border-brown-600 focus:outline-none dark:bg-white/5 dark:text-white
                 {{ $errors->has('contact')
                     ? 'border-red-500 focus:border-red-500'
                     : 'border-gray-200/50 dark:border-white/5' }}"
@@ -391,7 +391,7 @@ new class extends Component
                                 type="text"
                                 wire:model.blur="subject"
                                 placeholder="مثلا: پیگیری سفارش یا درخواست همکاری"
-                                class="w-full rounded-2xl border bg-white/50 px-6 py-4 text-sm font-bold transition-all placeholder:text-gray-400 focus:border-blue-600 focus:outline-none dark:bg-white/5 dark:text-white
+                                class="w-full rounded-2xl border bg-white/50 px-6 py-4 text-sm font-bold transition-all placeholder:text-gray-400 focus:border-brown-600 focus:outline-none dark:bg-white/5 dark:text-white
         {{ $errors->has('subject')
             ? 'border-red-500 focus:border-red-500'
             : 'border-gray-200/50 dark:border-white/5' }}"
@@ -421,7 +421,7 @@ new class extends Component
                                 wire:model.blur="message"
                                 rows="5"
                                 placeholder="چطور می‌توانیم به شما کمک کنیم؟"
-                                class="w-full resize-none rounded-[2rem] border bg-white/50 px-6 py-6 text-sm font-bold transition-all placeholder:text-gray-400 focus:border-blue-600 focus:outline-none dark:bg-white/5 dark:text-white
+                                class="w-full resize-none rounded-[2rem] border bg-white/50 px-6 py-6 text-sm font-bold transition-all placeholder:text-gray-400 focus:border-brown-600 focus:outline-none dark:bg-white/5 dark:text-white
             {{ $errors->has('message')
                 ? 'border-red-500 focus:border-red-500'
                 : 'border-gray-200/50 dark:border-white/5' }}"
@@ -441,7 +441,7 @@ new class extends Component
                             type="submit"
                             wire:loading.attr="disabled"
                             wire:target="save"
-                            class="group flex w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 px-12 py-5 text-sm font-black text-white shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
+                            class="group flex w-full items-center justify-center gap-3 rounded-2xl bg-brown-600 px-12 py-5 text-sm font-black text-white shadow-lg shadow-brown-500/25 transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
                         >
 
                             {{-- Normal State --}}

@@ -47,12 +47,16 @@ new class extends Component
     public string $newAddress = '';
     public string $newPostalCode = '';
 
-    // ---- ارسال ----
-    public $shippingSlots = [];
-    public ?int $selectedSlotId = null;
+    // ---- ارسال (تاریخ‌ها از «تنظیمات ارسال» داشبورد محاسبه می‌شوند) ----
+    public array $deliveryDates = [];
+    public ?string $deliveryDate = null;
 
-    // ---- پرداخت ----
-    public string $paymentMethod = 'gateway'; // gateway | cod | transfer | wallet
+    // ---- پرداخت (روش‌ها از پنل > تنظیمات پرداخت؛ منطق در app/Payments) ----
+    public string $paymentMethod = '';
+    public ?int $gatewayId = null;      // درگاه انتخابی در روش «درگاه بانکی»
+    public ?int $bankCardId = null;
+    public string $payerName = '';
+    public string $payerCard = '';
 
     public string $errorMessage = '';
 
@@ -87,16 +91,13 @@ new class extends Component
         $default = $this->addresses->firstWhere('is_default', true) ?? $this->addresses->first();
         $this->selectedAddressId = $order->address_id ?? $default?->id;
 
-        $this->shippingSlots = ShippingSlot::where('is_active', true)
-            ->where('date', '>=', now()->toDateString())
-            ->orderBy('date')
-            ->get();
+        $this->loadDeliveryDates($order->delivery_date?->toDateString());
 
-        $this->selectedSlotId = $order->shipping_slot_id
-            ?? $this->shippingSlots->firstWhere('is_holiday', false)?->id
-            ?? $this->shippingSlots->first()?->id;
-
-        $this->paymentMethod = $order->payment_method ?? 'gateway';
+        // روش قبلی (اگر هنوز قابل استفاده باشد) یا اولین روش فعال
+        $usable = $this->paymentOptions->whereNull('disabled')->pluck('key');
+        $this->paymentMethod = $usable->contains($order->payment_method) ? $order->payment_method : (string) $usable->first();
+        $this->gatewayId = $this->gatewayOptions->firstWhere('disabled', null)['id'] ?? null;
+        $this->bankCardId = $this->bankCards->first()?->id;
     }
 
     #[Computed]
@@ -125,15 +126,30 @@ new class extends Component
     }
 
     #[Computed]
-    public function selectedSlot()
+    public function selectedDelivery(): ?array
     {
-        return $this->shippingSlots->firstWhere('id', $this->selectedSlotId);
+        return collect($this->deliveryDates)->firstWhere('date', $this->deliveryDate);
     }
 
     #[Computed]
     public function shippingCost(): int
     {
-        return (int) ($this->selectedSlot->cost ?? 0);
+        return (int) ($this->selectedDelivery['cost'] ?? 0);
+    }
+
+    protected function deliveryService(): \App\Services\Delivery\DeliveryScheduleService
+    {
+        return app(\App\Services\Delivery\DeliveryScheduleService::class);
+    }
+
+    // تاریخ‌های مجاز؛ انتخاب قبلی اگر هنوز مجاز باشد حفظ می‌شود، وگرنه زودترین تاریخ
+    protected function loadDeliveryDates(?string $preferred = null): void
+    {
+        $this->deliveryDates = $this->deliveryService()->availableDates()->all();
+        $dates = array_column($this->deliveryDates, 'date');
+
+        $this->deliveryDate = in_array($preferred, $dates, true) ? $preferred : ($dates[0] ?? null);
+        unset($this->selectedDelivery, $this->shippingCost, $this->total);
     }
 
     #[Computed]
@@ -146,6 +162,29 @@ new class extends Component
     public function walletBalance(): int
     {
         return (int) (Auth::user()?->wallet?->balance ?? 0);
+    }
+
+    #[Computed]
+    public function paymentOptions()
+    {
+        return app(\App\Payments\PaymentManager::class)->checkoutOptions($this->order, Auth::user());
+    }
+
+    // درگاه‌های فعال و تنظیم‌شده (زرین‌پال، اسنپ‌پی، دیجی‌پی، ...) با دلیل عدم دسترسی برای این سفارش
+    #[Computed]
+    public function gatewayOptions()
+    {
+        return app(\App\Payments\PaymentManager::class)->gatewayOptions($this->order)->map(fn ($opt) => [
+            'id' => $opt['gateway']->id,
+            'title' => $opt['gateway']->title,
+            'disabled' => $opt['disabled'],
+        ])->values();
+    }
+
+    #[Computed]
+    public function bankCards()
+    {
+        return \App\Models\BankCard::active()->get();
     }
 
     // ---------------- آدرس ----------------
@@ -214,22 +253,115 @@ new class extends Component
 
     // ---------------- ارسال ----------------
 
-    public function selectSlot(int $id): void
+    public function selectDeliveryDate(string $date): void
     {
-        $slot = $this->shippingSlots->firstWhere('id', $id);
-        if ($slot && !$slot->is_holiday) {
-            $this->selectedSlotId = $id;
+        if (in_array($date, array_column($this->deliveryDates, 'date'), true)) {
+            $this->deliveryDate = $date;
+            unset($this->selectedDelivery, $this->shippingCost, $this->total);
         }
+    }
+
+    /**
+     * اعتبارسنجی تاریخ ارسال در لحظه ثبت (ممکن است از زمان باز شدن صفحه، cut-off گذشته باشد)
+     */
+    protected function validatedDelivery(): ?array
+    {
+        $delivery = $this->deliveryService()->find($this->deliveryDate);
+
+        if (! $delivery) {
+            $this->loadDeliveryDates();
+            $this->errorMessage = 'تاریخ ارسال انتخاب‌شده دیگر در دسترس نیست؛ لطفاً دوباره یک تاریخ انتخاب کنید.';
+        }
+
+        return $delivery;
     }
 
     // ---------------- پرداخت ----------------
 
     public function selectPayment(string $method): void
     {
+        $option = $this->paymentOptions->firstWhere('key', $method);
+
+        if (! $option || $option['disabled']) {
+            return;
+        }
+
         $this->paymentMethod = $method;
-        if ($method == 'transfer'){
+        $this->errorMessage = '';
+
+        if ($method === 'transfer') {
             $this->openModal();
         }
+    }
+
+    public function selectGateway(int $id): void
+    {
+        $option = $this->gatewayOptions->firstWhere('id', $id);
+
+        if (! $option || $option['disabled']) {
+            return;
+        }
+
+        $this->gatewayId = $id;
+        $this->errorMessage = '';
+    }
+
+    /**
+     * ذخیره آدرس، تاریخ و هزینه ارسال روی سفارش/فاکتور قبل از شروع پرداخت
+     */
+    protected function saveShippingDetails(array $delivery): ?\App\Models\Order
+    {
+        return DB::transaction(function () use ($delivery) {
+            $order = Order::lockForUpdate()->findOrFail($this->orderId);
+
+            if ($order->status !== 'pending' || $order->payment_status === 'paid' || ($order->expires_at && $order->expires_at->isPast())) {
+                $this->errorMessage = 'مهلت این سفارش به پایان رسیده یا قبلاً پرداخت شده است.';
+                return null;
+            }
+
+            $shipping = (int) $delivery['cost'];
+            $total = max(0, (int) $order->subtotal - (int) $order->discount_amount + (int) $order->tax_amount + $shipping);
+
+            $order->update([
+                'address_id'       => $this->selectedAddressId,
+                'delivery_date'    => $delivery['date'],
+                'shipping_slot_id' => $delivery['slot_id'],
+                'shipping_amount'  => $shipping,
+                'total_amount'     => $total,
+            ]);
+
+            $order->invoice?->update([
+                'shipping_amount' => $shipping,
+                'total_amount'    => $total,
+            ]);
+
+            return $order->fresh();
+        });
+    }
+
+    /**
+     * نتیجه روش پرداخت => انتقال کاربر
+     */
+    protected function handlePaymentResult(\App\Payments\PaymentResult $result)
+    {
+        if ($result->isFailed()) {
+            $this->errorMessage = $result->message ?? 'پرداخت انجام نشد.';
+            unset($this->paymentOptions);
+            return null;
+        }
+
+        if ($result->type === \App\Payments\PaymentResult::REDIRECT) {
+            return redirect()->away($result->redirectUrl);
+        }
+
+        if ($result->message) {
+            session()->flash('success', $result->message);
+        }
+
+        return redirect()->route('order.payment.result', [
+            'code' => $this->order->order_number,
+            'payment' => $result->payment?->uuid,
+        ]);
     }
 
     // ---------------- ثبت نهایی ----------------
@@ -239,75 +371,45 @@ new class extends Component
     public function placeOrder()
     {
         $this->errorMessage = '';
-        if ($this->paymentMethod === 'cod') {
-            $this->errorMessage = 'این روش پرداخت غیرفعال است.';
-            return;
-        }
-        if ($this->paymentMethod === 'transfer') {
-            $this->openModal();
-            return;
-        }
-        $order = Order::lockForUpdate()->findOrFail($this->orderId);
-
-        if ($order->status !== 'pending' || ($order->expires_at && $order->expires_at->isPast())) {
-            $this->errorMessage = 'مهلت این سفارش به پایان رسیده. لطفاً دوباره از سبد خرید اقدام کنید.';
-            return;
-        }
 
         if (!$this->selectedAddressId) {
             $this->errorMessage = 'لطفاً یک آدرس تحویل انتخاب کنید.';
             return;
         }
 
-        if (!$this->selectedSlotId) {
+        if (!$this->deliveryDate) {
             $this->errorMessage = 'لطفاً یک روز ارسال انتخاب کنید.';
             return;
         }
 
-        if ($this->paymentMethod === 'wallet' && $this->walletBalance < $this->total) {
-            $this->errorMessage = 'موجودی کیف پول شما کافی نیست.';
+        $manager = app(\App\Payments\PaymentManager::class);
+
+        if (! $this->paymentMethod || ! $manager->isMethodUsable($this->paymentMethod, $this->order, Auth::user())) {
+            $this->errorMessage = 'روش پرداخت انتخاب‌شده در دسترس نیست.';
+            unset($this->paymentOptions);
             return;
         }
 
-        DB::transaction(function () use ($order) {
-            $order->update([
-                'address_id'       => $this->selectedAddressId,
-                'shipping_slot_id' => $this->selectedSlotId,
-                'payment_method'   => $this->paymentMethod,
-                'shipping_amount'  => $this->shippingCost,
-                'total_amount'     => $this->total,
-            ]);
-
-            $order->invoice?->update([
-                'shipping_amount' => $this->shippingCost,
-                'total_amount'    => $this->total,
-            ]);
-
-            if ($this->paymentMethod === 'wallet') {
-                Auth::user()->wallet()->decrement('balance', $this->total);
-
-                Payment::create([
-                    'order_id' => $order->id,
-                    'method'   => 'wallet',
-                    'amount'   => $this->total,
-                    'status'   => 'success',
-                    'paid_at'  => now(),
-                ]);
-
-                $order->update([
-                    'payment_status' => 'paid',
-                    'status'         => 'processing',
-                    'expires_at'     => null,
-                ]);
-                $order->invoice?->update(['status' => 'paid', 'paid_at' => now()]);
-            }
-        });
-
-        if ($this->paymentMethod === 'gateway') {
-            return redirect()->route('payment.gateway', ['order' => $order->id]);
+        // کارت‌به‌کارت: اطلاعات واریز در مودال گرفته می‌شود
+        if ($this->paymentMethod === 'transfer') {
+            $this->openModal();
+            return;
         }
 
-        return redirect()->route('order.success', ['order' => $order->id]);
+        $delivery = $this->validatedDelivery();
+        if (! $delivery) {
+            return;
+        }
+
+        $order = $this->saveShippingDetails($delivery);
+        if (! $order) {
+            return;
+        }
+        unset($this->order, $this->total);
+
+        $input = $this->paymentMethod === 'gateway' && $this->gatewayId ? ['gateway_id' => $this->gatewayId] : [];
+
+        return $this->handlePaymentResult($manager->method($this->paymentMethod)->start($order, $input));
     }
     public function openModal(): void
     {
@@ -328,175 +430,61 @@ new class extends Component
 
     public function submitCardToCardPayment()
     {
-    $this->errorMessage = '';
+        $this->errorMessage = '';
 
-    $this->validate([
-        'paymentReference' => [
-            'required',
-            'string',
-            'max:100',
-        ],
-    ], [
-        'paymentReference.required' => 'لطفاً شناسه پرداخت یا کد پیگیری را وارد کنید.',
-        'paymentReference.max'      => 'شناسه پرداخت نمی‌تواند بیشتر از ۱۰۰ کاراکتر باشد.',
-    ]);
+        $this->validate([
+            'bankCardId'       => ['required', 'integer'],
+            'paymentReference' => ['required', 'string', 'max:40'],
+            'payerName'        => ['nullable', 'string', 'max:190'],
+            'payerCard'        => ['nullable', 'string', 'max:20'],
+        ], [
+            'bankCardId.required'       => 'کارت مقصد را انتخاب کنید.',
+            'paymentReference.required' => 'لطفاً شناسه پرداخت یا کد پیگیری را وارد کنید.',
+            'paymentReference.max'      => 'شناسه پرداخت نمی‌تواند بیشتر از ۴۰ کاراکتر باشد.',
+            'payerName.max'             => 'نام صاحب کارت بیش از حد طولانی است.',
+            'payerCard.max'             => 'چهار رقم آخر کارت را وارد کنید.',
+        ]);
 
-    try {
+        if (!$this->selectedAddressId) {
+            $this->errorMessage = 'لطفاً یک آدرس تحویل انتخاب کنید.';
+            $this->showModal = false;
+            return;
+        }
 
-        DB::transaction(function () {
+        $manager = app(\App\Payments\PaymentManager::class);
 
-            /*
-            |--------------------------------------------------------------------------
-            | دریافت سفارش
-            |--------------------------------------------------------------------------
-            */
+        if (! $manager->isMethodUsable('transfer', $this->order, Auth::user())) {
+            $this->addError('paymentReference', 'پرداخت کارت به کارت در حال حاضر فعال نیست.');
+            return;
+        }
 
-            $order = Order::lockForUpdate()
-                ->find($this->orderId);
+        $delivery = $this->validatedDelivery();
+        if (! $delivery) {
+            $this->showModal = false;
+            return;
+        }
 
-            if (!$order) {
-                throw new \Exception('سفارش موردنظر پیدا نشد.');
-            }
+        $order = $this->saveShippingDetails($delivery);
+        if (! $order) {
+            $this->showModal = false;
+            return;
+        }
+        unset($this->order, $this->total);
 
-            /*
-            |--------------------------------------------------------------------------
-            | بررسی وضعیت سفارش
-            |--------------------------------------------------------------------------
-            */
+        $result = $manager->method('transfer')->start($order, [
+            'bank_card_id' => $this->bankCardId,
+            'reference'    => $this->paymentReference,
+            'payer_name'   => $this->payerName,
+            'payer_card'   => $this->payerCard,
+        ]);
 
-            if ($order->status !== 'pending') {
-                throw new \Exception(
-                    'این سفارش دیگر قابل پرداخت نیست.'
-                );
-            }
+        if ($result->isFailed()) {
+            $this->addError('paymentReference', $result->message);
+            return;
+        }
 
-            /*
-            |--------------------------------------------------------------------------
-            | بررسی انقضای سفارش
-            |--------------------------------------------------------------------------
-            */
-
-            if (
-                $order->expires_at &&
-                $order->expires_at->isPast()
-            ) {
-                throw new \Exception(
-                    'مهلت پرداخت این سفارش به پایان رسیده است.'
-                );
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | بررسی تکراری نبودن شناسه پرداخت
-            |--------------------------------------------------------------------------
-            */
-
-            $referenceExists = Transaction::where(
-                'reference_id',
-                $this->paymentReference
-            )
-                ->where('reference_type', 'card_to_card')
-                ->exists();
-
-            if ($referenceExists) {
-                throw new \Exception(
-                    'این شناسه پرداخت قبلاً ثبت شده است.'
-                );
-            }
-            /*
-            |--------------------------------------------------------------------------
-            | پیدا کردن پرداخت کارت به کارت سفارش
-            |--------------------------------------------------------------------------
-            */
-
-            $payment = Payment::where('order_id', $order->id)
-                ->where('method', 'transfer')
-                ->where('status', 'pending')
-                ->latest()
-                ->first();
-
-            /*
-            |--------------------------------------------------------------------------
-            | ایجاد Payment در صورت عدم وجود
-            |--------------------------------------------------------------------------
-            */
-
-            if (!$payment) {
-
-                $payment = Payment::create([
-                    'order_id' => $order->id,
-                    'method'   => 'transfer',
-                    'amount'   => $order->total_amount,
-                    'status'   => 'pending',
-                ]);
-
-            } else {
-
-                /*
-                |--------------------------------------------------------------------------
-                | به‌روزرسانی مبلغ پرداخت
-                |--------------------------------------------------------------------------
-                */
-
-                $payment->update([
-                    'amount' => $order->total_amount,
-                ]);
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | ثبت Transaction
-            |--------------------------------------------------------------------------
-            */
-
-            Transaction::create([
-                'user_id'        => auth()->id(),
-                'type'           => 'credit',
-                'category'       => 'order_payment',
-                'amount'         => $order->total_amount,
-                'status'         => 'pending',
-                'payment_id'     => $payment->id,
-                'order_id'       => $order->id,
-                'reference_type' => 'card_to_card',
-                'reference_id'   => $this->paymentReference,
-                'description'    => 'پرداخت کارت به کارت سفارش ' . $order->order_number,
-            ]);
-
-            /*
-            |--------------------------------------------------------------------------
-            | تغییر وضعیت سفارش
-            |--------------------------------------------------------------------------
-            */
-
-            $order->update([
-                'payment_method' => 'transfer',
-                'payment_status' => 'pending',
-            ]);
-        });
-
-    } catch (\Throwable $e) {
-
-        $this->errorMessage = $e->getMessage();
-
-        return;
+        return $this->handlePaymentResult($result);
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | موفقیت
-    |--------------------------------------------------------------------------
-    */
-
-    session()->flash(
-        'success',
-        'اطلاعات پرداخت شما با موفقیت ثبت شد و پس از بررسی تأیید خواهد شد.'
-    );
-    return redirect()->route(
-        'order.payment.result',
-        ['code' => $this->orderId]
-    );
-}
-
 
 };
 ?>
@@ -658,34 +646,56 @@ new class extends Component
                                 @endforeach
                             </div>
 
-                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                                @foreach ($shippingSlots as $slot)
-                                    <button wire:click="selectSlot({{ $slot->id }})" type="button"
-                                            @disabled($slot->is_holiday)
-                                            class="day-card group relative p-5 rounded-[2.5rem] border-2 text-center transition-all duration-300 shadow-sm
-                                            {{ $slot->id === $selectedSlotId ? 'border-brown-600 bg-white/80 dark:bg-brown-600/10' : 'border-white/60 dark:border-white/5 bg-white/30 dark:bg-white/[0.02]' }}
-                                            {{ $slot->is_holiday ? 'opacity-50 cursor-not-allowed' : '' }}">
-
-                                        @if ($slot->id === $selectedSlotId)
-                                            <div class="absolute top-3 left-3 w-5 h-5 bg-brown-600 rounded-full flex items-center justify-center">
-                                                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                            </div>
-                                        @endif
-
-                                        <span class="block text-[10px] font-black uppercase tracking-widest mb-1 {{ $slot->is_holiday ? 'text-rose-400' : 'text-gray-400' }}">
-                                            {{ $slot->is_holiday ? 'تعطیل' : ($slot->label ?? '-') }}
+                            @if (empty($deliveryDates))
+                                <div class="p-5 rounded-[2rem] bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-sm font-bold">
+                                    در حال حاضر تاریخی برای ارسال در دسترس نیست. لطفاً بعداً تلاش کنید یا با پشتیبانی تماس بگیرید.
+                                </div>
+                            @else
+                                <div class="flex items-center justify-between gap-3 mb-4">
+                                    <span class="text-xs font-black text-gray-500 dark:text-gray-400">روز تحویل را انتخاب کنید</span>
+                                    @if ($this->selectedDelivery)
+                                        <span class="text-xs font-black text-brown-600">
+                                            {{ $this->selectedDelivery['weekday'] }} {{ $this->selectedDelivery['day'] }} {{ $this->selectedDelivery['month'] }}
                                         </span>
-                                        <span class="block text-sm font-bold text-gray-600 dark:text-gray-400">
-                                            {{ \Morilog\Jalali\Jalalian::fromDateTime($slot->date)->format('l j F') }}
-                                        </span>
-                                        <div class="mt-4 py-1.5 px-2 rounded-xl {{ $slot->cost > 0 ? 'bg-gray-50 dark:bg-white/5' : 'bg-emerald-500/10' }}">
-                                            <span class="block text-[10px] font-black {{ $slot->cost > 0 ? 'text-gray-400' : 'text-emerald-600' }}">
-                                                {{ $slot->cost > 0 ? number_format($slot->cost) . ' تومان' : 'ارسال رایگان' }}
+                                    @endif
+                                </div>
+
+                                {{-- موبایل: اسکرول افقی با snap | دسکتاپ: گرید --}}
+                                <div class="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-3 -mx-2 px-2 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 lg:grid-cols-7 sm:overflow-visible" role="radiogroup" aria-label="تاریخ ارسال">
+                                    @foreach ($deliveryDates as $option)
+                                        @php
+                                            $isSelected = $option['date'] === $deliveryDate;
+                                        @endphp
+                                        <button wire:click="selectDeliveryDate('{{ $option['date'] }}')"
+                                                wire:key="delivery-{{ $option['date'] }}"
+                                                type="button"
+                                                role="radio"
+                                                aria-checked="{{ $isSelected ? 'true' : 'false' }}"
+                                                class="relative shrink-0 snap-start w-[5.5rem] sm:w-auto min-h-28 px-2 py-4 rounded-[1.75rem] border-2 text-center transition-all duration-300
+                                                {{ $isSelected ? 'border-brown-600 bg-white/90 dark:bg-brown-600/15 shadow-lg shadow-brown-600/10' : 'border-white/60 dark:border-white/5 bg-white/30 dark:bg-white/[0.02] hover:border-brown-600/40' }}">
+
+                                            @if ($isSelected)
+                                                <span class="absolute top-2 left-2 w-5 h-5 bg-brown-600 rounded-full flex items-center justify-center">
+                                                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                                </span>
+                                            @endif
+
+                                            <span class="block text-[10px] font-black mb-1 {{ $option['label'] ? 'text-brown-600' : 'text-gray-400' }}">
+                                                {{ $option['label'] ?? $option['weekday'] }}
                                             </span>
-                                        </div>
-                                    </button>
-                                @endforeach
-                            </div>
+                                            <span class="block text-2xl font-black text-gray-900 dark:text-white leading-none tabular-nums">{{ $option['day'] }}</span>
+                                            <span class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-1">{{ $option['month'] }}</span>
+                                            @if ($option['label'])
+                                                <span class="block text-[10px] font-bold text-gray-400 mt-0.5">{{ $option['weekday'] }}</span>
+                                            @endif
+
+                                            <span class="mt-3 inline-block py-1 px-2 rounded-lg text-[9px] font-black {{ $option['cost'] > 0 ? 'bg-gray-50 dark:bg-white/5 text-gray-500' : 'bg-emerald-500/10 text-emerald-600' }}">
+                                                {{ $option['cost'] > 0 ? number_format($option['cost']) . ' ت' : 'رایگان' }}
+                                            </span>
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
 
                         <!-- روش پرداخت -->
@@ -700,34 +710,14 @@ new class extends Component
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                                @php
-                                    $paymentOptions = [
-                                        'gateway' => [
-                                            'title' => 'درگاه بانکی (آنلاین)',
-                                            'sub'   => '۱٪ سود بیشتر',
-                                            'icon'  => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
-                                        ],
-                                        'cod' => [
-                                            'title' => 'پرداخت در محل',
-                                            'sub'   => 'نقدی یا با کارت‌خوان',
-                                            'icon'  => 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
-                                        ],
-                                        'transfer' => [
-                                            'title' => 'کارت به کارت',
-                                            'sub'   => 'ارسال فیش در چت',
-                                            'icon'  => 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4',
-                                        ],
-                                        'wallet' => [
-                                            'title' => 'کیف پول زارا',
-                                            'sub'   => 'موجودی: ' . number_format($this->walletBalance) . ' تومان',
-                                            'icon'  => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-                                        ],
-                                    ];
-                                @endphp
-
-                                @foreach ($paymentOptions as $key => $opt)
-                                    <label wire:click="selectPayment('{{ $key }}')"
-                                           class="payment-card relative flex items-center p-6 border-2 rounded-[2rem] cursor-pointer transition-all
+                                @forelse ($this->paymentOptions as $opt)
+                                    @php
+                                        $key = $opt['key'];
+                                    @endphp
+                                    <label wire:click="selectPayment('{{ $key }}')" wire:key="pay-{{ $key }}"
+                                           @if($opt['disabled']) title="{{ $opt['disabled'] }}" @endif
+                                           class="payment-card relative flex items-center p-6 border-2 rounded-[2rem] transition-all
+                                           {{ $opt['disabled'] ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }}
                                            {{ $paymentMethod === $key ? 'border-brown-600 bg-white shadow-sm' : 'border-gray-100 dark:border-white/5 bg-white/50 dark:bg-white/[0.02]' }}">
                                         <input type="radio" name="payment" value="{{ $key }}" @checked($paymentMethod === $key) class="sr-only">
                                         <div class="w-14 h-14 rounded-2xl flex items-center justify-center ml-4 transition-all {{ $paymentMethod === $key ? 'bg-brown-600 text-white shadow-lg shadow-brown-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-400' }}">
@@ -737,7 +727,7 @@ new class extends Component
                                         </div>
                                         <div class="flex-1">
                                             <span class="block text-sm font-black text-gray-900 dark:text-white">{{ $opt['title'] }}</span>
-                                            <span class="text-[10px] {{ $key === 'wallet' ? 'text-brown-500 font-black' : 'text-gray-400 font-bold' }}">{{ $opt['sub'] }}</span>
+                                            <span class="text-[10px] {{ $opt['disabled'] ? 'text-rose-500 font-black' : ($key === 'wallet' ? 'text-brown-500 font-black' : 'text-gray-400 font-bold') }}">{{ $opt['disabled'] ?? ($opt['hint'] ?? $opt['description']) }}</span>
                                         </div>
                                         <div class="w-6 h-6 border-2 rounded-full flex items-center justify-center {{ $paymentMethod === $key ? 'border-brown-600 bg-brown-600' : 'border-gray-200 dark:border-white/10' }}">
                                             @if ($paymentMethod === $key)
@@ -745,7 +735,36 @@ new class extends Component
                                             @endif
                                         </div>
                                     </label>
-                                @endforeach
+
+                                    {{-- انتخاب درگاه (فقط وقتی بیش از یک درگاه فعال است) --}}
+                                    @if ($key === 'gateway' && $paymentMethod === 'gateway' && $this->gatewayOptions->count() > 1)
+                                        <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3" wire:key="gateways-list">
+                                            @foreach ($this->gatewayOptions as $gw)
+                                                <button type="button" wire:key="gw-{{ $gw['id'] }}" wire:click="selectGateway({{ $gw['id'] }})"
+                                                        @disabled($gw['disabled']) @if($gw['disabled']) title="{{ $gw['disabled'] }}" @endif
+                                                        class="flex items-center justify-between gap-3 px-5 py-4 rounded-2xl border-2 text-right transition-all
+                                                        {{ $gw['disabled'] ? 'opacity-50 cursor-not-allowed border-gray-100 dark:border-white/5' : 'cursor-pointer' }}
+                                                        {{ $gatewayId === $gw['id'] ? 'border-brown-600 bg-white dark:bg-white/5 shadow-sm' : 'border-gray-100 dark:border-white/5 bg-white/50 dark:bg-white/[0.02]' }}">
+                                                    <span>
+                                                        <span class="block text-xs font-black text-gray-900 dark:text-white">{{ $gw['title'] }}</span>
+                                                        @if ($gw['disabled'])
+                                                            <span class="block text-[10px] font-bold text-rose-500 mt-1">{{ $gw['disabled'] }}</span>
+                                                        @endif
+                                                    </span>
+                                                    <span class="w-5 h-5 shrink-0 border-2 rounded-full flex items-center justify-center {{ $gatewayId === $gw['id'] ? 'border-brown-600 bg-brown-600' : 'border-gray-200 dark:border-white/10' }}">
+                                                        @if ($gatewayId === $gw['id'])
+                                                            <span class="w-1.5 h-1.5 bg-white rounded-full"></span>
+                                                        @endif
+                                                    </span>
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                @empty
+                                    <div class="md:col-span-2 p-5 rounded-[2rem] bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-sm font-bold">
+                                        در حال حاضر روش پرداخت فعالی وجود ندارد.
+                                    </div>
+                                @endforelse
                             </div>
                         </div>
 
@@ -902,7 +921,7 @@ new class extends Component
 
                         <div>
                             <h3 class="text-sm font-black text-gray-900 dark:text-white">
-                                افزایش موجودی کیف پول
+                                پرداخت کارت به کارت
                             </h3>
 
                             <p class="mt-1 text-[10px] font-bold text-gray-400">
@@ -970,78 +989,44 @@ new class extends Component
                     </div>
 
 
-                    {{-- Card Number --}}
+                    {{-- Bank cards (از پنل > تنظیمات پرداخت > کارت‌های بانکی) --}}
                     <div class="mb-5">
-
-                        <label
-                            class="block mb-2 text-[11px] font-black
-                           text-gray-700 dark:text-gray-300"
-                        >
+                        <label class="block mb-2 text-[11px] font-black text-gray-700 dark:text-gray-300">
                             شماره کارت جهت واریز
                         </label>
 
-                        <div
-                            class="relative flex items-center
-                           h-16 px-4
-                           rounded-2xl
-                           bg-gray-50 dark:bg-white/[0.04]
-                           border border-gray-200 dark:border-white/10"
-                        >
-
-                            <div
-                                class="w-10 h-10 rounded-xl
-                               bg-brown-500/10
-                               flex items-center justify-center
-                               text-brown-500 ml-3"
-                            >
-                                <svg
-                                    class="w-5 h-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                                    />
-                                </svg>
-                            </div>
-
-                            <div class="flex-1">
-
-                        <span
-                            class="block text-base font-black
-                                   text-gray-900 dark:text-white
-                                   tracking-[2px]"
-                            dir="ltr"
-                        >
-                            6393 - 4610 - 6688 - 7601
-                        </span>
-
-                                <span class="block mt-1 text-[9px] font-bold text-gray-400">
-                            به نام: سید محمد امین یاسینی
-                        </span>
-
-                            </div>
-
+                        <div class="space-y-2 max-h-64 overflow-y-auto">
+                            @forelse($this->bankCards as $card)
+                                <label wire:key="bank-card-{{ $card->id }}"
+                                       class="relative flex items-center h-16 px-4 rounded-2xl border cursor-pointer transition
+                                       {{ (int) $bankCardId === $card->id ? 'border-brown-500 bg-brown-500/5' : 'bg-gray-50 dark:bg-white/[0.04] border-gray-200 dark:border-white/10' }}">
+                                    <input type="radio" class="sr-only" wire:model.live="bankCardId" value="{{ $card->id }}">
+                                    <div class="w-10 h-10 rounded-xl bg-brown-500/10 flex items-center justify-center text-brown-500 ml-3 shrink-0">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <span class="block text-base font-black text-gray-900 dark:text-white tracking-[2px]" dir="ltr">{{ $card->formatted_number }}</span>
+                                        <span class="block mt-1 text-[9px] font-bold text-gray-400 truncate">
+                                            {{ $card->bank_name }} — به نام: {{ $card->owner_name }}
+                                        </span>
+                                    </div>
+                                    <button type="button"
+                                            x-data
+                                            x-on:click.stop.prevent="navigator.clipboard.writeText('{{ $card->card_number }}'); $el.innerText = 'کپی شد'"
+                                            class="mr-2 shrink-0 text-[9px] font-black text-brown-500 hover:text-brown-600 transition">
+                                        کپی
+                                    </button>
+                                </label>
+                            @empty
+                                <p class="text-[10px] font-bold text-rose-500">کارتی برای واریز ثبت نشده است.</p>
+                            @endforelse
                         </div>
-
-                        {{-- Copy --}}
-                        <button
-                            type="button"
-                            onclick="navigator.clipboard.writeText('6037991812345678')"
-                            class="mt-2 text-[9px] font-black
-                           text-brown-500
-                           hover:text-brown-600
-                           transition"
-                        >
-                            کپی شماره کارت
-                        </button>
-
+                        @error('bankCardId')
+                        <p class="mt-2 text-[10px] font-bold text-red-500">{{ $message }}</p>
+                        @enderror
                     </div>
-
 
                     {{-- Warning / Instruction --}}
                     <div
@@ -1114,6 +1099,19 @@ new class extends Component
                         </p>
                         @enderror
 
+                        <div class="grid grid-cols-2 gap-3 mt-4">
+                            <div>
+                                <label class="block mb-2 text-[11px] font-black text-gray-700 dark:text-gray-300">نام صاحب کارت (اختیاری)</label>
+                                <input type="text" wire:model="payerName" autocomplete="off"
+                                       class="w-full h-12 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] px-4 text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-brown-500 focus:ring-4 focus:ring-brown-500/10 transition">
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-[11px] font-black text-gray-700 dark:text-gray-300">۴ رقم آخر کارت (اختیاری)</label>
+                                <input type="text" inputmode="numeric" maxlength="4" wire:model="payerCard" autocomplete="off" dir="ltr"
+                                       class="w-full h-12 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] px-4 text-xs font-black text-gray-900 dark:text-white outline-none focus:border-brown-500 focus:ring-4 focus:ring-brown-500/10 transition">
+                            </div>
+                        </div>
+
                     </div>
 
 
@@ -1185,7 +1183,7 @@ new class extends Component
                        text-gray-400"
                     >
                         پس از بررسی و تأیید پرداخت توسط مدیریت،
-                        مبلغ به کیف پول شما اضافه خواهد شد.
+                        سفارش شما تأیید و آماده ارسال می‌شود.
                     </p>
 
                 </div>

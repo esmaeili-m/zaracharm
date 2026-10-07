@@ -178,32 +178,8 @@
                 </div>
                 <p class="text-sm text-gray-500 dark:text-gray-400 leading-8 text-justify font-medium max-w-md">
                     فروشگاه زارا چرم؛ ترکیبی از اصالت، کیفیت و استایل. ما با ارائه محصولات چرمی باکیفیت و طراحی‌های به‌روز، انتخابی مطمئن برای کسانی هستیم که به جزئیات و ماندگاری اهمیت می‌دهند. اصالت، کیفیت و رضایت شما، سه اصل اصلی ماست.                </p>
-                @php
-                    $socialLinks = \App\Models\SocialLink::where('is_active', true)
-                        ->orderBy('sort')
-                        ->get();
-                @endphp
-
-                @if($socialLinks->count())
-                    <div class="flex gap-4">
-                        @foreach($socialLinks as $social)
-                            <a href="{{ $social->url }}"
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               title="{{ $social->name }}"
-                               aria-label="{{ $social->name }}"
-                               class="w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-brown-600 hover:text-white hover:scale-110 transition-all duration-500">
-                                @if($social->icon)
-                                    <img src="{{ url('/storage/' . $social->icon) }}"
-                                         alt="{{ $social->name }}"
-                                         class="w-5 h-5 object-contain">
-                                @else
-                                    <span class="text-xs font-bold">{{ mb_substr($social->name, 0, 2) }}</span>
-                                @endif
-                            </a>
-                        @endforeach
-                    </div>
-                @endif
+                {{-- شبکه‌های اجتماعی از دیتابیس (پنل > شبکه‌های اجتماعی) --}}
+                <x-main.site-socials />
             </div>
 
             <div class="space-y-8">
@@ -310,6 +286,9 @@
                             d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
                         />
                     </svg>
+                    @auth
+                        <livewire:main.cart-count />
+                    @endauth
                 </button>
             </li>
 
@@ -560,7 +539,7 @@
         <div class="flex-1 overflow-y-auto custom-scrollbar pt-2">
 
             <div class="px-4 mb-6">
-                <a href="{{ auth()->check() ? route('user.dashboard') : route('login')}}"  class="p-4 rounded-[2rem] bg-gradient-to-br from-brown-600 to-indigo-700 text-white shadow-lg shadow-brown-500/20 flex items-center justify-between cursor-pointer group transition-all active:scale-95">
+                <a href="{{ auth()->check() ? route('user.dashboard') : route('login')}}"  class="p-4 rounded-[2rem] bg-gradient-to-br from-brown-600 to-brown-700 text-white shadow-lg shadow-brown-500/20 flex items-center justify-between cursor-pointer group transition-all active:scale-95">
                     <div class="flex items-center gap-3">
                         <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
                             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">

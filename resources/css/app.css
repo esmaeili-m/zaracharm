@@ -12,6 +12,18 @@
 @source inline("pt-{0..20}");
 @source inline("pb-{0..20}");
 
+/* اسکریپت‌های قالب فروشگاه (کلاس‌هایی که با JS اضافه می‌شوند هم در build ساخته شوند) */
+@source '../../public/main/js/**/*.js';
+
+/* رنگ‌های تزئینی پویای کارت دسته‌بندی‌ها: bg-{{ $color }}-600/10 */
+@source inline("{bg-,dark:bg-}{brown,amber,orange,yellow,red,rose,stone}-{400,600}/10");
+
+/* رنگ پویای صفحه نتیجه پرداخت (pages/main/cart/payment): emerald | amber | rose */
+@source inline("{bg-,dark:bg-}{emerald,amber,rose}-500{,/5,/10,/20}");
+@source inline("{border-}{emerald,amber,rose}-500/20");
+@source inline("{text-,hover:text-,dark:text-}{emerald,amber,rose}-{400,600,700}");
+@source inline("text-{emerald,amber,rose}-600/70");
+
 @custom-variant dark (&:where(.dark, .dark *));
 @theme {
     --default-font-family: payda, sans-serif;
@@ -19,18 +31,18 @@
     --breakpoint-laptop: 75rem;
     --breakpoint-desktop: 90rem;
     /* primary color */
-    --color-primary: oklch(52.986% 0.20551 263.33);
-    --color-primary-50: oklch(87.605% 0.04819 267.18);
-    --color-primary-100: oklch(83.604% 0.06397 266.3);
-    --color-primary-200: oklch(75.456% 0.09919 266.14);
-    --color-primary-300: oklch(67.63% 0.1347 264.98);
-    --color-primary-400: oklch(59.935% 0.17139 264.46);
-    --color-primary-500: oklch(52.986% 0.20551 263.33);
-    --color-primary-600: oklch(44.617% 0.17879 263.23);
-    --color-primary-700: oklch(35.889% 0.13872 263.41);
-    --color-primary-800: oklch(26.621% 0.09533 263.86);
-    --color-primary-900: oklch(16.79% 0.04448 262.56);
-    --color-primary-950: oklch(10.389% 0.01943 248.35);
+    --color-primary: oklch(52.5% 0.070 55);
+    --color-primary-50: oklch(97.8% 0.012 75);
+    --color-primary-100: oklch(94.8% 0.020 72);
+    --color-primary-200: oklch(89.2% 0.035 68);
+    --color-primary-300: oklch(80.8% 0.050 63);
+    --color-primary-400: oklch(68.7% 0.062 58);
+    --color-primary-500: oklch(52.5% 0.070 55);
+    --color-primary-600: oklch(45.1% 0.062 52);
+    --color-primary-700: oklch(37.6% 0.053 48);
+    --color-primary-800: oklch(29.8% 0.042 45);
+    --color-primary-900: oklch(20.8% 0.028 42);
+    --color-primary-950: oklch(14.2% 0.018 40);
 
     --color-brown: oklch(52.5% 0.07 55);
 
@@ -257,7 +269,7 @@
 
     /* Swiper pagination */
     .swiper-pagination-bullet-active {
-        @apply !w-8 !rounded-full !opacity-100 !bg-blue-600 !border-none;
+        @apply !w-8 !rounded-full !opacity-100 !bg-brown-600 !border-none;
         transition: width 0.3s ease;
     }
 
@@ -363,7 +375,7 @@
     }
 
     #quick-view-modal .overflow-y-auto::-webkit-scrollbar-thumb {
-        background-color: rgba(59, 130, 246, 0.2);
+        background-color: rgba(120,72,45, 0.2);
         border-radius: 20px;
         border: 3px solid transparent;
         background-clip: content-box;
@@ -371,12 +383,12 @@
     }
 
     #quick-view-modal .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-        background-color: rgba(59, 130, 246, 0.5);
+        background-color: rgba(120,72,45, 0.5);
         border: 2px solid transparent;
     }
 
     .dark #quick-view-modal .overflow-y-auto::-webkit-scrollbar-thumb {
-        background-color: rgba(96, 165, 250, 0.15);
+        background-color: rgba(120,72,45, 0.15);
     }
 
     /* Thumb swiper */
@@ -385,7 +397,7 @@
     }
 
     .thumbSwiper .swiper-slide-thumb-active img {
-        border-color: #2563eb !important;
+        border-color: #78482d !important;
     }
 
     /* Auth step */
@@ -428,7 +440,7 @@
     }
 
     .amazing-deals-section .glowing-btn:hover {
-        box-shadow: 0 0 25px rgba(37, 99, 235, 0.4);
+        box-shadow: 0 0 25px rgba(120,72,45, 0.4);
     }
 
     .amazing-deals-section .glowing-btn:hover .shimmer-effect {
@@ -461,16 +473,16 @@
 
     .footer-title::before {
         content: '';
-        @apply absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.6)];
+        @apply absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-brown-600 rounded-full shadow-[0_0_15px_rgba(120,72,45,0.6)];
     }
 
     .footer-link {
-        @apply text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 font-medium flex items-center gap-0 hover:gap-3;
+        @apply text-sm text-gray-500 dark:text-gray-400 hover:text-brown-600 dark:hover:text-brown-400 transition-all duration-300 font-medium flex items-center gap-0 hover:gap-3;
     }
 
     .footer-link::before {
         content: '●';
-        @apply text-[8px] text-blue-600 opacity-0 transition-all duration-300;
+        @apply text-[8px] text-brown-600 opacity-0 transition-all duration-300;
     }
 
     .footer-link:hover::before {
@@ -479,7 +491,7 @@
 
     /* Contact tile */
     .contact-tile {
-        @apply bg-white/40 dark:bg-white/[0.02] backdrop-blur-2xl p-6 rounded-[2rem] border border-white/60 dark:border-white/10 flex items-center gap-5 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-blue-500/5 cursor-pointer;
+        @apply bg-white/40 dark:bg-white/[0.02] backdrop-blur-2xl p-6 rounded-[2rem] border border-white/60 dark:border-white/10 flex items-center gap-5 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-brown-500/5 cursor-pointer;
     }
 
     .icon-box {
@@ -488,7 +500,7 @@
 
     /* Legal link */
     .legal-link {
-        @apply text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest hover:text-blue-600 transition-colors;
+        @apply text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest hover:text-brown-600 transition-colors;
     }
 
     /* Timer block */
@@ -512,9 +524,9 @@
 
     /* Tab button */
     .tab-btn.active {
-        background-color: #2563eb;
+        background-color: #78482d;
         color: white !important;
-        box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
+        box-shadow: 0 10px 15px -3px rgba(120,72,45, 0.2);
     }
 
     /* Animation keyframes (consolidated) */
@@ -558,7 +570,7 @@
         height: 22px;
         border-radius: 50%;
         background: white;
-        border: 2px solid #3b82f6;
+        border: 2px solid #8a5a3b;
         cursor: pointer;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         transition: all 0.2s;
@@ -566,7 +578,7 @@
 
     .range-input::-webkit-slider-thumb:hover {
         transform: scale(1.15);
-        box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.1);
+        box-shadow: 0 0 0 8px rgba(120,72,45, 0.1);
     }
 
     /* Shake animation */
@@ -627,9 +639,9 @@
 
     /* Active tab (duplicate of shop-filter-btn? kept for compatibility) */
     .active-tab {
-        background-color: #3b82f6 !important;
+        background-color: #8a5a3b !important;
         color: white !important;
-        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+        box-shadow: 0 10px 15px -3px rgba(120,72,45, 0.3);
     }
 
     /* Scrollbar hide */

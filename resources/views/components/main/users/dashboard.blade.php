@@ -194,8 +194,8 @@ new class extends Component
 
                                     'processing' => [
                                         'title' => 'در حال پردازش',
-                                        'class' => 'bg-blue-500/10 text-blue-500 border-blue-500/10',
-                                        'dot' => 'bg-blue-500',
+                                        'class' => 'bg-brown-500/10 text-brown-500 border-brown-500/10',
+                                        'dot' => 'bg-brown-500',
                                     ],
 
                                     'shipped' => [

@@ -11,7 +11,7 @@ new class extends Component
     public $colors=[];
     public function mount($data)
     {
-        $this->colors = ['brown', 'red', 'green', 'purple', 'pink', 'cyan', 'yellow', 'indigo'];
+        $this->colors = ['brown', 'amber', 'orange', 'yellow', 'red', 'rose', 'stone', 'brown'];
         $this->data = $data;
         $this->pictureMode = PictureMode::forSection('categories', $data)->value;
         if ($data){

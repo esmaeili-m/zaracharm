@@ -79,7 +79,7 @@
 </span>
 
                     <div class="flex gap-1">
-                        <div class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]"></div>
+                        <div class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(120,72,45,0.5)]"></div>
                         <div class="w-2 h-2 rounded-full bg-gray-800 shadow-[0_0_5px_rgba(0,0,0,0.5)]"></div>
                     </div>
 

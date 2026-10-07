@@ -42,3 +42,62 @@ Artisan::command('inventory:sync-reservations', function () {
 \Illuminate\Support\Facades\Schedule::command('inventory:sync-reservations')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+/*
+|--------------------------------------------------------------------------
+| همگام‌سازی مارکت‌پلیس‌ها (دیجی‌کالا، باسلام، ...)
+|--------------------------------------------------------------------------
+| --orders : دریافت سفارش مارکت‌پلیس‌هایی که زمانشان رسیده (فاصله از تنظیمات هر مارکت‌پلیس)
+| --stock  : تطبیق دوره‌ای قیمت/موجودی/وضعیت همه اتصال‌ها (فقط موارد تغییرکرده ارسال می‌شوند؛
+|            تغییر قیمت ناشی از شروع/پایان تخفیف و کمپین هم با همین اجرا ارسال می‌شود)
+| --retry  : تلاش دوباره اتصال‌های ناموفق
+| --prune  : حذف لاگ‌های قدیمی
+| اجرای خودکار نیازمند `php artisan schedule:run` (cron) و `queue:work` روی سرور است.
+*/
+Artisan::command('marketplaces:sync {--orders} {--stock} {--retry} {--prune} {--marketplace=}', function () {
+    $sync = app(\App\Marketplaces\Services\SyncService::class);
+    $all = ! $this->option('orders') && ! $this->option('stock') && ! $this->option('retry') && ! $this->option('prune');
+
+    $marketplaces = \App\Models\Marketplace::active()
+        ->where('auto_sync', true)
+        ->when($this->option('marketplace'), fn ($q, $provider) => $q->where('provider', $provider))
+        ->get()
+        ->filter(fn ($m) => $m->isUsable());
+
+    foreach ($marketplaces as $marketplace) {
+        if (($all || $this->option('orders')) && $marketplace->supports(\App\Marketplaces\Capability::PULL_ORDERS)) {
+            $minutes = max(1, (int) $marketplace->setting('order_pull_minutes', 10));
+
+            if (! $marketplace->last_order_sync_at || $marketplace->last_order_sync_at->lte(now()->subMinutes($minutes))) {
+                \App\Marketplaces\Jobs\PullOrdersJob::dispatch($marketplace->id);
+                $this->line("دریافت سفارش: {$marketplace->title}");
+            }
+        }
+
+        if (($all || $this->option('stock')) && array_intersect(\App\Marketplaces\Capability::LISTING_SYNC, $marketplace->driver()->capabilities())) {
+            $count = $sync->queueMarketplace($marketplace, ['price', 'stock', 'status']);
+            $this->line("تطبیق قیمت/موجودی {$marketplace->title}: {$count} اتصال");
+        }
+    }
+
+    if ($all || $this->option('retry')) {
+        \App\Models\MarketplaceListing::query()
+            ->where('sync_status', 'failed')
+            ->where('is_active', true)
+            ->where('failed_attempts', '<', 10)
+            ->where('updated_at', '<', now()->subMinutes(30))
+            ->whereIn('marketplace_id', $marketplaces->pluck('id'))
+            ->pluck('id')
+            ->each(fn ($id) => \App\Marketplaces\Jobs\SyncListingJob::dispatch($id));
+    }
+
+    if ($all || $this->option('prune')) {
+        $deleted = \App\Models\MarketplaceSyncLog::where('created_at', '<', now()->subDays((int) config('marketplaces.log_retention_days', 60)))->delete();
+        $this->line("لاگ‌های حذف‌شده: {$deleted}");
+    }
+})->purpose('همگام‌سازی زمان‌بندی‌شده مارکت‌پلیس‌ها (سفارش، قیمت/موجودی، تلاش مجدد)');
+
+\Illuminate\Support\Facades\Schedule::command('marketplaces:sync --orders')->everyMinute()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('marketplaces:sync --stock')->hourly()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('marketplaces:sync --retry')->everyThirtyMinutes()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('marketplaces:sync --prune')->daily();

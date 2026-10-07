@@ -328,7 +328,7 @@ new class extends Component
             ->newQuery()
             ->with([
                 'user:id,first_name,last_name,mobile,email',
-                'order:id,user_id,order_number,address_id,shipping_slot_id,status,payment_status,payment_method,subtotal,discount_amount,tax_amount,shipping_amount,total_amount,expires_at,created_at,updated_at',
+                'order:id,user_id,order_number,address_id,shipping_slot_id,delivery_date,status,payment_status,payment_method,subtotal,discount_amount,tax_amount,shipping_amount,total_amount,expires_at,created_at,updated_at',
                 'order.address',
                 'order.payments',
                 'order.shipment',
@@ -1243,16 +1243,22 @@ new class extends Component
 
                                                 {{-- اصلاح: اطلاعات بازه‌ی ارسال (shipping_slot) لود می‌شد ولی هیچ‌جا نمایش داده نمی‌شد --}}
                                                 <div class="col-md-6">
-                                                    <span class="text-muted d-block mb-1">بازه ارسال انتخابی</span>
+                                                    <span class="text-muted d-block mb-1">تاریخ ارسال انتخابی</span>
                                                     <span class="fw-medium">
-                                                        @if($selectedInvoice->order?->shippingSlot)
-                                                            {{ $selectedInvoice->order->shippingSlot->label
-                                                                ?? \Illuminate\Support\Carbon::parse($selectedInvoice->order->shippingSlot->date)->translatedFormat('Y/m/d') }}
-                                                            @if($selectedInvoice->order->shippingSlot->cost > 0)
-                                                                <span class="text-muted small">
-                                                                    ({{ $this->money($selectedInvoice->order->shippingSlot->cost) }})
-                                                                </span>
+                                                        @if($selectedInvoice->order?->delivery_date)
+                                                            {{ verta($selectedInvoice->order->delivery_date)->format('l j F Y') }}
+                                                            @if($selectedInvoice->order->shippingSlot?->label)
+                                                                <span class="badge bg-light text-dark ms-1">{{ $selectedInvoice->order->shippingSlot->label }}</span>
                                                             @endif
+                                                            @if((int) $selectedInvoice->order->shipping_amount > 0)
+                                                                <span class="text-muted small">({{ $this->money($selectedInvoice->order->shipping_amount) }})</span>
+                                                            @else
+                                                                <span class="text-success small">(ارسال رایگان)</span>
+                                                            @endif
+                                                        @elseif($selectedInvoice->order?->shippingSlot)
+                                                            {{-- سفارش‌های قدیمی (قبل از زمان‌بندی خودکار) --}}
+                                                            {{ $selectedInvoice->order->shippingSlot->label
+                                                                ?? verta($selectedInvoice->order->shippingSlot->date)->format('Y/m/d') }}
                                                         @else
                                                             —
                                                         @endif

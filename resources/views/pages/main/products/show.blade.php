@@ -178,43 +178,24 @@ new class extends Component
             return;
         }
 
-        $stock = $this->stockForVariant($variant->id);
-        if ($stock <= 0) {
-            $this->dispatch('alert', type: 'error', message: 'موجودی این کالا تمام شده است.');
+        $pricing = app(\App\Services\Pricing\ProductPriceService::class)
+            ->calculate($variant);
+
+        // همان واریانت در سبد => فقط تعداد زیاد می‌شود؛ موجودیِ از قبل در سبد هم حساب می‌شود
+        $result = app(\App\Services\Cart\CartService::class)->add(
+            Auth::id(),
+            $variant->product_id,
+            $variant->id,
+            (int) ($pricing['after_discount'] ?? $variant->price ?? 0)
+        );
+
+        if (! $result['ok']) {
+            $this->dispatch('alert', type: 'error', message: $result['message']);
             return;
         }
 
-        $cartId = DB::table('carts')
-            ->where('user_id', Auth::id())
-            ->where('status', 'active')
-            ->value('id');
-
-        if (! $cartId) {
-            $cartId = DB::table('carts')->insertGetId([
-                'user_id' => Auth::id(),
-                'status' => 'active',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        $pricing = app(\App\Services\Pricing\ProductPriceService::class)
-            ->calculate($this->selectedVariant);
-
-        $finalPrice = $pricing['after_discount'] ?? null;
-
-        DB::table('cart_items')->insert([
-            'cart_id' => $cartId,
-            'product_id' => $variant->product_id,
-            'quantity' => 1,
-            'price' => $finalPrice,
-            'variant_id' => $variant->id,
-            'attributes' => json_encode(['variant_id' => $variant->id]),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
         $this->dispatch('cart-updated');
-        $this->dispatch('alert', type: 'success', message: 'به سبد خرید اضافه شد.');
+        $this->dispatch('alert', type: 'success', message: $result['message']);
     }
     public function selectOption($valueId)
     {
@@ -1023,7 +1004,7 @@ new class extends Component
                                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                                     <div class="lg:col-span-7 space-y-6 order-2 lg:order-1">
                                         <div class="flex items-center gap-3">
-                                            <span class="w-2 h-8 bg-brown-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.6)]"></span>
+                                            <span class="w-2 h-8 bg-brown-600 rounded-full shadow-[0_0_15px_rgba(120,72,45,0.6)]"></span>
                                             <h3 class="text-2xl font-black text-zinc-900 dark:text-white">{{$product->title}}</h3>
                                         </div>
                                         <p class="text-sm font-medium text-zinc-600 dark:text-zinc-300 leading-9 text-justify">
@@ -1045,7 +1026,7 @@ new class extends Component
                                     </div>
 
                                     <div class="hidden lg:block lg:col-span-5 order-1 lg:order-2 relative group">
-                                        <div class="absolute -inset-4 bg-gradient-to-tr from-brown-600/20 to-indigo-600/20 rounded-[3.5rem] blur-md opacity-50 group-hover:opacity-80 transition duration-1000"></div>
+                                        <div class="absolute -inset-4 bg-gradient-to-tr from-brown-600/20 to-brown-600/20 rounded-[3.5rem] blur-md opacity-50 group-hover:opacity-80 transition duration-1000"></div>
 
                                         @if($product->featuredVideoUrl)
                                             <video
@@ -1079,7 +1060,7 @@ new class extends Component
                                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                                     <div class="lg:col-span-7 space-y-6">
                                         <div class="flex items-center gap-3">
-                                            <span class="w-12 h-1.5 bg-brown-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.4)]"></span>
+                                            <span class="w-12 h-1.5 bg-brown-600 rounded-full shadow-[0_0_15px_rgba(120,72,45,0.4)]"></span>
                                             <h3 class="text-2xl font-black text-zinc-900 dark:text-white">{{$product->title}}</h3>
                                         </div>
                                         <div class="
@@ -1544,7 +1525,7 @@ new class extends Component
 
                                         <div class="flex items-center gap-4 mb-12">
 
-                                            <span class="w-2.5 h-8 bg-brown-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.4)]"></span>
+                                            <span class="w-2.5 h-8 bg-brown-600 rounded-full shadow-[0_0_15px_rgba(120,72,45,0.4)]"></span>
 
                                             <h3 class="text-[16px] font-black text-zinc-900 dark:text-white uppercase tracking-tighter">
                                                 ثبت تجربه و دیدگاه جدید
@@ -2104,14 +2085,14 @@ new class extends Component
 
                     <div class="flex flex-col items-center text-center group">
                         <div class="relative w-20 h-20 mb-6 flex items-center justify-center">
-                            <div class="absolute inset-0 bg-indigo-500/10 dark:bg-indigo-500/20 blur-md rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                            <div class="relative z-10 w-full h-full bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm transition-all duration-500 group-hover:-translate-y-2 group-hover:border-indigo-500/50 group-hover:shadow-lg group-hover:shadow-indigo-500/10 flex items-center justify-center">
-                                <svg class="w-9 h-9 text-gray-700 dark:text-gray-300 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="absolute inset-0 bg-brown-500/10 dark:bg-brown-500/20 blur-md rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <div class="relative z-10 w-full h-full bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm transition-all duration-500 group-hover:-translate-y-2 group-hover:border-brown-500/50 group-hover:shadow-lg group-hover:shadow-brown-500/10 flex items-center justify-center">
+                                <svg class="w-9 h-9 text-gray-700 dark:text-gray-300 group-hover:text-brown-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
                                 </svg>
                             </div>
                         </div>
-                        <h3 class="text-sm font-black text-gray-900 dark:text-white mb-2 transition-colors group-hover:text-indigo-600 dark:group-hover:text-indigo-400">ضمانت اصالت</h3>
+                        <h3 class="text-sm font-black text-gray-900 dark:text-white mb-2 transition-colors group-hover:text-brown-600 dark:group-hover:text-brown-400">ضمانت اصالت</h3>
                         <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-6 max-w-[150px]">تضمین ۱۰۰٪ کالاها با گارانتی معتبر</p>
                     </div>
 

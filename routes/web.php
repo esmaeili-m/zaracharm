@@ -16,6 +16,61 @@ Route::livewire('/product', 'pages::main.user.dashboard')->name('product.show');
 Route::livewire('/products/{product}', 'pages::main.products.show')->name('products.show');
 Route::livewire('/cartItem', 'pages::main.cart.cart-item')->name('cartItem')->middleware(['auth']);
 Route::livewire('/checkout/{code}', 'pages::main.cart.checkout')->name('checkout')->middleware(['auth']);
+// بازگشت از درگاه بانکی (بدون auth: ممکن است نشست کاربر در بازگشت از درگاه از بین رفته باشد؛ اعتبارسنجی با uuid + Authority)
+Route::livewire('/payment/{uuid}/callback', 'pages::main.payment.callback')->name('payment.callback');
+// درگاه‌هایی که با فرم POST برمی‌گردند (اسنپ‌پی، دیجی‌پی). بدون Session/CSRF: درخواست cross-site است
+// و ساختن نشست جدید، کوکی نشست کاربر را بازنویسی (خارج) می‌کرد؛ نتیجه با redirect GET نمایش داده می‌شود.
+Route::post('/payment/{uuid}/callback', function (string $uuid) {
+    $payment = app(\App\Payments\PaymentManager::class)->method('gateway')
+        ->handleCallbackFor($uuid, request()->post());
+
+    return redirect()->route('order.payment.result', [
+        'code' => $payment->order?->order_number,
+        'payment' => $payment->uuid,
+    ], 303);
+})->withoutMiddleware([
+    \Illuminate\Session\Middleware\StartSession::class,
+    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+    \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+])->name('payment.callback.post');
+
+// ─── Marketplaces (ورودی از مارکت‌پلیس‌ها؛ بدون Session/CSRF) ─────────────
+// وب‌هوک: اعتبار با secret یکتای هر مارکت‌پلیس در آدرس
+Route::post('/marketplaces/{provider}/webhook/{secret}', function (string $provider, string $secret) {
+    $marketplace = \App\Models\Marketplace::where('provider', $provider)->firstOrFail();
+
+    abort_unless($marketplace->webhook_secret && hash_equals($marketplace->webhook_secret, $secret), 404);
+    abort_unless($marketplace->isUsable() && $marketplace->supports(\App\Marketplaces\Capability::WEBHOOK), 404);
+
+    try {
+        $result = app(\App\Marketplaces\Services\SyncService::class)->handleWebhook($marketplace, request());
+    } catch (\Throwable $e) {
+        report($e);
+
+        return response()->json(['ok' => false], 500); // مارکت‌پلیس وب‌هوک را دوباره ارسال می‌کند
+    }
+
+    return response()->json(['ok' => true, 'message' => $result->message]);
+})->withoutMiddleware([
+    \Illuminate\Session\Middleware\StartSession::class,
+    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+    \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+])->middleware('throttle:120,1')->name('marketplaces.webhook');
+
+// خوراک محصولات برای مارکت‌پلیس‌هایی که از فروشگاه Pull می‌کنند (ترب: API نسخه ۳)
+Route::match(['get', 'post'], '/marketplaces/{provider}/feed', function (string $provider) {
+    $marketplace = \App\Models\Marketplace::where('provider', $provider)->firstOrFail();
+
+    abort_unless($marketplace->is_active && $marketplace->supports(\App\Marketplaces\Capability::PRODUCT_FEED), 404);
+
+    $manager = app(\App\Marketplaces\MarketplaceManager::class);
+
+    return $marketplace->driver()->feed($marketplace, $manager->client($marketplace), request());
+})->withoutMiddleware([
+    \Illuminate\Session\Middleware\StartSession::class,
+    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+    \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+])->middleware('throttle:300,1')->name('marketplaces.feed');
 Route::livewire('/order/{code}/payment', 'pages::main.cart.payment')
     ->name('order.payment.result')->middleware(['auth']);
 // ─── Static Pages ────────────────────────────────────────
@@ -62,6 +117,13 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/invoices/create', 'pages::dashboard.invoices.form')->name('invoices.create');
     Route::livewire('/invoices/{invoice}/edit', 'pages::dashboard.invoices.form')->name('invoices.edit');
     Route::livewire('/returns', 'pages::dashboard.returns.index')->name('returns.index');
+    Route::livewire('/delivery', 'pages::dashboard.delivery.index')->name('delivery.index');
+    Route::livewire('/payments', 'pages::dashboard.payments.index')->name('payments.index');
+    Route::livewire('/payments/settings', 'pages::dashboard.payments.settings')->name('payments.settings');
+    Route::livewire('/marketplaces', 'pages::dashboard.marketplaces.index')->name('marketplaces.index');
+    Route::livewire('/marketplaces/listings', 'pages::dashboard.marketplaces.listings')->name('marketplaces.listings');
+    Route::livewire('/marketplaces/orders', 'pages::dashboard.marketplaces.orders')->name('marketplaces.orders');
+    Route::livewire('/marketplaces/logs', 'pages::dashboard.marketplaces.logs')->name('marketplaces.logs');
     Route::livewire('/tickets', 'pages::dashboard.tickets.index')->name('tickets.index');
     Route::livewire('/messages', 'pages::dashboard.contact.index')->name('messages.index');
     Route::livewire('/comments', 'pages::dashboard.comments.index')->name('comments.index');

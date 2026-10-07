@@ -102,7 +102,7 @@ new class extends Component
                             icon-class="w-4 h-4"
                             class="absolute top-8 left-6 z-30 w-8 h-8 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl flex items-center justify-center shadow-sm transition-all"
                         />
-                        <a  href="{{ route('products.show', $product->product->slug) }}" class=" group/card block relative bg-gray-100 dark:bg-[#0c0c0e] p-4 rounded-[1.8rem] border border-gray-100 dark:border-white/5 transition-all duration-500  dark:hover:shadow-[0_20px_40px_-10px_rgba(59,130,246,0.15)] hover:-translate-y-2">
+                        <a  href="{{ route('products.show', $product->product->slug) }}" class=" group/card block relative bg-gray-100 dark:bg-[#0c0c0e] p-4 rounded-[1.8rem] border border-gray-100 dark:border-white/5 transition-all duration-500  dark:hover:shadow-[0_20px_40px_-10px_rgba(120,72,45,0.15)] hover:-translate-y-2">
 
                             <div class="absolute top-6 right-6 z-20">
                                 @if($prices['has_discount'] ?? false)
