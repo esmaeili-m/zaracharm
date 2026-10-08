@@ -221,7 +221,7 @@ function startOtpTimer() {
 
     resendBtn.disabled = true;
     resendBtn.style.opacity = "0.5";
-    resendBtn.classList.remove('text-blue-600');
+    resendBtn.classList.remove('text-brown-600');
     resendBtn.classList.add('text-gray-400');
 
     clearInterval(otpCountdown);
@@ -235,7 +235,7 @@ function startOtpTimer() {
             resendBtn.disabled = false;
             resendBtn.style.opacity = "1";
             resendBtn.classList.remove('text-gray-400');
-            resendBtn.classList.add('text-blue-600', 'hover:text-blue-700');
+            resendBtn.classList.add('text-brown-600', 'hover:text-brown-700');
         }
     }, 1000);
 }
@@ -479,9 +479,9 @@ function initEnhancedMobileMenu() {
                     }
 
                     if (isHidden) {
-                        btn.classList.add('ring-1', 'ring-blue-500/30');
+                        btn.classList.add('ring-1', 'ring-brown-500/30');
                     } else {
-                        btn.classList.remove('ring-1', 'ring-blue-500/30');
+                        btn.classList.remove('ring-1', 'ring-brown-500/30');
                     }
                 }
             });
@@ -542,8 +542,8 @@ function initProductVariables() {
 
     colorBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            colorBtns.forEach(b => b.classList.replace('ring-blue-600', 'ring-transparent'));
-            btn.classList.replace('ring-transparent', 'ring-blue-600');
+            colorBtns.forEach(b => b.classList.replace('ring-brown-600', 'ring-transparent'));
+            btn.classList.replace('ring-transparent', 'ring-brown-600');
             if (colorNameDisplay) {
                 colorNameDisplay.innerText = btn.getAttribute('data-color');
             }
@@ -557,13 +557,13 @@ function initProductVariables() {
     sizeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             sizeBtns.forEach(b => {
-                b.classList.remove('border-blue-600', 'bg-blue-50', 'dark:bg-blue-600/10', 'text-blue-600', 'dark:text-blue-400');
+                b.classList.remove('border-brown-600', 'bg-brown-50', 'dark:bg-brown-600/10', 'text-brown-600', 'dark:text-brown-400');
                 b.classList.add('border-transparent', 'bg-gray-100', 'dark:bg-white/5', 'text-gray-700', 'dark:text-gray-300');
             });
 
-            btn.classList.replace('border-transparent', 'border-blue-600');
-            btn.classList.replace('bg-gray-100', 'bg-blue-50');
-            btn.classList.add('dark:bg-blue-600/10', 'text-blue-600', 'dark:text-blue-400');
+            btn.classList.replace('border-transparent', 'border-brown-600');
+            btn.classList.replace('bg-gray-100', 'bg-brown-50');
+            btn.classList.add('dark:bg-brown-600/10', 'text-brown-600', 'dark:text-brown-400');
 
             if (sizeNameDisplay) {
                 sizeNameDisplay.innerText = btn.getAttribute('data-size');
@@ -583,11 +583,11 @@ function initAddToCart() {
     cartBtn.addEventListener('click', function() {
         const originalText = this.querySelector('span')?.innerText || '';
         this.querySelector('span').innerText = 'به سبد اضافه شد';
-        this.classList.replace('bg-blue-600', 'bg-green-600');
+        this.classList.replace('bg-brown-600', 'bg-green-600');
 
         setTimeout(() => {
             this.querySelector('span').innerText = originalText;
-            this.classList.replace('bg-green-600', 'bg-blue-600');
+            this.classList.replace('bg-green-600', 'bg-brown-600');
         }, 2000);
 
         console.log('Product added to cart!');
@@ -895,7 +895,7 @@ function switchTab(tabId) {
     });
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active', 'bg-blue-600', 'text-white');
+        btn.classList.remove('active', 'bg-brown-600', 'text-white');
         btn.classList.add('text-gray-400');
     });
 
@@ -986,80 +986,8 @@ function initProsConsManager() {
  * Modal with price history chart visualization
  */
 function initChart() {
-    const ctx = document.getElementById('priceChart')?.getContext('2d');
-    if (!ctx) return;
-
-    const fontName = 'payda, sans-serif';
-
-    if (chartInstance) {
-        chartInstance.destroy();
-        chartInstance = null;
-    }
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.25)');
-    gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-
-    chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور'],
-            datasets: [{
-                data: [1300000, 1450000, 1420000, 1680000, 1600000, 1890000],
-                borderColor: '#2563eb',
-                borderWidth: 5,
-                fill: true,
-                backgroundColor: gradient,
-                tension: 0.45,
-                pointRadius: 0,
-                pointHoverRadius: 8,
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: '#2563eb',
-                pointHoverBorderWidth: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { intersect: false, mode: 'index' },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    enabled: true,
-                    backgroundColor: '#18181b',
-                    titleFont: { family: fontName, size: 14, weight: 'bold' },
-                    bodyFont: { family: fontName, size: 13 },
-                    padding: 15,
-                    cornerRadius: 15,
-                    displayColors: false,
-                    callbacks: {
-                        label: function (context) {
-                            return `قیمت: ${context.raw.toLocaleString()} تومان`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    display: true,
-                    position: 'right',
-                    grid: { color: 'rgba(0,0,0,0.03)', drawBorder: false },
-                    ticks: {
-                        font: { family: fontName, size: 11, weight: '600' },
-                        color: '#94a3b8',
-                        callback: value => value.toLocaleString()
-                    }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: {
-                        font: { family: fontName, size: 12, weight: 'bold' },
-                        color: '#64748b'
-                    }
-                }
-            }
-        }
-    });
+    // نمودار قیمت اکنون در صفحه محصول با داده واقعی (جدول price_histories) و Alpine رسم می‌شود؛
+    // داده نمونه/ثابت قبلی حذف شد تا قیمت ساختگی نمایش داده نشود.
 }
 
 /* =========================================================
@@ -1080,11 +1008,11 @@ function copyLink() {
     const btn = event.target;
     const originalText = btn.innerText;
     btn.innerText = 'کپی شد!';
-    btn.classList.replace('bg-blue-600', 'bg-emerald-500');
+    btn.classList.replace('bg-brown-600', 'bg-emerald-500');
 
     setTimeout(() => {
         btn.innerText = originalText;
-        btn.classList.replace('bg-emerald-500', 'bg-blue-600');
+        btn.classList.replace('bg-emerald-500', 'bg-brown-600');
     }, 2000);
 }
 
@@ -1151,7 +1079,7 @@ function updateSlots() {
     const finalBtn = document.getElementById('finalBtn');
 
     slots.forEach(slot => {
-        slot.className = "slot h-36 border-2 border-dashed border-blue-300/40 dark:border-blue-900/50 rounded-3xl flex items-center justify-center text-blue-400/50 transition-all hover:bg-blue-500/5";
+        slot.className = "slot h-36 border-2 border-dashed border-brown-300/40 dark:border-brown-900/50 rounded-3xl flex items-center justify-center text-brown-400/50 transition-all hover:bg-brown-500/5";
         slot.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>`;
     });
 
@@ -1465,7 +1393,7 @@ function initCheckoutAddress() {
 
     function selectAddress(element) {
         document.querySelectorAll('.address-item').forEach(el => {
-            el.classList.remove('border-blue-500', 'bg-white/60', 'shadow-sm');
+            el.classList.remove('border-brown-500', 'bg-white/60', 'shadow-sm');
             el.classList.add('border-transparent');
             const dot = el.querySelector('.status-dot');
             if (dot) {
@@ -1473,11 +1401,11 @@ function initCheckoutAddress() {
             }
         });
 
-        element.classList.add('border-blue-500', 'bg-white/60', 'shadow-sm');
+        element.classList.add('border-brown-500', 'bg-white/60', 'shadow-sm');
         element.classList.remove('border-transparent');
         const activeDot = element.querySelector('.status-dot');
         if (activeDot) {
-            activeDot.className = "status-dot w-4 h-4 rounded-full bg-blue-500 border-2 border-blue-500";
+            activeDot.className = "status-dot w-4 h-4 rounded-full bg-brown-500 border-2 border-brown-500";
         }
 
         const addressText = document.getElementById('active-address-text');
@@ -1499,7 +1427,7 @@ function initCheckoutAddress() {
 
         if (name && phone && addr) {
             const newCard = document.createElement('div');
-            newCard.className = "address-item cursor-pointer p-5 rounded-2xl bg-white/50 dark:bg-white/5 border-2 border-transparent hover:border-blue-500/30 transition-all";
+            newCard.className = "address-item cursor-pointer p-5 rounded-2xl bg-white/50 dark:bg-white/5 border-2 border-transparent hover:border-brown-500/30 transition-all";
             newCard.dataset.address = addr;
             newCard.dataset.name = name;
             newCard.dataset.phone = phone;
@@ -1549,7 +1477,7 @@ function initShippingCost() {
     dayCards.forEach(card => {
         card.addEventListener('click', () => {
             dayCards.forEach(c => {
-                c.classList.remove('border-blue-600', 'bg-white/80', 'dark:bg-blue-600/10');
+                c.classList.remove('border-brown-600', 'bg-white/80', 'dark:bg-brown-600/10');
                 c.classList.add('border-white/60', 'dark:border-white/5', 'bg-white/30', 'dark:bg-white/[0.02]');
 
                 const icon = c.querySelector('.status-icon');
@@ -1563,7 +1491,7 @@ function initShippingCost() {
             });
 
             card.classList.remove('border-white/60', 'dark:border-white/5', 'bg-white/30', 'dark:bg-white/[0.02]');
-            card.classList.add('border-blue-600', 'bg-white/80', 'dark:bg-blue-600/10');
+            card.classList.add('border-brown-600', 'bg-white/80', 'dark:bg-brown-600/10');
 
             const activeIcon = card.querySelector('.status-icon');
             if (activeIcon) activeIcon.classList.replace('hidden', 'flex');
@@ -1921,10 +1849,10 @@ function initTermsNavigation() {
         if (activeSectionId) {
             navLinks.forEach(link => {
                 const linkId = link.getAttribute('href')?.substring(1);
-                link.classList.remove('text-blue-600', 'bg-blue-600/5', 'border-blue-600/10', 'dark:text-blue-400');
+                link.classList.remove('text-brown-600', 'bg-brown-600/5', 'border-brown-600/10', 'dark:text-brown-400');
                 link.classList.add('text-gray-500');
                 if (linkId === activeSectionId) {
-                    link.classList.add('text-blue-600', 'bg-blue-600/5', 'border-blue-600/10');
+                    link.classList.add('text-brown-600', 'bg-brown-600/5', 'border-brown-600/10');
                     link.classList.remove('text-gray-500');
                 }
             });

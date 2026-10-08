@@ -287,9 +287,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const thumbs = document.querySelectorAll('.productThumbsSwiper .swiper-slide');
         thumbs.forEach((slide, i) => {
             if (i === index) {
-                slide.classList.add('!opacity-100', 'border-blue-600', 'shadow-lg');
+                slide.classList.add('!opacity-100', 'border-brown-600', 'shadow-lg');
             } else {
-                slide.classList.remove('!opacity-100', 'border-blue-600', 'shadow-lg');
+                slide.classList.remove('!opacity-100', 'border-brown-600', 'shadow-lg');
             }
         });
     });
