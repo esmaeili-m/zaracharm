@@ -25,14 +25,14 @@ new class extends Component
 ?>
 
 <div>
-    <section class="relative py-16 transition-colors duration-700" dir="rtl">
+    <section class="relative py-6 md:py-16 transition-colors duration-700" dir="rtl">
 
         <div class="container">
 
-            <div class="mb-12">
+            <div class="mb-6 md:mb-12">
 
                 {{-- Breadcrumb --}}
-                <nav class="flex items-center gap-2 text-[10px] font-black text-gray-400 mb-6 bg-white/30 dark:bg-white/[0.02] w-fit px-4 py-2 rounded-full border border-white/40 dark:border-white/5 backdrop-blur-md">
+                <nav class="flex items-center gap-2 text-[10px] font-black text-gray-400 mb-4 md:mb-6 bg-white/30 dark:bg-white/[0.02] w-fit px-4 py-2 rounded-full border border-white/40 dark:border-white/5 backdrop-blur-md">
                     <a href="{{ route('home') }}" class="hover:text-brown-500 transition-colors">
                         خانه
                     </a>
@@ -47,24 +47,24 @@ new class extends Component
                 </nav>
 
                 {{-- Title --}}
-                <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-r-4 border-brown-600 pr-2 pl-2">
+                <div class="flex flex-row items-end justify-between gap-3 md:gap-6 border-r-4 border-brown-600 pr-2 pl-2">
                     <div>
-                        <h1 class="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white">
+                        <h1 class="text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 dark:text-white">
                             همه <span class="text-brown-600">برندها</span>
                         </h1>
-                        <p class="text-gray-500 dark:text-gray-400 mt-2 font-bold text-sm">
+                        <p class="text-gray-500 dark:text-gray-400 mt-1 md:mt-2 font-bold text-xs md:text-sm">
                             محصولات برند موردعلاقه خود را پیدا کنید
                         </p>
                     </div>
 
-                    <span class="w-fit px-4 py-2 rounded-xl bg-white/60 dark:bg-white/5 border border-white dark:border-white/10 text-[11px] font-black text-gray-500 dark:text-gray-300 tabular-nums">
+                    <span class="shrink-0 w-fit px-3 md:px-4 py-2 rounded-xl bg-white/60 dark:bg-white/5 border border-white dark:border-white/10 text-[11px] font-black text-gray-500 dark:text-gray-300 tabular-nums">
                         {{ number_format($this->brands->total()) }} برند
                     </span>
                 </div>
             </div>
 
             {{-- Brands grid --}}
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6 lg:gap-8">
                 @forelse($this->brands as $brand)
                     <x-main.brands.card
                         wire:key="brand-{{ $brand->id }}"
@@ -83,7 +83,7 @@ new class extends Component
                 @endforelse
             </div>
 
-            <div class="mt-16 flex items-center justify-center">
+            <div class="mt-8 md:mt-16 flex items-center justify-center">
                 {{ $this->brands->onEachSide(1)->links() }}
             </div>
 

@@ -10,7 +10,7 @@
         @endforeach
     </div>
 @elseif($itemsType === 'brands')
-    <div class="grid pb-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div class="grid pb-6 grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6 lg:gap-8">
         @foreach($items as $brand)
             <x-main.brands.card
                 wire:key="search-brand-{{ $brand->id }}"

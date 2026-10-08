@@ -1,10 +1,13 @@
 <div class="relative group overflow-hidden rounded-[2.5rem]">
     <div class="swiper mainHeroSwiper h-full ">
         <div class="swiper-wrapper">
-            @foreach(\App\Models\SliderItem::where('slider_id',$data['slider_id'])->with('media')->get() as $slider)
+            @foreach(\App\Models\SliderItem::where('slider_id',$data['slider_id'] ?? null)->with('media')->get() as $slider)
+                @continue(! $slider->media->first())
                 <div class="swiper-slide relative">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                    <img src="{{ asset('storage/'.$slider->media->first()->file_path)}}" alt="Banner" class="w-full h-full object-cover">
+                    {{-- حداکثر ارتفاع استاندارد؛ تصاویر کوتاه‌تر همان اندازه خودشان می‌مانند، بلندترها برش می‌خورند --}}
+                    <img src="{{ asset('storage/'.$slider->media->first()->file_path)}}" alt="Banner"
+                         class="block w-full h-auto max-h-[200px] sm:max-h-[280px] md:max-h-[360px] lg:max-h-[440px] xl:max-h-[480px] object-cover">
                 </div>
             @endforeach
 

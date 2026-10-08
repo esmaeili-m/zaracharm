@@ -76,7 +76,8 @@ new class extends Component
 
         @push('scripts')
 
-            <script src="{{ asset('main/js/plugin/story-player/story-player.js') }}"></script>
+            {{-- ?v= برای جلوگیری از کش شدن نسخه قدیمی اسکریپت در مرورگر --}}
+            <script src="{{ asset('main/js/plugin/story-player/story-player.js') }}?v={{ @filemtime(public_path('main/js/plugin/story-player/story-player.js')) ?: '3' }}"></script>
 
             <script>
                 const stories = @js(
@@ -105,10 +106,17 @@ new class extends Component
                 ]]);
             }
 
+            $first = $items->first();
+
             return [
                 'user' => $story->user,
                 'avatar' => $story->avatar_url,
                 'items' => $items,
+                // سازگاری با نسخه قدیمی story-player.js (اگر پوشه public هاست هنوز بروز نشده باشد)
+                'type' => $first['type'] ?? 'image',
+                'url' => $first['url'] ?? null,
+                'duration' => $first['duration'] ?? 7000,
+                'link' => $first['link'] ?? null,
             ];
 
         })->filter(fn ($story) => $story['items']->isNotEmpty())->values()
