@@ -138,9 +138,12 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/tickets/trash', 'pages::dashboard.courses.trash')->name('tickets.show');
 
     Route::livewire('/products', 'pages::dashboard.products.index')->name('products.index');
-    Route::livewire('/products/{product}/settings', 'pages::dashboard.products.settings')->name('products.settings');
-    Route::livewire('/products/{product}/prices', 'pages::dashboard.products.prices')->name('products.prices');
-    Route::livewire('/products/{product}/specifications', 'pages::dashboard.products.specifications')->name('products.specifications');
+    // مدیریت مرحله‌ای محصول (مشخصات فنی ← ویژگی‌های قیمت‌ساز ← قیمت/SKU/بارکد ← موجودی)
+    // مسیرهای قدیمی همان صفحه را در مرحله متناظر باز می‌کنند (نام routeها برای لینک‌های موجود حفظ شده است)
+    Route::livewire('/products/{product}/manage', 'pages::dashboard.products.manage')->name('products.manage');
+    Route::livewire('/products/{product}/settings', 'pages::dashboard.products.manage')->name('products.settings');
+    Route::livewire('/products/{product}/prices', 'pages::dashboard.products.manage')->name('products.prices');
+    Route::livewire('/products/{product}/specifications', 'pages::dashboard.products.manage')->name('products.specifications');
     Route::livewire('/products/trash', 'pages::dashboard.products.trash')->name('products.trash');
 
     Route::livewire('/brands', 'pages::dashboard.brands.index')->name('brands.index');

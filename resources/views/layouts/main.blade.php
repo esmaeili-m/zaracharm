@@ -93,6 +93,9 @@
 
 <body class="bg-gray-100 dark:bg-[#050505] min-h-screen transition-colors duration-700 selection:bg-brown-500/30 selection:text-brown-600 overflow-x-hidden">
 
+{{-- لودر صفحه (قبل از نمایش محتوا) --}}
+<x-layout.page-loader name="زاراچرم" latin="ZARACHARM" />
+
 <!-- HEADER -->
 <header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
 {{--    <div class="bg-primary-900 text-white py-1.5 text-center text-[11px] font-medium tracking-wide hidden md:block">--}}

@@ -20,7 +20,7 @@ new class extends Component
         $mode = $settings['mode'] ?? 'latest';
         $limit = (int) ($settings['limit'] ?? 8);
 
-        $query = Story::query()->with('media')
+        $query = Story::query()->with(['media', 'items.file'])
             ->where('status', true)
             ->orderByDesc('created_at');
 
@@ -30,13 +30,13 @@ new class extends Component
                 ->limit($limit)
                 ->get(),
 
-            'random' => Story::query()->with('media')
+            'random' => Story::query()->with(['media', 'items.file'])
                 ->where('status', true)
                 ->inRandomOrder()
                 ->limit($limit)
                 ->get(),
 
-            'manual' => Story::query()->with('media')
+            'manual' => Story::query()->with(['media', 'items.file'])
                 ->where('status', true)
                 ->whereIn(
                     'id',
@@ -81,27 +81,37 @@ new class extends Component
             <script>
                 const stories = @js(
         $this->stories->map(function ($story) {
-            $avatar = $story->media
-                ->firstWhere('collection', 'avatar');
-            $url = $story->media
-                ->firstWhere('collection', 'url');
+            $items = $story->items
+                ->map(fn ($item) => [
+                    'type' => $item->type === 'video' ? 'video' : 'image',
+                    'url' => $item->file_url,
+                    'title' => $item->title,
+                    'description' => $item->description,
+                    'duration' => $item->duration ?: 7000,
+                    'link' => $item->link,
+                ])
+                ->filter(fn ($item) => $item['url'])
+                ->values();
+
+            // استوری‌های قدیمی (تک‌فایلی، پیش از آیتم‌ها)
+            if ($items->isEmpty() && ($legacy = $story->media->firstWhere('collection', 'url'))) {
+                $items = collect([[
+                    'type' => $story->type === 'video' ? 'video' : 'image',
+                    'url' => asset('storage/' . $legacy->file_path),
+                    'title' => null,
+                    'description' => null,
+                    'duration' => $story->duration ?: 7000,
+                    'link' => $story->link,
+                ]]);
+            }
+
             return [
-                'type' => $story->type,
                 'user' => $story->user,
-
-                'avatar' => $avatar
-                    ? asset('storage/' . $avatar->file_path)
-                    : null,
-
-                'url' => $url
-                    ? asset('storage/' . $url->file_path)
-                    : null,
-
-                'duration' => $story->duration,
-                'link' => $story->link,
+                'avatar' => $story->avatar_url,
+                'items' => $items,
             ];
 
-        })->values()
+        })->filter(fn ($story) => $story['items']->isNotEmpty())->values()
     );
 
                 new StoryPlayer('stories-container', stories);

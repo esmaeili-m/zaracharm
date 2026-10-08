@@ -302,6 +302,7 @@ new class extends Component
     public function save(){
         abort_if(!auth()->user()->can($this->selectItem ? 'products.edit' : 'products.create'), 403);
         $data= $this->validate();
+        $isNew = !$this->selectItem;
         $tagIds = $data['tag_ids'] ?? [];
         $categoryIds = $data['category_ids'] ?? [];
         unset($data['featured_image']);
@@ -360,15 +361,20 @@ new class extends Component
         // رفرش دیتا
 
 
+        // کالای جدید => ادامه در مراحل مشخصات فنی، ویژگی‌های قیمت‌ساز، قیمت و موجودی
+        if ($isNew) {
+            session()->flash('product-created', true);
+
+            return $this->redirectRoute('products.manage', $item);
+        }
+
         // ریست فرم
         $this->resetData('close');
         $this->dispatch(
             'alert',
             type: 'success',
             title: 'عملیات موفق',
-            text: $this->selectItem
-                ? $this->info['personal'] . ' با موفقیت ویرایش شد.'
-                : $this->info['personal'] . ' جدید با موفقیت ایجاد شد.',
+            text: $this->info['personal'] . ' با موفقیت ویرایش شد.',
         );
     }
 
@@ -556,20 +562,10 @@ new class extends Component
                                                 <a data-bs-toggle="modal" href="#gallery" wire:click="get_data({{$item->id}})"  class="text-info fs-14 lh-1"><i
                                                         class="ri-gallery-fill"></i></a>
                                             @endcan
-                                            @can('products.create')
-
-                                                <a href="{{route('products.settings',$item->id)}}" class="text-info fs-14 lh-1"><i
-                                                        class="ri-list-settings-fill"></i></a>
-                                            @endcan
-                                            @can('products.create')
-
-                                                    <a href="{{route('products.specifications',$item->id)}}" class="text-info fs-14 lh-1">
-                                                        <i class="ri-file-list-3-line"></i></a>
-                                             @endcan
-                                            @can('products.create')
-
-                                                <a href="{{route('products.prices',$item->id)}}" class="text-warning fs-14 lh-1"><i
-                                                        class="ri-money-dollar-box-line"></i></a>
+                                            @can('products.view')
+                                                <a href="{{ route('products.manage', $item->id) }}" class="btn btn-sm btn-primary-light py-0 px-2" title="مشخصات فنی، ویژگی‌های قیمت‌ساز، قیمت و موجودی">
+                                                    <i class="ri-price-tag-3-line"></i> مشخصات، قیمت و موجودی
+                                                </a>
                                             @endcan
                                             @can('products.delete')
 

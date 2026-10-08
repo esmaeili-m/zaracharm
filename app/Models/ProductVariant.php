@@ -28,7 +28,19 @@ class ProductVariant extends Model
     {
         return [
             'status' => 'boolean',
+            'is_default' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // SKU/بارکد خالی => تولید خودکار مقدار یکتا (هنگام ایجاد یا وقتی کاربر فیلد را خالی کند)
+        static::saving(function (ProductVariant $variant) {
+            $generator = app(\App\Services\Catalog\VariantCodeGenerator::class);
+
+            $variant->sku = filled($variant->sku) ? trim((string) $variant->sku) : $generator->sku($variant->product_id);
+            $variant->barcode = filled($variant->barcode) ? trim((string) $variant->barcode) : $generator->barcode();
+        });
     }
 
 

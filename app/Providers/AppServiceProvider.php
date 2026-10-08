@@ -12,7 +12,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // یک نمونه در هر درخواست تا SKU/بارکدهای تولیدشده در ساخت گروهی تنوع‌ها تکراری نشوند
+        $this->app->scoped(\App\Services\Catalog\VariantCodeGenerator::class);
     }
 
     /**

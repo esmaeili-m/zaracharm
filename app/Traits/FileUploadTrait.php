@@ -19,7 +19,8 @@ trait FileUploadTrait
         $purpose='main',
         $sort=1,
         $name=null,
-        $meta=[]
+        $meta=[],
+        bool $compress = true
     ): ?Media
     {
         Validator::make(
@@ -27,12 +28,31 @@ trait FileUploadTrait
             ['file' => 'required|file|max:512000']
         )->validate();
 
-        $path = $file->store($collection, $disk);
+        // فشرده‌سازی خودکار تصاویر (config/media.php)؛ در صورت عدم امکان، فایل اصلی ذخیره می‌شود
+        $compressed = $compress ? app(\App\Services\Media\ImageCompressor::class)->compress($file) : null;
+
+        if ($compressed) {
+            $path = Storage::disk($disk)->putFileAs(
+                $collection,
+                new \Illuminate\Http\File($compressed['path']),
+                Str::random(40) . '.' . $compressed['extension']
+            );
+            @unlink($compressed['path']);
+
+            $meta = array_merge((array) $meta, [
+                'compressed' => true,
+                'original_size' => $file->getSize(),
+                'width' => $compressed['width'],
+                'height' => $compressed['height'],
+            ]);
+        } else {
+            $path = $file->store($collection, $disk);
+        }
 
         if (!$path) return null;
 
-        $mime = $file->getMimeType();
-        $extension = strtolower($file->getClientOriginalExtension());
+        $mime = $compressed['mime'] ?? $file->getMimeType();
+        $extension = $compressed['extension'] ?? strtolower($file->getClientOriginalExtension());
 
         $type = match (true) {
 
@@ -105,9 +125,9 @@ trait FileUploadTrait
 
         'mime_type' => $mime,
 
-        'extension' => $file->getClientOriginalExtension(),
+        'extension' => $extension,
 
-        'size' => $file->getSize(),
+        'size' => $compressed['size'] ?? $file->getSize(),
 
         'type' => $type,
 

@@ -2,7 +2,8 @@
 
 use Livewire\Component;
 use \App\Models\Story;
-use Illuminate\Validation\Rule;
+use \App\Models\StoryItem;
+use Illuminate\Support\Facades\DB;
 
 new class extends Component
 {
@@ -11,18 +12,18 @@ new class extends Component
     public $info=[];
     public $selectItem;
     public $data;
-    public $title='';
-    public $type;
     public $user;
     public $avatar;
-    public $url;
-    public $duration=7000;
-    public $link;
-    public $featured_image;
-    public $banner_image;
-    public $editorImage;
+    public $status = 1;
     public $search;
     public Story $model;
+
+    // ---- آیتم‌های استوری ----
+    public array $items = [];        // آیتم‌های ذخیره‌شده (قابل ویرایش)
+    public array $newItems = [];     // عنوان/توضیح/نوع آیتم‌های جدید (هم‌اندیس با $newFiles)
+    public array $newFiles = [];     // فایل آیتم‌های جدید؛ جدا نگه داشته می‌شود چون Livewire فایل داخل آرایه تودرتو را بازیابی نمی‌کند
+    public array $removedItems = []; // شناسه آیتم‌هایی که حذف می‌شوند
+    public $pendingFiles = [];       // ورودی چندفایلی
 
     #[\Livewire\Attributes\Layout('layouts.dashboard')]
     public function mount(Story $model)
@@ -36,6 +37,7 @@ new class extends Component
         $this->info['table']['headers']=[
             '#',
             'نام',
+            'آیتم‌ها',
             'وضعیت',
             'عملیات',
         ];
@@ -78,7 +80,10 @@ new class extends Component
     }
     public function loadData()
     {
-        $query = $this->model->where(function ($query) {
+        $query = $this->model->withCount([
+            'items',
+            'items as video_items_count' => fn ($q) => $q->where('type', 'video'),
+        ])->where(function ($query) {
             $query->where('user', 'LIKE', '%' . $this->search . '%');
         });
 
@@ -86,17 +91,30 @@ new class extends Component
     }
     public function get_data($id)
     {
-        $this->selectItem= $this->model->findOrFail($id);
-        $this->title=$this->selectItem->title;
-        $this->type=$this->selectItem->type;
+        $this->resetErrorBag();
+        $this->selectItem= $this->model->with('items.file')->findOrFail($id);
         $this->user=$this->selectItem->user;
-        $this->duration=$this->selectItem->duration;
-        $this->link=$this->selectItem->link;
+        $this->status=(int) $this->selectItem->status;
+        $this->avatar = null;
+        $this->newItems = [];
+        $this->newFiles = [];
+        $this->removedItems = [];
+        $this->pendingFiles = [];
+        $this->items = $this->selectItem->items->map(fn (StoryItem $item) => [
+            'id' => $item->id,
+            'type' => $item->type,
+            'title' => $item->title,
+            'description' => $item->description,
+            'duration' => $item->duration,
+            'link' => $item->link,
+            'url' => $item->file_url,
+        ])->all();
     }
     public function resetData($action= 'create')
     {
         if ($action == 'create'){
             $this->resetExcept('model','info','data');
+            $this->resetErrorBag();
         }else{
             $this->resetExcept(['selectItem','model','info','data']);
             $this->dispatch('close-modal');
@@ -104,15 +122,93 @@ new class extends Component
         $this->dispatch('editor-update');
 
     }
+
+    /**
+     * فایل‌های انتخاب‌شده به فهرست آیتم‌های جدید اضافه می‌شوند (نوع از روی فایل تشخیص داده می‌شود)
+     */
+    public function updatedPendingFiles(): void
+    {
+        $this->validate([
+            'pendingFiles' => ['array', 'max:20'],
+            'pendingFiles.*' => ['file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm,mov', 'max:40960'],
+        ], [
+            'pendingFiles.max' => 'در هر بار حداکثر ۲۰ فایل قابل انتخاب است.',
+            'pendingFiles.*.mimes' => 'فقط تصویر (jpg, png, webp, gif) یا ویدیو (mp4, webm, mov) مجاز است.',
+            'pendingFiles.*.max' => 'حجم هر فایل حداکثر ۴۰ مگابایت است.',
+        ]);
+
+        foreach ((array) $this->pendingFiles as $file) {
+            $this->newFiles[] = $file;
+            $this->newItems[] = [
+                'type' => str_starts_with((string) $file->getMimeType(), 'video') ? 'video' : 'image',
+                'title' => null,
+                'description' => null,
+                'duration' => 7000,
+                'link' => null,
+            ];
+        }
+
+        $this->pendingFiles = [];
+    }
+
+    public function removeItem(int $index): void
+    {
+        if (isset($this->items[$index])) {
+            $this->removedItems[] = $this->items[$index]['id'];
+            unset($this->items[$index]);
+            $this->items = array_values($this->items);
+        }
+    }
+
+    /**
+     * فایل آیتم جدید؛ اگر Livewire آن را به‌صورت رشته (livewire-file:...) برگرداند، دوباره به فایل تبدیل می‌شود
+     */
+    public function newFileAt(int $index): ?\Livewire\Features\SupportFileUploads\TemporaryUploadedFile
+    {
+        $file = $this->newFiles[$index] ?? null;
+
+        if (is_string($file) && \Livewire\Features\SupportFileUploads\TemporaryUploadedFile::canUnserialize($file)) {
+            $file = \Livewire\Features\SupportFileUploads\TemporaryUploadedFile::unserializeFromLivewireRequest($file);
+        }
+
+        return $file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile && $file->exists() ? $file : null;
+    }
+
+    public function removeNewItem(int $index): void
+    {
+        unset($this->newItems[$index], $this->newFiles[$index]);
+        $this->newItems = array_values($this->newItems);
+        $this->newFiles = array_values($this->newFiles);
+    }
+
+    public function moveItem(string $list, int $index, string $direction): void
+    {
+        if (!in_array($list, ['items', 'newItems'], true)) {
+            return;
+        }
+
+        $swap = $direction === 'up' ? $index - 1 : $index + 1;
+
+        if (isset($this->{$list}[$index], $this->{$list}[$swap])) {
+            [$this->{$list}[$index], $this->{$list}[$swap]] = [$this->{$list}[$swap], $this->{$list}[$index]];
+
+            // فایل‌ها هم‌اندیس با newItems جابه‌جا می‌شوند
+            if ($list === 'newItems' && isset($this->newFiles[$index], $this->newFiles[$swap])) {
+                [$this->newFiles[$index], $this->newFiles[$swap]] = [$this->newFiles[$swap], $this->newFiles[$index]];
+            }
+        }
+    }
+
     protected function rules(): array
     {
-        return [
-            'type' => [
-                'required',
-                'string',
-                'in:image,video',
-            ],
+        $itemRules = fn (string $prefix) => [
+            "{$prefix}.*.title" => ['nullable', 'string', 'max:150'],
+            "{$prefix}.*.description" => ['nullable', 'string', 'max:1000'],
+            "{$prefix}.*.duration" => ['required', 'integer', 'min:1000', 'max:60000'],
+            "{$prefix}.*.link" => ['nullable', 'url', 'max:500'],
+        ];
 
+        return [
             'user' => [
                 'required',
                 'string',
@@ -123,94 +219,110 @@ new class extends Component
                 $this->selectItem ? 'nullable' : 'required',
                 'image',
                 'mimes:jpg,jpeg,png,webp',
-                'max:2048',
+                'max:5120',
             ],
 
-            'url' => [
-                $this->selectItem ? 'nullable' : 'required',
-                'file',
-                'mimes:jpg,jpeg,png,webp,mp4,webm,mov',
-                'max:20480',
-            ],
+            'status' => ['required', 'boolean'],
 
-            'duration' => [
-                'required',
-                'integer',
-                'min:1000',
-                'max:60000',
-            ],
-
-            'link' => [
-                'nullable',
-                'url',
-                'max:500',
-            ],
-        ];
+            'newFiles.*' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm,mov', 'max:40960'],
+        ] + $itemRules('items') + $itemRules('newItems');
     }
 
     protected function messages(): array
     {
         return [
-            'type.required' => 'انتخاب نوع استوری الزامی است.',
-            'type.in' => 'نوع استوری انتخاب شده معتبر نیست.',
-
             'user.required' => 'وارد کردن نام استوری الزامی است.',
             'user.max' => 'نام استوری نمی‌تواند بیشتر از ۱۰۰ کاراکتر باشد.',
 
-            'avatar.max' => 'آدرس تصویر آواتار نمی‌تواند بیشتر از ۵۰۰ کاراکتر باشد.',
+            'avatar.required' => 'تصویر آواتار الزامی است.',
+            'avatar.image' => 'آواتار باید تصویر باشد.',
+            'avatar.max' => 'حجم آواتار حداکثر ۵ مگابایت است.',
 
-            'url.required' => 'وارد کردن آدرس استوری الزامی است.',
-            'url.max' => 'آدرس استوری نمی‌تواند بیشتر از ۵۰۰ کاراکتر باشد.',
+            'newFiles.*.required' => 'فایل آیتم الزامی است.',
+            'newFiles.*.mimes' => 'فقط تصویر یا ویدیو مجاز است.',
+            'newFiles.*.max' => 'حجم هر فایل حداکثر ۴۰ مگابایت است.',
 
-            'duration.required' => 'وارد کردن مدت زمان نمایش الزامی است.',
-            'duration.integer' => 'مدت زمان نمایش باید عدد باشد.',
-            'duration.min' => 'مدت زمان نمایش حداقل باید ۱ ثانیه باشد.',
-            'duration.max' => 'مدت زمان نمایش حداکثر ۶۰ ثانیه است.',
-
-            'link.url' => 'لینک وارد شده معتبر نیست.',
-            'link.max' => 'لینک نمی‌تواند بیشتر از ۵۰۰ کاراکتر باشد.',
+            '*.*.title.max' => 'عنوان حداکثر ۱۵۰ کاراکتر است.',
+            '*.*.description.max' => 'توضیحات حداکثر ۱۰۰۰ کاراکتر است.',
+            '*.*.duration.required' => 'مدت نمایش الزامی است.',
+            '*.*.duration.min' => 'مدت نمایش حداقل ۱ ثانیه است.',
+            '*.*.duration.max' => 'مدت نمایش حداکثر ۶۰ ثانیه است.',
+            '*.*.link.url' => 'لینک وارد شده معتبر نیست.',
+            '*.*.link.max' => 'لینک نمی‌تواند بیشتر از ۵۰۰ کاراکتر باشد.',
         ];
     }
 
     public function save(){
         abort_if(!auth()->user()->can($this->selectItem ? 'stories.edit' : 'stories.create'), 403);
-        $data= $this->validate();
-        unset($data['avatar']);
-        unset($data['url']);
-        $item = $this->selectItem
-            ? tap($this->selectItem)->update($data)
-            : $this->model->create($data);
-        if ($this->avatar) {
 
-            $item->media()
-                ->where('collection', 'avatar')
-                ->delete();
+        // فایل‌های برگشتی به‌صورت رشته دوباره به فایل تبدیل می‌شوند (فایل منقضی‌شده => خطای «الزامی»)
+        $this->newFiles = array_map(fn ($index) => $this->newFileAt($index), array_keys($this->newFiles));
 
-            $this->upload(
-                $this->avatar,
-                $item,
-                'avatar'
-            );
+        $this->validate();
+
+        if (count($this->items) + count($this->newItems) === 0) {
+            $this->addError('newItems', 'حداقل یک تصویر یا ویدیو برای استوری اضافه کنید.');
+            return;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | تصویر بنر
-        |--------------------------------------------------------------------------
-        */
+        $clean = fn ($value) => filled($value) ? trim((string) $value) : null;
+        $editing = (bool) $this->selectItem;
 
-        if ($this->url) {
+        DB::transaction(function () use ($clean) {
+            $data = [
+                'user' => trim($this->user),
+                'status' => (bool) $this->status,
+            ];
 
-            $item->media()
-                ->where('collection', 'url')
-                ->delete();
+            $item = $this->selectItem
+                ? tap($this->selectItem)->update($data)
+                : $this->model->create($data + ['sort' => (int) $this->model->max('sort') + 1]);
 
-            $this->upload(
-                $this->url,
-                $item,
-                'url'
-            );
-        }
+            if ($this->avatar) {
+                $item->media()->where('collection', 'avatar')->get()->each(fn ($m) => $this->deleteMedia($m));
+                $this->upload($this->avatar, $item, 'avatar');
+            }
+
+            // حذف آیتم‌ها و فایل‌هایشان
+            StoryItem::where('story_id', $item->id)->whereIn('id', $this->removedItems)->get()->each(function (StoryItem $storyItem) {
+                $storyItem->media->each(fn ($m) => $this->deleteMedia($m));
+                $storyItem->delete();
+            });
+
+            $sort = 1;
+
+            foreach ($this->items as $row) {
+                StoryItem::where('story_id', $item->id)->whereKey($row['id'])->update([
+                    'title' => $clean($row['title'] ?? null),
+                    'description' => $clean($row['description'] ?? null),
+                    'duration' => (int) $row['duration'],
+                    'link' => $clean($row['link'] ?? null),
+                    'sort' => $sort++,
+                ]);
+            }
+
+            foreach ($this->newItems as $index => $row) {
+                $file = $this->newFileAt($index);
+
+                if (!$file) {
+                    continue;
+                }
+
+                $storyItem = StoryItem::create([
+                    'story_id' => $item->id,
+                    'type' => $row['type'],
+                    'title' => $clean($row['title'] ?? null),
+                    'description' => $clean($row['description'] ?? null),
+                    'duration' => (int) $row['duration'],
+                    'link' => $clean($row['link'] ?? null),
+                    'sort' => $sort++,
+                ]);
+
+                // تصاویر به‌صورت خودکار فشرده می‌شوند (FileUploadTrait)
+                $this->upload($file, $storyItem, 'story_media');
+            }
+        });
+
         // رفرش دیتا
         $this->loadData();
 
@@ -220,7 +332,7 @@ new class extends Component
             'alert',
             type: 'success',
             title: 'عملیات موفق',
-            text: $this->selectItem
+            text: $editing
                 ? $this->info['personal'] . ' با موفقیت ویرایش شد.'
                 : $this->info['personal'] . ' جدید با موفقیت ایجاد شد.',
         );
@@ -297,14 +409,17 @@ new class extends Component
                             </tr>
                             </thead>
                             <tbody  id="simple-list">
-                            @php($counter=1)
                             @forelse($data ?? [] as $item)
                                 <tr data-id="{{ $item->id }}" wire:key="{{$item->id}}">
                                     <th scope="row">
-                                        {{$counter}}
+                                        {{ $loop->iteration }}
                                     </th>
                                     <td>
                                         {{$item->user}}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ $item->items_count - $item->video_items_count }} تصویر</span>
+                                        <span class="badge bg-light text-dark">{{ $item->video_items_count }} ویدیو</span>
                                     </td>
                                     <td>
                                         @can('stories.edit')
@@ -320,7 +435,7 @@ new class extends Component
                                     <td>
 
                                         <div class="hstack gap-2 flex-wrap">
-                                            @can('stories.create')
+                                            @can('stories.edit')
 
                                                 <a data-bs-toggle="modal" href="#create" wire:click="get_data({{$item->id}})"  class="text-info fs-14 lh-1"><i
                                                         class="ri-edit-line"></i></a>
@@ -333,7 +448,6 @@ new class extends Component
                                         </div>
                                     </td>
                                 </tr>
-                                @php($counter++)
                             @empty
                                 <tr>
                                     <td colspan="{{ count($info['table']['headers'] ?? []) }}" class="text-center py-5 text-muted">
@@ -356,251 +470,145 @@ new class extends Component
         <div class="modal-dialog modal-dialog-centered text-center modal-xl modal-dialog-scrollable" role="document">
             <div class="modal-content modal-content-demo">
                 <div class="modal-header">
-                    <h6 class="modal-title">{{$info['create']}}</h6><button aria-label="Close" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h6 class="modal-title">{{ $selectItem ? 'ویرایش استوری' : $info['create'] }}</h6><button aria-label="Close" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-start">
                     <form wire:submit.prevent="save" id="save">
 
-                        <div class="row">
+                        <div class="row g-3">
 
-                            {{-- نوع استوری --}}
-                            <div class="col-xl-4">
-
-                                <label class="form-label">
-                                    نوع استوری
-                                </label>
-
-                                <select
-                                    wire:model.lazy="type"
-                                    class="form-select @error('type') is-invalid @enderror">
-
-                                    <option value="">
-                                        انتخاب کنید
-                                    </option>
-
-                                    <option value="image">
-                                        تصویر
-                                    </option>
-
-                                    <option value="video">
-                                        ویدیو
-                                    </option>
-
-                                </select>
-
-                                @error('type')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
-                                @enderror
-
+                            {{-- نام استوری (زیر دایره آواتار) --}}
+                            <div class="col-xl-5">
+                                <label class="form-label">نام استوری</label>
+                                <input wire:model.lazy="user" type="text"
+                                       class="form-control @error('user') is-invalid @enderror"
+                                       placeholder="نامی که زیر دایره استوری نمایش داده می‌شود">
+                                @error('user') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
-
-
-                            {{-- عنوان / نام استوری --}}
-                            <div class="col-xl-4">
-
-                                <label class="form-label">
-                                    عنوان استوری
-                                </label>
-
-                                <input
-                                    wire:model.lazy="user"
-                                    type="text"
-                                    class="form-control @error('user') is-invalid @enderror"
-                                    placeholder="لطفا عنوان استوری را وارد کنید">
-
-                                @error('user')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
-                                @enderror
-
-                            </div>
-
-
-                            {{-- مدت نمایش --}}
-                            <div class="col-xl-4">
-
-                                <label class="form-label">
-                                    مدت نمایش
-                                </label>
-
-                                <select
-                                    wire:model.lazy="duration"
-                                    class="form-select @error('duration') is-invalid @enderror">
-
-                                    <option value="3000">
-                                        ۳ ثانیه
-                                    </option>
-
-                                    <option value="5000">
-                                        ۵ ثانیه
-                                    </option>
-
-                                    <option value="7000">
-                                        ۷ ثانیه
-                                    </option>
-
-                                    <option value="10000">
-                                        ۱۰ ثانیه
-                                    </option>
-
-                                    <option value="15000">
-                                        ۱۵ ثانیه
-                                    </option>
-
-                                </select>
-
-                                @error('duration')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
-                                @enderror
-
-                            </div>
-
 
                             {{-- تصویر آواتار --}}
-                            <div class="col-xl-6 mt-3">
-
-                                <label class="form-label">
-                                    تصویر آواتار
-                                </label>
-
-                                <div
-                                    x-data="{ progress: 0 }"
-                                    x-on:livewire-upload-start="progress = 0"
-                                    x-on:livewire-upload-finish="progress = 100"
-                                    x-on:livewire-upload-error="progress = 0"
-                                    x-on:livewire-upload-progress="progress = $event.detail.progress">
-
-                                    <input
-                                        wire:model.lazy="avatar"
-                                        class="form-control mb-1 @error('avatar') is-invalid @enderror"
-                                        type="file">
-
-                                    <div
-                                        class="progress mt-2"
-                                        x-show="progress > 0">
-
-                                        <div
-                                            class="progress-bar"
-                                            role="progressbar"
-                                            :style="'width: ' + progress + '%'">
-
-                                            <span x-text="progress + '%'"></span>
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                @error('avatar')
-                                <div class="invalid-feedback d-block">
-                                    {{ $message }}
-                                </div>
-                                @enderror
-
+                            <div class="col-xl-5">
+                                <label class="form-label">تصویر آواتار @if($selectItem)<span class="text-muted small">(برای تغییر انتخاب کنید)</span>@endif</label>
+                                <input wire:model="avatar" class="form-control @error('avatar') is-invalid @enderror" type="file" accept="image/*">
+                                <div wire:loading wire:target="avatar" class="small text-muted mt-1">در حال بارگذاری...</div>
+                                @error('avatar') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                             </div>
-
-
-                            {{-- تصویر / ویدیوی استوری --}}
-                            <div class="col-xl-6 mt-3">
-
-                                <label class="form-label">
-                                    فایل استوری
-                                </label>
-
-                                <div
-                                    x-data="{ progress: 0 }"
-                                    x-on:livewire-upload-start="progress = 0"
-                                    x-on:livewire-upload-finish="progress = 100"
-                                    x-on:livewire-upload-error="progress = 0"
-                                    x-on:livewire-upload-progress="progress = $event.detail.progress">
-
-                                    <input
-                                        wire:model.lazy="url"
-                                        class="form-control mb-1 @error('url') is-invalid @enderror"
-                                        type="file">
-
-                                    <div
-                                        class="progress mt-2"
-                                        x-show="progress > 0">
-
-                                        <div
-                                            class="progress-bar"
-                                            role="progressbar"
-                                            :style="'width: ' + progress + '%'">
-
-                                            <span x-text="progress + '%'"></span>
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                @error('url')
-                                <div class="invalid-feedback d-block">
-                                    {{ $message }}
-                                </div>
-                                @enderror
-
-                            </div>
-
-
-                            {{-- لینک --}}
-                            <div class="col-xl-8 mt-3">
-
-                                <label class="form-label">
-                                    لینک
-                                </label>
-
-                                <input
-                                    wire:model.lazy="link"
-                                    type="url"
-                                    class="form-control @error('link') is-invalid @enderror"
-                                    placeholder="https://example.com">
-
-                                @error('link')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
-                                @enderror
-
-                            </div>
-
 
                             {{-- وضعیت --}}
-                            <div class="col-xl-4 mt-3">
-
-                                <label class="form-label">
-                                    وضعیت
-                                </label>
-
-                                <select
-                                    wire:model.lazy="status"
-                                    class="form-select @error('status') is-invalid @enderror">
-
-                                    <option value="1">
-                                        فعال
-                                    </option>
-
-                                    <option value="0">
-                                        غیرفعال
-                                    </option>
-
+                            <div class="col-xl-2">
+                                <label class="form-label">وضعیت</label>
+                                <select wire:model="status" class="form-select @error('status') is-invalid @enderror">
+                                    <option value="1">فعال</option>
+                                    <option value="0">غیرفعال</option>
                                 </select>
-
-                                @error('status')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
-                                @enderror
-
                             </div>
+
+                            {{-- افزودن تصویر / ویدیو --}}
+                            <div class="col-12">
+                                <div class="border rounded p-3 bg-light">
+                                    <label class="form-label fw-semibold mb-1">افزودن تصویر یا ویدیو به استوری</label>
+                                    <div class="small text-muted mb-2">می‌توانید چند فایل را با هم انتخاب کنید. تصاویر هنگام ذخیره به‌صورت خودکار فشرده می‌شوند. حداکثر حجم هر فایل ۴۰ مگابایت.</div>
+                                    <div
+                                        x-data="{ progress: 0 }"
+                                        x-on:livewire-upload-start="progress = 0"
+                                        x-on:livewire-upload-finish="progress = 0"
+                                        x-on:livewire-upload-error="progress = 0"
+                                        x-on:livewire-upload-progress="progress = $event.detail.progress">
+                                        <input wire:model="pendingFiles" type="file" multiple
+                                               accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                                               class="form-control @error('pendingFiles') is-invalid @enderror @error('pendingFiles.*') is-invalid @enderror">
+                                        <div class="progress mt-2" x-show="progress > 0">
+                                            <div class="progress-bar" role="progressbar" :style="'width: ' + progress + '%'"><span x-text="progress + '%'"></span></div>
+                                        </div>
+                                    </div>
+                                    @error('pendingFiles') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                                    @error('pendingFiles.*') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                                    @error('newItems') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                </div>
+                            </div>
+
+                            {{-- آیتم‌ها --}}
+                            @php
+                                $rows = collect($items)->map(fn ($r, $i) => ['list' => 'items', 'index' => $i, 'row' => $r])
+                                    ->concat(collect($newItems)->map(fn ($r, $i) => ['list' => 'newItems', 'index' => $i, 'row' => $r]));
+                            @endphp
+                            @foreach($rows as $entry)
+                                @php
+                                    $list = $entry['list'];
+                                    $i = $entry['index'];
+                                    $row = $entry['row'];
+                                    $isNew = $list === 'newItems';
+                                    $file = $isNew ? $this->newFileAt($i) : null;
+                                    $hasFile = $file !== null;
+                                    $preview = $isNew
+                                        ? ($hasFile && $file->isPreviewable() ? $file->temporaryUrl() : null)
+                                        : $row['url'];
+                                    $count = $isNew ? count($newItems) : count($items);
+                                @endphp
+                                <div class="col-12" wire:key="story-{{ $list }}-{{ $isNew ? 'n' . $i . '-' . ($hasFile ? $file->getFilename() : '') : $row['id'] }}">
+                                    <div class="border rounded p-3 d-flex gap-3 flex-wrap flex-md-nowrap">
+                                        <div class="flex-shrink-0 text-center" style="width: 120px">
+                                            <div class="rounded overflow-hidden bg-dark d-flex align-items-center justify-content-center" style="width: 120px; height: 200px">
+                                                @if($preview && $row['type'] === 'video')
+                                                    <video src="{{ $preview }}" class="w-100 h-100" style="object-fit: cover" muted playsinline preload="metadata"></video>
+                                                @elseif($preview)
+                                                    <img src="{{ $preview }}" class="w-100 h-100" style="object-fit: cover" alt="">
+                                                @else
+                                                    <i class="ri-{{ $row['type'] === 'video' ? 'film' : 'image' }}-line text-white fs-1"></i>
+                                                @endif
+                                            </div>
+                                            <span class="badge bg-{{ $row['type'] === 'video' ? 'danger' : 'primary' }}-transparent mt-2">{{ $row['type'] === 'video' ? 'ویدیو' : 'تصویر' }}</span>
+                                            @if($isNew)<span class="badge bg-success-transparent mt-2">جدید</span>@endif
+                                        </div>
+
+                                        <div class="flex-grow-1">
+                                            <div class="row g-2">
+                                                <div class="col-md-6">
+                                                    <label class="form-label small mb-1">عنوان <span class="text-muted">(اختیاری)</span></label>
+                                                    <input type="text" wire:model="{{ $list }}.{{ $i }}.title" class="form-control form-control-sm @error($list . '.' . $i . '.title') is-invalid @enderror">
+                                                    @error($list . '.' . $i . '.title') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label small mb-1">لینک <span class="text-muted">(اختیاری)</span></label>
+                                                    <input type="url" dir="ltr" wire:model="{{ $list }}.{{ $i }}.link" class="form-control form-control-sm @error($list . '.' . $i . '.link') is-invalid @enderror" placeholder="https://">
+                                                    @error($list . '.' . $i . '.link') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                                </div>
+                                                <div class="col-md-9">
+                                                    <label class="form-label small mb-1">توضیحات <span class="text-muted">(اختیاری)</span></label>
+                                                    <textarea rows="2" wire:model="{{ $list }}.{{ $i }}.description" class="form-control form-control-sm @error($list . '.' . $i . '.description') is-invalid @enderror"></textarea>
+                                                    @error($list . '.' . $i . '.description') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small mb-1">مدت نمایش</label>
+                                                    @if($row['type'] === 'video')
+                                                        <div class="form-control form-control-sm bg-light text-muted">طول ویدیو</div>
+                                                    @else
+                                                        <select wire:model="{{ $list }}.{{ $i }}.duration" class="form-select form-select-sm">
+                                                            @foreach([3000 => '۳ ثانیه', 5000 => '۵ ثانیه', 7000 => '۷ ثانیه', 10000 => '۱۰ ثانیه', 15000 => '۱۵ ثانیه'] as $ms => $label)
+                                                                <option value="{{ $ms }}">{{ $label }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            @if($isNew)
+                                                @error('newFiles.' . $i) <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                            @endif
+                                        </div>
+
+                                        <div class="d-flex flex-md-column gap-1 flex-shrink-0">
+                                            <button type="button" class="btn btn-sm btn-light" wire:click="moveItem('{{ $list }}', {{ $i }}, 'up')" @disabled($i === 0) title="بالا"><i class="ri-arrow-up-line"></i></button>
+                                            <button type="button" class="btn btn-sm btn-light" wire:click="moveItem('{{ $list }}', {{ $i }}, 'down')" @disabled($i === $count - 1) title="پایین"><i class="ri-arrow-down-line"></i></button>
+                                            <button type="button" class="btn btn-sm btn-danger-light"
+                                                    wire:click="{{ $isNew ? 'removeNewItem' : 'removeItem' }}({{ $i }})" title="حذف"><i class="ri-delete-bin-5-line"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+
+                            @if($rows->isEmpty())
+                                <div class="col-12 text-center text-muted small py-3">هنوز تصویر یا ویدیویی اضافه نشده است.</div>
+                            @endif
 
                         </div>
 
@@ -611,7 +619,7 @@ new class extends Component
                         <button class="btn btn-info"
                                 form="save"
                                 wire:loading.attr="disabled"
-                                wire:target="featured_image,banner_image,save"
+                                wire:target="avatar,pendingFiles,save"
                                 type="submit">
                             ذخیره تغییرات
                         </button>
@@ -633,15 +641,14 @@ new class extends Component
         <div class="modal-dialog modal-dialog-centered text-center " role="document">
             <div class="modal-content modal-content-demo">
                 <div class="modal-header">
-                    <h6 class="modal-title">{{$info['delete'] .' ' .$selectItem?->title}}</h6><button aria-label="Close" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h6 class="modal-title">{{$info['delete'] .' ' .$selectItem?->user}}</h6><button aria-label="Close" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-start">
-
                     <div class="alert alert-danger d-flex align-items-center" role="alert">
-                        <svg class="flex-shrink-0 me-2 svg-danger" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="1.5rem" viewBox="0 0 24 24" width="1.5><0rem" fill="1.5rem" fill="1.5rem"00" height="24" width="24"/></g><g><g><g><path d="M15.73,3H8.27L3,8.27v7.46L8.27,21h7.46L21,15.73V8.27L15.73,3z M19,14.9L14.9,19H9.1L5,14.9V9.1L9.1,5h5.8L19,9.1V14.9z"/><rect height="6" width="2" x="11" y="7"/><rect height="2" width="2"><g="11">
-                                        <div>
-                                            از حذف کردن این ایتم مطمین هستید ؟!
-                                        </div>
+                        <i class="ri-error-warning-line fs-4 me-2"></i>
+                        <div>
+                            از حذف کردن این ایتم مطمین هستید ؟!
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -231,19 +231,16 @@ new class extends Component
         //     'reference' => Str::uuid(),
         // ]);
 
-
-        $this->closeWithdrawModal();
-
-        // notification / toast
+        // ثبت درخواست تسویه هنوز پیاده نشده (جدول/مدل Withdrawal وجود ندارد)؛
+        // به‌جای بستن بی‌صدای مودال (که کاربر فکر می‌کرد درخواست ثبت شده) پیام روشن نمایش داده می‌شود.
+        $this->addError('withdrawAmount', 'ثبت درخواست تسویه از پنل هنوز فعال نشده است؛ لطفاً از طریق تیکت پشتیبانی درخواست دهید.');
     }
 
 
     private function getWithdrawableBalance(): int
     {
-        // این متد باید موجودی واقعی و قابل برداشت را
-        // از سیستم مالی شما محاسبه کند.
-
-        return (int) auth()->user()->wallet_balance;
+        // ستون wallet_balance در users وجود ندارد؛ موجودی از جدول wallets خوانده می‌شود
+        return (int) (auth()->user()->wallet?->balance ?? 0);
     }
     public function openWalletModal(): void
     {
@@ -300,6 +297,10 @@ new class extends Component
         // 3. مبلغ را از همین مقدار validate‌شده بگیر
         // 4. یک شناسه یکتا برای تراکنش بساز
         // 5. کاربر را به درگاه پرداخت بفرست
+
+        // شارژ آنلاین کیف پول هنوز به درگاه متصل نشده (سیستم پرداخت فعلاً فقط برای سفارش است)؛
+        // به‌جای اینکه دکمه بدون هیچ واکنشی بماند، پیام روشن نمایش داده می‌شود.
+        $this->addError('walletAmount', 'افزایش موجودی آنلاین هنوز فعال نشده است.');
     }
 };
 ?>
@@ -1518,7 +1519,7 @@ new class extends Component
 
                             <span class="text-sm font-black
                                      text-gray-900 dark:text-white">
-                            {{ number_format(auth()->user()->wallet_balance ?? 0) }}
+                            {{ number_format(auth()->user()->wallet?->balance ?? 0) }}
                             <span class="text-[9px] text-gray-400">
                                 تومان
                             </span>
