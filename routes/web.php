@@ -14,6 +14,7 @@ Route::livewire('/login', 'pages::auth.login')->name('login');
 Route::livewire('/user/dashboard', 'pages::main.user.dashboard')->name('user.dashboard')->middleware(['auth']);
 Route::livewire('/product', 'pages::main.user.dashboard')->name('product.show');
 Route::livewire('/products/{product}', 'pages::main.products.show')->name('products.show');
+Route::livewire('/compare', 'pages::main.compare.index')->name('compare.index');
 Route::livewire('/cartItem', 'pages::main.cart.cart-item')->name('cartItem')->middleware(['auth']);
 Route::livewire('/checkout/{code}', 'pages::main.cart.checkout')->name('checkout')->middleware(['auth']);
 // بازگشت از درگاه بانکی (بدون auth: ممکن است نشست کاربر در بازگشت از درگاه از بین رفته باشد؛ اعتبارسنجی با uuid + Authority)
@@ -154,9 +155,13 @@ Route::prefix('dashboard') ->middleware([
 
     Route::livewire('/campaign', 'pages::dashboard.campaign.index')->name('campaign.index');
     Route::livewire('/campaign/trash', 'pages::dashboard.campaign.trash')->name('campaign.trash');
-    Route::livewire('/campaign/{campaign}/targets', 'pages::dashboard.campaign.targets')->name('campaign.targets');
-    Route::livewire('/campaign/{campaign}/conditions', 'pages::dashboard.campaign.conditions')->name('campaign.conditions');
-    Route::livewire('/campaign/{campaign}/rewards', 'pages::dashboard.campaign.rewards')->name('campaign.rewards');
+    // ویزارد کمپین (اطلاعات ← محصولات ← تخفیف ← محدودیت‌ها ← بررسی نهایی)
+    // مسیرهای قدیمی همان ویزارد را در مرحله متناظر باز می‌کنند (نام routeها حفظ شده است)
+    Route::livewire('/campaign/create', 'pages::dashboard.campaign.wizard')->name('campaign.create');
+    Route::livewire('/campaign/{campaign}/edit', 'pages::dashboard.campaign.wizard')->name('campaign.edit');
+    Route::livewire('/campaign/{campaign}/targets', 'pages::dashboard.campaign.wizard')->name('campaign.targets');
+    Route::livewire('/campaign/{campaign}/conditions', 'pages::dashboard.campaign.wizard')->name('campaign.conditions');
+    Route::livewire('/campaign/{campaign}/rewards', 'pages::dashboard.campaign.wizard')->name('campaign.rewards');
 
     Route::livewire('/sliders', 'pages::dashboard.sliders.index')->name('sliders.index');
     Route::livewire('/sliders/trash', 'pages::dashboard.sliders.trash')->name('sliders.trash');
@@ -185,6 +190,8 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/courses/{course}/lessons/trash', 'pages::dashboard.courses.lessons.trash')->name('courses.lessons.trash');
 
     Route::livewire('/categories', 'pages::dashboard.categories.index')->name('categories.index');
+    // ویژگی‌ها و فیلترهای دسته (منبع فیلترهای صفحه دسته‌بندی)
+    Route::livewire('/categories/{category}/attributes', 'pages::dashboard.categories.attributes')->name('categories.attributes');
     Route::livewire('/subcategory/{id}', 'pages::dashboard.categories.subcategory')->name('categories.subcategory');
     Route::livewire('/categories/trash', 'pages::dashboard.categories.trash')->name('categories.trash');
 

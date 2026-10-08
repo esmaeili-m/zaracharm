@@ -212,6 +212,13 @@ class PaymentService
         $order->invoice?->update(['status' => 'paid', 'paid_at' => now()]);
 
         app(InvoiceStockService::class)->syncOrder($order);
+
+        // ثبت استفاده از کمپین‌ها (برای سقف استفاده و گزارش عملکرد کمپین)؛ خطای آن نباید پرداخت را متوقف کند
+        try {
+            app(\App\Services\Campaigns\CampaignUsageRecorder::class)->recordForOrder($order);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function log(Payment $payment, string $event, ?string $from, ?string $to, ?string $message = null, array $data = []): void

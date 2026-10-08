@@ -35,6 +35,26 @@ class Category extends Model
     {
         return $this->hasMany(Faq::class);
     }
+
+    /** ویژگی‌های تعریف‌شده برای این دسته (منبع فیلترها) */
+    public function attributeDefinitions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CategoryAttribute::class)->orderBy('sort')->orderBy('id');
+    }
+
+    /** شناسه والدها از نزدیک به دور (بدون خود دسته) */
+    public function ancestorIds(): array
+    {
+        $ids = [];
+        $parentId = $this->parent_id;
+
+        while ($parentId && !in_array($parentId, $ids, true) && count($ids) < 20) {
+            $ids[] = (int) $parentId;
+            $parentId = Category::whereKey($parentId)->value('parent_id');
+        }
+
+        return $ids;
+    }
     public function getAllDescendantIds()
     {
         $ids = collect();

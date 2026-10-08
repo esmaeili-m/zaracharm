@@ -538,6 +538,16 @@ new class extends Component
 
                     $unitPrice = (int) $cartItem->price;
                     $quantity  = (int) $cartItem->quantity;
+
+                    // کمپینی که قیمت این قلم از آن آمده (برای ثبت استفاده و سقف استفاده پس از پرداخت)
+                    if ($variant) {
+                        $pricing = rescue(fn () => $variant->priceData(), [], false) ?: [];
+
+                        if (!empty($pricing['campaign_id']) && (int) ($pricing['after_discount'] ?? -1) === $unitPrice) {
+                            $attributes['campaign_id'] = (int) $pricing['campaign_id'];
+                            $attributes['campaign_discount'] = (int) ($pricing['discount'] ?? 0);
+                        }
+                    }
                     $lineTotal = $unitPrice * $quantity;
                     $subtotal += $lineTotal;
 

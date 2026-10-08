@@ -69,7 +69,7 @@ new class extends Component
                     .addTo(map)
                     .bindPopup(`
                     <div class="text-center p-2">
-                        <strong>زاراچرم</strong>
+                        <strong>{{ \App\Models\Setting::option('site_name', config('app.name')) }}</strong>
                         <br>
                         <span>فروشگاه کیف و کفش</span>
                     </div>

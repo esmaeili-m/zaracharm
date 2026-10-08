@@ -3,507 +3,260 @@
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Brand;
+use App\Models\OptionValue;
 use App\Models\ProductVariant;
+use App\Services\Catalog\CategoryFilterService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Carbon\Carbon;
 
+/*
+|--------------------------------------------------------------------
+| صفحه دسته‌بندی با فیلترهای پویا
+|--------------------------------------------------------------------
+| فیلترها از «ویژگی‌های دسته‌بندی» در پنل (category_attributes) ساخته می‌شوند و به زیر‌دسته‌ها
+| ارث می‌رسند؛ بدون تعریف، از مشخصات «قابل فیلتر» و ویژگی‌های قیمت‌ساز محصولات همین دسته.
+| همه فیلترها، تعداد هر گزینه، مرتب‌سازی و صفحه‌بندی روی ایندکس محصولات دسته
+| (CategoryFilterService) و قیمت نهایی موتور قیمت انجام می‌شود؛ پس تعداد کل و صفحه‌ها دقیق‌اند.
+| وضعیت فیلترها در آدرس صفحه می‌ماند (رفرش، صفحه‌بندی و اشتراک لینک).
+*/
 new class extends Component
 {
     use WithPagination;
 
-    /*
-    |--------------------------------------------------------------------
-    | نکته مهم درباره منطق تخفیف (برای خودتان که بعداً برمی‌گردید سراغ این فایل)
-    |--------------------------------------------------------------------
-    | 1) product_variants.price  = قیمت فعلی فروش واریانت.
-    |    product_variants.compare_price = قیمت قبل از تخفیفِ خودِ محصول (فقط برای خط‌خورده نمایش داده می‌شود).
-    |    یعنی تخفیفِ «خودِ محصول» از قبل توی price اعمال شده و دوباره چیزی از آن کم نمی‌کنیم.
-    |
-    | 2) discounts + discount_targets: یک لایه‌ی تخفیفِ *اضافه* هستند که می‌توانند هدف‌گذاری شوند روی
-    |    محصول خاص / برند / دسته‌بندی، با بازه زمانی و سقف تخفیف. اگر چند تخفیف روی یک محصول match شوند،
-    |    آن‌ها را روی هم جمع نمی‌زنیم؛ فقط تخفیفی که کمترین قیمت نهایی را نتیجه می‌دهد اعمال می‌شود.
-    |
-    | 3) campaigns سطحش سبد خرید است (شرط روی جمع سبد + پاداش کلی)، نه قیمت تک‌محصول؛
-    |    بنابراین در این صفحه (لیست محصولات) اعمال نمی‌شود.
-    |
-    | 4) type روی جدول discounts فرض شده: 1 = درصدی، 2 = مبلغ ثابت (تومان).
-    |    اگر enum واقعی پروژه فرق دارد، فقط همین دو ثابت پایین را عوض کنید.
-    |
-    | 5) [جدید] Price Filter (minPrice/maxPrice) باید همیشه روی همین «Final Price» محاسبه‌شده کار کند،
-    |    نه روی product_variants.price خام. چون finalPrice نتیجه‌ی محاسبه‌ی PHP (نه یک ستون SQL) است،
-    |    تنها فیلترِ *امنِ* قابل انجام در سطح SQL محدودکردن کف قیمت (>= minPrice) روی basePrice است
-    |    (چون finalPrice همیشه <= basePrice، پس finalPrice >= min ⇒ basePrice >= min، بدون false-negative).
-    |    فیلترِ دقیقِ هر دو طرفِ بازه روی final_price، داخل viewProducts() بعد از محاسبه انجام می‌شود؛
-    |    دقیقاً با همان الگویی که پیش‌تر برای onlyInStock/onlyDiscounted استفاده شده بود.
-    |
-    |--------------------------------------------------------------------
-    | چرا render() نداریم
-    |--------------------------------------------------------------------
-    | این کامپوننت به‌جای متد render() از پراپرتی‌های #[Computed] استفاده می‌کند. هر پراپرتی
-    | Computed (مثل paginator و viewProducts) فقط وقتی که در تمپلیت صدا زده می‌شود (به‌صورت
-    | $this->paginator یا $this->viewProducts) اجرا و در همان درخواست کش می‌شود، بدون این‌که
-    | لازم باشد state سنگین (کالکشن محصولات و...) به‌عنوان پراپرتی عمومی بین درخواست‌ها ذخیره و
-    | هیدریت شود. Livewire به‌صورت خودکار، بعد از هر اکشن، تمپلیت را با همین پراپرتی‌های Computed
-    | تازه دوباره رندر می‌کند؛ پس نیازی به render() صریح نیست.
-    */
-    private const DISCOUNT_TYPE_PERCENT = 1;
-    private const DISCOUNT_TYPE_FIXED   = 2;
+    public const PER_PAGE = 12;
+
+    public const SORTS = [
+        'latest' => 'جدیدترین',
+        'sales' => 'پرفروش‌ترین',
+        'cheap' => 'ارزان‌ترین',
+        'expensive' => 'گران‌ترین',
+        'discount' => 'بیشترین تخفیف',
+        'rating' => 'محبوب‌ترین',
+    ];
 
     public Category $category;
     public Collection $childCategories;
-    public Collection $brands;
-
     public array $categoryIds = [];
 
-    // فیلترها و مرتب‌سازی
+    #[Url(except: 'latest')]
     public string $sort = 'latest';
+
+    #[Url(as: 'cat', except: [])]
     public array $selectedCategories = [];
+
+    #[Url(as: 'brand', except: [])]
     public array $selectedBrands = [];
 
-    public int $priceFloor = 0;
-    public int $priceCeil = 0;
+    #[Url(as: 'stock', except: false)]
+    public bool $onlyInStock = false;
+
+    #[Url(as: 'off', except: false)]
+    public bool $onlyDiscounted = false;
+
+    #[Url(as: 'new', except: false)]
+    public bool $onlyNew = false;
+
+    #[Url(as: 'rate', except: null)]
+    public ?int $minRating = null;
+
+    #[Url(as: 'min', except: null)]
     public ?int $minPrice = null;
+
+    #[Url(as: 'max', except: null)]
     public ?int $maxPrice = null;
 
-    public bool $onlyInStock = false;
-    public bool $onlyDiscounted = false;
-    public bool $onlyNew = false;
+    // مشخصات فنی: specId => [values] | ['min' => , 'max' => ] | true
+    #[Url(as: 'f', except: [])]
+    public array $specs = [];
+
+    // ویژگی‌های قیمت‌ساز (رنگ، سایز): optionId => [valueIds]
+    #[Url(as: 'o', except: [])]
+    public array $options = [];
 
     protected $paginationTheme = 'tailwind';
 
     public function mount($slug)
     {
-        $this->category = Category::query()
-            ->active()
-            ->where('slug', $slug)
-            ->firstOrFail();
+        $this->category = Category::query()->active()->where('slug', $slug)->firstOrFail();
 
-        $this->childCategories = $this->category
-            ->children()
-            ->active()
-            ->orderBy('title')
-            ->get();
+        $this->childCategories = $this->category->children()->active()->orderBy('title')->get();
 
-        $this->categoryIds = $this->category
-            ->getAllDescendantIds()
+        $this->categoryIds = $this->category->getAllDescendantIds()
             ->push($this->category->id)
             ->unique()
             ->values()
             ->toArray();
 
-        // برندهایی که واقعاً محصولی در این دسته‌بندی دارند (برای فیلتر برند، به‌جای لیست ثابت)
-        $this->brands = Brand::query()
-            ->where('status', 1)
-            ->whereNull('deleted_at')
-            ->whereHas('products', function ($q) {
-                $q->whereHas('categories', fn ($q2) => $q2->whereIn('categories.id', $this->categoryIds));
-            })
-            ->orderBy('title')
-            ->get();
-
-        // بازه‌ی واقعی قیمت بر اساس واریانت‌های محصولاتِ همین دسته (برای تنظیم اسلایدر قیمت)
-        // توجه: این بازه بر مبنای basePrice است، نه finalPrice. چون finalPrice <= basePrice همیشه
-        // برقرار است، این بازه یک محدوده‌ی «امن و محافظه‌کارانه» است (ممکن است در عمل چند محصولِ
-        // تخفیف‌خورده حتی از priceFloor هم ارزان‌تر باشند، ولی چون کف اسلایدر را می‌شود همان‌جا
-        // خالی گذاشت، مشکلی برای UX ایجاد نمی‌کند). محاسبه‌ی دقیقِ finalPrice برای کل کاتالوگ فقط
-        // برای تعیین بازه‌ی اسلایدر، به معنای لود و پردازش تمام واریانت‌های دسته در هر mount است که
-        // طبق قانون «از ایجاد Query اضافی جلوگیری کن» صرفه نمی‌کند؛ همان الگویی که خودِ کد قبلاً
-        // برای sort=cheap هم پذیرفته بود.
-        $bounds = DB::table('product_variants')
-            ->join('category_product', 'product_variants.product_id', '=', 'category_product.product_id')
-            ->whereIn('category_product.category_id', $this->categoryIds)
-            ->where('product_variants.status', 1)
-            ->whereNull('product_variants.deleted_at')
-            ->selectRaw('MIN(price) as min_price, MAX(price) as max_price')
-            ->first();
-
-        $this->priceFloor = (int) ($bounds->min_price ?? 0);
-        $this->priceCeil  = (int) ($bounds->max_price ?? 0);
-        $this->minPrice   = $this->priceFloor;
-        $this->maxPrice   = $this->priceCeil;
+        if (!array_key_exists($this->sort, self::SORTS)) {
+            $this->sort = 'latest';
+        }
     }
 
-    /**
-     * تخفیف‌های فعالِ همین لحظه (status=1 و داخل بازه‌ی زمانی starts_at/ends_at).
-     * Computed یعنی: در یک درخواست فقط یک‌بار اجرا و کش می‌شود، نیازی به نگه‌داشتنش بین درخواست‌ها نیست.
-     */
+    protected function service(): CategoryFilterService
+    {
+        return app(CategoryFilterService::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | داده
+    |--------------------------------------------------------------------------
+    */
     #[Computed]
-    public function activeDiscounts(): Collection
+    public function index(): array
     {
-        $now = Carbon::now();
-
-        return collect(
-            DB::table('discounts')
-                ->where('status', 1)
-                ->whereNull('deleted_at')
-                ->where(function ($q) use ($now) {
-                    $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
-                })
-                ->where(function ($q) use ($now) {
-                    $q->whereNull('ends_at')->orWhere('ends_at', '>=', $now);
-                })
-                ->get()
-        );
+        return $this->service()->index($this->categoryIds);
     }
 
-    /**
-     * هدف‌های همان تخفیف‌های فعال، گروه‌بندی‌شده بر اساس discount_id.
-     */
     #[Computed]
-    public function discountTargetsByDiscount(): Collection
+    public function definitions(): Collection
     {
-        $discountIds = $this->activeDiscounts->pluck('id');
-
-        if ($discountIds->isEmpty()) {
-            return collect();
-        }
-
-        return collect(
-            DB::table('discount_targets')->whereIn('discount_id', $discountIds)->get()
-        )->groupBy('discount_id');
+        return $this->service()->definitions($this->category, $this->index);
     }
 
-    public function setSort(string $sort): void
+    /** شناسه هر زیر‌دسته => خودش و همه زیر‌شاخه‌هایش */
+    #[Computed]
+    public function childScopes(): array
     {
-        $this->sort = $sort;
-        $this->resetPage();
+        return $this->childCategories->mapWithKeys(fn ($child) => [
+            $child->id => $child->getAllDescendantIds()->push($child->id)->map(fn ($id) => (int) $id)->unique()->values()->all(),
+        ])->all();
     }
 
-    public function applyPriceRange(): void
+    protected function state(): array
     {
-        $this->clampPriceRange();
-        $this->resetPage();
+        return [
+            'categories' => $this->selectedCategories,
+            'brands' => $this->selectedBrands,
+            'stock' => $this->onlyInStock,
+            'discount' => $this->onlyDiscounted,
+            'new' => $this->onlyNew,
+            'rating' => $this->minRating,
+            'price_min' => $this->minPrice,
+            'price_max' => $this->maxPrice,
+            'specs' => $this->specs,
+            'options' => $this->options,
+            'sort' => $this->sort,
+        ];
     }
 
-    /**
-     * وقتی کاربر داخل اینپوت عددیِ «از» چیزی تایپ می‌کند (wire:model.live).
-     */
-    public function updatedMinPrice(): void
+    #[Computed]
+    public function result(): array
     {
-        $this->clampPriceRange();
-        $this->resetPage();
+        return $this->service()->apply($this->index, $this->definitions, $this->state(), $this->childScopes);
     }
 
-    /**
-     * وقتی کاربر داخل اینپوت عددیِ «تا» چیزی تایپ می‌کند (wire:model.live).
-     */
-    public function updatedMaxPrice(): void
+    #[Computed]
+    public function facets(): array
     {
-        $this->clampPriceRange();
-        $this->resetPage();
+        return $this->result['facets'];
     }
 
-    /**
-     * صدا زده می‌شود از اسلایدرِ Alpine، فقط یک‌بار در لحظه‌ی رها کردن دستگیره
-     * (نه در حین درگ کردن) تا درخواست‌های شبکه‌ی اضافی ایجاد نشود.
-     */
-    public function updatePriceRange(int $min, int $max): void
+    #[Computed]
+    public function brands(): Collection
     {
-        $this->minPrice = $min;
-        $this->maxPrice = $max;
-        $this->clampPriceRange();
-        $this->resetPage();
+        $ids = collect($this->index)->pluck('brand')->filter()->unique();
+
+        return $ids->isEmpty() ? collect() : Brand::where('status', 1)->whereIn('id', $ids)->orderBy('title')->get(['id', 'title']);
     }
 
-    /**
-     * تضمین می‌کند minPrice از maxPrice عبور نکند و هر دو داخل بازه‌ی [priceFloor, priceCeil] بمانند.
-     */
-    private function clampPriceRange(): void
+    /** مقادیر قابل انتخاب هر ویژگی (با برچسب، رنگ و تعداد) */
+    #[Computed]
+    public function attributeOptions(): array
     {
-        if ($this->minPrice !== null) {
-            $this->minPrice = max($this->priceFloor, min($this->minPrice, $this->priceCeil));
-        }
+        $facets = $this->facets['attributes'];
+        $result = [];
 
-        if ($this->maxPrice !== null) {
-            $this->maxPrice = max($this->priceFloor, min($this->maxPrice, $this->priceCeil));
-        }
+        $optionValueIds = $this->definitions->where('kind', 'option')
+            ->flatMap(fn ($d) => array_keys($facets[$d['key']] ?? []))
+            ->merge(collect($this->options)->flatten())
+            ->unique()->all();
 
-        if ($this->minPrice !== null && $this->maxPrice !== null && $this->minPrice > $this->maxPrice) {
-            [$this->minPrice, $this->maxPrice] = [
-                min($this->minPrice, $this->maxPrice),
-                max($this->minPrice, $this->maxPrice),
-            ];
-        }
-    }
+        $optionValues = $optionValueIds ? OptionValue::whereIn('id', $optionValueIds)->orderBy('sort')->orderBy('id')->get()->keyBy('id') : collect();
 
-    public function updatedSelectedCategories(): void { $this->resetPage(); }
-    public function updatedSelectedBrands(): void { $this->resetPage(); }
-    public function updatedOnlyInStock(): void { $this->resetPage(); }
-    public function updatedOnlyDiscounted(): void { $this->resetPage(); }
-    public function updatedOnlyNew(): void { $this->resetPage(); }
+        foreach ($this->definitions as $definition) {
+            $key = $definition['key'];
 
-    public function toggleFavorite(int $productId): void
-    {
-        if (! Auth::check()) {
-            $this->dispatch('notify', type: 'error', message: 'برای افزودن به علاقه‌مندی ابتدا وارد شوید.');
-            return;
-        }
+            if ($definition['kind'] === 'option') {
+                $selected = array_map('intval', (array) ($this->options[$definition['id']] ?? []));
+                $counts = $facets[$key] ?? [];
 
-        // فقط محصول فعال قابل افزودن است
-        if (! Product::active()->whereKey($productId)->exists()) {
-            return;
-        }
+                $values = $optionValues->filter(fn ($v) => (int) $v->option_id === $definition['id'] && (isset($counts[$v->id]) || in_array($v->id, $selected, true)))
+                    ->map(fn ($v) => [
+                        'value' => $v->id,
+                        'label' => $v->title,
+                        'count' => (int) ($counts[$v->id] ?? 0),
+                        'selected' => in_array($v->id, $selected, true),
+                        'color' => $definition['display'] === 'color' ? $this->service()->colorFor($v) : null,
+                    ])->values()->all();
+            } elseif (in_array($definition['display'], ['range', 'toggle'], true)) {
+                $values = $facets[$key] ?? null;
+            } else {
+                $selected = array_map('strval', (array) ($this->specs[$definition['id']] ?? []));
+                $counts = $facets[$key] ?? [];
 
-        $existing = Auth::user()->wishlists()
-            ->where('product_id', $productId)
-            ->first();
+                foreach ($selected as $value) {
+                    $counts[$value] ??= 0;
+                }
 
-        if ($existing) {
-            $existing->delete();
-        } else {
-            Auth::user()->wishlists()->createOrFirst([
-                'product_id' => $productId,
-            ]);
-        }
-
-        // چون wishlists روی favorites تأثیر می‌گذارد و آن پراپرتی هم Computed و کش‌شده در همین درخواست است، پاکش می‌کنیم
-        unset($this->favoriteProductIds);
-    }
-
-    /**
-     * افزودن به سبد خرید.
-     * توجه: جدول cart_items ستون variant_id ندارد (فقط product_id). چون این صفحه واریانت مشخصی را
-     * پیشنهاد می‌دهد (دیفالت/ارزان‌ترین موجود)، شناسه‌ی واریانت را داخل ستون JSON با نام attributes
-     * ذخیره می‌کنیم. اگر بعداً بخواهید محصولاتِ چند-واریانته را درست جمع بزنید، پیشنهادم اضافه‌کردن
-     * ستون variant_id به cart_items است.
-     */
-    public function addToCart(int $variantId): void
-    {
-        if (! Auth::check()) {
-            $this->dispatch('alert', type: 'error', message: 'برای خرید ابتدا وارد شوید.');
-            return;
-        }
-
-        $variant = ProductVariant::query()->find($variantId);
-
-        if (! $variant) {
-            $this->dispatch('alert', type: 'error', message: 'این کالا در دسترس نیست.');
-            return;
-        }
-
-        [$finalPrice] = $this->finalPriceForVariant($variant->id, $variant->price, $variant->product_id, $variant->product->brand_id ?? null);
-
-        // همان واریانت در سبد => فقط تعداد زیاد می‌شود؛ موجودیِ از قبل در سبد هم حساب می‌شود
-        $result = app(\App\Services\Cart\CartService::class)->add(
-            Auth::id(),
-            $variant->product_id,
-            $variant->id,
-            (int) $finalPrice
-        );
-
-        if (! $result['ok']) {
-            $this->dispatch('alert', type: 'error', message: $result['message']);
-            return;
-        }
-
-        $this->dispatch('cart-updated');
-        $this->dispatch('alert', type: 'success', message: $result['message']);
-    }
-
-    /**
-     * موجودی واقعی یک واریانت = مجموع (quantity - reserved_quantity) در انبارهای فعال.
-     */
-    private function stockForVariant(int $variantId): int
-    {
-        return (int) DB::table('inventory_items')
-            ->where('product_variant_id', $variantId)
-            ->where('status', 1)
-            ->whereNull('deleted_at')
-            ->selectRaw('SUM(quantity - reserved_quantity) as stock')
-            ->value('stock');
-    }
-
-
-    private function finalPriceForVariant(int $variantId, int $basePrice, int $productId, ?int $brandId): array
-    {
-        if ($basePrice <= 0 || $this->activeDiscounts->isEmpty()) {
-            return [$basePrice, 0];
-        }
-
-        $productCategoryIds = DB::table('category_product')
-            ->where('product_id', $productId)
-            ->pluck('category_id')
-            ->all();
-
-        $bestPrice = $basePrice;
-
-        foreach ($this->activeDiscounts as $discount) {
-            $targets = $this->discountTargetsByDiscount->get($discount->id, collect());
-
-            $matches = $targets->contains(function ($target) use ($productId, $brandId, $productCategoryIds) {
-                return match ($target->target_type) {
-                    'App\\Models\\Product' => (int) $target->target_id === $productId,
-                    'App\\Models\\Brand' => $brandId && (int) $target->target_id === $brandId,
-                    'App\\Models\\Category' => in_array((int) $target->target_id, $productCategoryIds, true),
-                    default => false,
-                };
-            });
-
-            if (! $matches) {
-                continue;
+                $values = collect($counts)->map(fn ($count, $value) => [
+                    'value' => (string) $value,
+                    'label' => is_numeric($value) ? number_format((float) $value, str_contains((string) $value, '.') ? 1 : 0) : (string) $value,
+                    'count' => (int) $count,
+                    'selected' => in_array((string) $value, $selected, true),
+                ])->sortBy(fn ($v) => is_numeric($v['value']) ? sprintf('%020.4f', (float) $v['value']) : $v['label'])->values()->all();
             }
 
-            $off = $discount->type === self::DISCOUNT_TYPE_PERCENT
-                ? $basePrice * ($discount->value / 100)
-                : $discount->value;
+            // فیلتر بدون گزینه قابل انتخاب نمایش داده نمی‌شود
+            $empty = is_array($values) && array_is_list($values) ? !$values
+                : ($definition['display'] === 'range' ? ($values['min'] ?? null) === null || $values['min'] == $values['max']
+                    : ($definition['display'] === 'toggle' ? !$values && empty($this->specs[$definition['id']]) : false));
 
-            if ($discount->maximum_discount) {
-                $off = min($off, $discount->maximum_discount);
-            }
-
-            $off = min($off, $basePrice);
-            $candidatePrice = (int) round($basePrice - $off);
-
-            if ($candidatePrice < $bestPrice) {
-                $bestPrice = $candidatePrice;
+            if (!$empty) {
+                $result[$key] = ['definition' => $definition, 'values' => $values];
             }
         }
 
-        $percent = $bestPrice < $basePrice
-            ? (int) round((($basePrice - $bestPrice) / $basePrice) * 100)
-            : 0;
-
-        return [$bestPrice, $percent];
+        return $result;
     }
 
-    /**
-     * از میان واریانت‌های یک محصول، واریانتِ پیش‌فرض (is_default) را انتخاب می‌کند؛
-     * اگر پیش‌فرض موجود نبود، ارزان‌ترین واریانتِ موجود در انبار را برمی‌گرداند.
-     */
-    private function pickDisplayVariant(Collection $variants, array $stockByVariant): ?object
+    #[Computed]
+    public function priceBounds(): array
     {
-        $active = $variants->where('status', 1);
+        $bounds = $this->result['bounds']['price'];
 
-        if ($active->isEmpty()) {
-            return null;
-        }
-
-        $default = $active->firstWhere('is_default', 1);
-
-        if ($default && ($stockByVariant[$default->id] ?? 0) > 0) {
-            return $default;
-        }
-
-        $cheapestInStock = $active
-            ->filter(fn ($v) => ($stockByVariant[$v->id] ?? 0) > 0)
-            ->sortBy('price')
-            ->first();
-
-        if ($cheapestInStock) {
-            return $cheapestInStock;
-        }
-
-        // چیزی موجود نیست؛ همان دیفالت (یا ارزان‌ترین) را برای نمایش "ناموجود" برمی‌گردانیم
-        return $default ?? $active->sortBy('price')->first();
+        return ['min' => (int) floor(($bounds['min'] ?? 0) / 1000) * 1000, 'max' => (int) ceil(($bounds['max'] ?? 0) / 1000) * 1000];
     }
 
-    /**
-     * کوئری اصلی محصولات با اعمال همه‌ی فیلترها و مرتب‌سازی.
-     */
-    private function baseQuery()
-    {
-        $query = Product::query()
-            ->where('status', 1)
-            ->whereNull('deleted_at')
-            ->with(['variants', 'media', 'brand'])
-            ->whereHas('categories', function ($q) {
-                $q->whereIn('categories.id', $this->categoryIds);
-            });
-
-        if (! empty($this->selectedCategories)) {
-            $query->whereHas('categories', function ($q) {
-                $q->whereIn('categories.id', $this->selectedCategories);
-            });
-        }
-
-        if (! empty($this->selectedBrands)) {
-            $query->whereIn('brand_id', $this->selectedBrands);
-        }
-
-        if ($this->onlyNew) {
-            $query->where('created_at', '>=', now()->subDays(7));
-        }
-
-        // نارروینگِ امن قیمت (فقط کف): توضیح کامل بالای کلاس، نکته‌ی ۵.
-        // عمداً سقف قیمت اینجا اعمال نمی‌شود؛ چون finalPrice می‌تواند به‌خاطر تخفیف،
-        // خیلی کمتر از basePrice باشد و یک محدودیت SQL روی سقفِ basePrice محصولات
-        // تخفیف‌خورده‌ی گران را به‌غلط از نتیجه حذف می‌کند. فیلترِ دقیقِ سقف داخل
-        // viewProducts() روی final_price انجام می‌شود.
-        if ($this->minPrice !== null) {
-            $query->whereHas('variants', function ($q) {
-                $q->where('status', 1)
-                    ->whereNull('deleted_at')
-                    ->where('price', '>=', $this->minPrice);
-            });
-        }
-
-        switch ($this->sort) {
-            case 'sales':
-                $salesQuery = DB::table('product_variants')
-                    ->join('order_items', 'product_variants.id', '=', 'order_items.variant_id')
-                    ->join('orders', 'order_items.order_id', '=', 'orders.id')
-                    ->whereNotIn('orders.status', ['cancelled'])
-                    ->select('product_variants.product_id', DB::raw('SUM(order_items.quantity) as total_sales'))
-                    ->groupBy('product_variants.product_id');
-
-                $query->leftJoinSub($salesQuery, 'sales', function ($join) {
-                    $join->on('products.id', '=', 'sales.product_id');
-                })
-                    ->select('products.*')
-                    ->selectRaw('COALESCE(sales.total_sales, 0) as total_sales')
-                    ->orderByDesc('total_sales');
-                break;
-
-            case 'cheap':
-                // توجه: این مرتب‌سازی بر اساس قیمتِ پایه‌ی ارزان‌ترین واریانت است، نه لزوماً قیمت نهایی
-                // بعد از اعمال تخفیف‌های جدول discounts (چون آن محاسبه سطح-SQL نیست). برای دقتِ ۱۰۰٪
-                // پیشنهاد می‌شود یک ستون cached final_price روی product_variants نگه‌داری و در ثبت/ویرایش
-                // تخفیف به‌روزرسانی شود.
-                $priceQuery = DB::table('product_variants')
-                    ->where('status', 1)
-                    ->whereNull('deleted_at')
-                    ->select('product_id', DB::raw('MIN(price) as min_price'))
-                    ->groupBy('product_id');
-
-                $query->joinSub($priceQuery, 'prices', function ($join) {
-                    $join->on('products.id', '=', 'prices.product_id');
-                })
-                    ->select('products.*')
-                    ->selectRaw('prices.min_price')
-                    ->orderBy('prices.min_price', 'asc');
-                break;
-
-            default:
-                $query->latest('products.created_at');
-                break;
-        }
-
-        return $query;
-    }
-
-    /**
-     * صفحه‌ی جاری محصولات (بدون فیلترهای onlyInStock/onlyDiscounted/minPrice/maxPrice که بعد از
-     * محاسبه‌ی قیمت نهایی اعمال می‌شوند - چون به داده‌ی محاسبه‌شده وابسته‌اند، نه ستون خام دیتابیس).
-     */
     #[Computed]
     public function paginator(): LengthAwarePaginator
     {
-        return $this->baseQuery()->paginate(12);
+        $ids = $this->result['ids'];
+        $page = max(1, min($this->getPage(), (int) ceil(max(1, count($ids)) / self::PER_PAGE)));
+        $pageIds = array_slice($ids, ($page - 1) * self::PER_PAGE, self::PER_PAGE);
+
+        $products = $pageIds
+            ? Product::with(['media', 'brand'])->whereIn('id', $pageIds)->get()->keyBy('id')
+            : collect();
+
+        $items = collect($pageIds)->map(fn ($id) => $products->get($id))->filter()->values();
+
+        return new LengthAwarePaginator($items, count($ids), self::PER_PAGE, $page, [
+            'path' => route('categories.show', $this->category->slug),
+            'pageName' => 'page',
+        ]);
     }
 
-    /**
-     * شناسه‌ی محصولاتی که کاربر لاگین‌شده لایک کرده، محدود به محصولات همین صفحه.
-     */
     #[Computed]
     public function favoriteProductIds(): array
     {
-        if (! Auth::check()) {
+        if (!Auth::check()) {
             return [];
         }
 
@@ -511,112 +264,307 @@ new class extends Component
             ->where('user_id', Auth::id())
             ->whereIn('product_id', $this->paginator->pluck('id'))
             ->pluck('product_id')
+            ->map(fn ($id) => (int) $id)
             ->all();
     }
 
-    /**
-     * ردیف‌های آماده‌ی نمایش برای صفحه‌ی جاری: واریانت انتخابی، قیمت نهایی، درصد تخفیف،
-     * موجودی واقعی، تصویر، نوع کارت (transparent/background) و وضعیت علاقه‌مندی هر محصول.
-     */
+    /** ردیف‌های کارت محصول (قیمت/موجودی از همان ایندکس فیلترها) */
     #[Computed]
     public function viewProducts(): Collection
     {
-        $paginated = $this->paginator;
+        $variants = ProductVariant::whereIn('id', $this->paginator->getCollection()->map(fn ($p) => $this->index[$p->id]['variant'] ?? null)->filter())
+            ->with('product:id,slug')
+            ->get()
+            ->keyBy('id');
 
-        $variantIds = $paginated->flatMap(fn ($p) => $p->variants->pluck('id'))->all();
-
-        $stockByVariant = $variantIds
-            ? DB::table('inventory_items')
-                ->whereIn('product_variant_id', $variantIds)
-                ->where('status', 1)
-                ->whereNull('deleted_at')
-                ->selectRaw('product_variant_id, SUM(quantity - reserved_quantity) as stock')
-                ->groupBy('product_variant_id')
-                ->pluck('stock', 'product_variant_id')
-                ->map(fn ($s) => (int) $s)
-                ->all()
-            : [];
-
-        $rows = $paginated->getCollection()->map(function ($product) use ($stockByVariant) {
-            $variant = $this->pickDisplayVariant($product->variants, $stockByVariant);
-
-            $price = 0;
-            $finalPrice = 0;
-            $discountPercent = 0;
-            $stock = 0;
-
-            if ($variant) {
-                $price = (int) $variant->price;
-                $stock = $stockByVariant[$variant->id] ?? 0;
-
-
-                [$finalPrice, $discountPercent] = $this->finalPriceForVariant(
-                    $variant->id,
-                    $price,
-                    $product->id,
-                    $product->brand_id
-                );
-
-                // اگر خودِ واریانت هم compare_price داشت و از finalPrice پایین‌تر بود، همان compare_price
-                // به‌عنوان «قیمت قبل از تخفیف» برای خط‌خورده نمایش داده می‌شود.
-
-                if ($variant->compare_price && $variant->compare_price > $finalPrice) {
-                    $original = (int) $variant->compare_price;
-                    $discountPercent = max($discountPercent, (int) round((($original - $finalPrice) / $original) * 100));
-
-                }
-            }
-
+        return $this->paginator->getCollection()->map(function ($product) use ($variants) {
+            $row = $this->index[$product->id] ?? [];
             $image = $product->media->firstWhere('collection', 'featured_image');
 
-            // تشخیص نوع کارت از روی mime_type همان تصویر (بدون نیاز به ستون جدید در دیتابیس).
-            // jpeg/jpg هرگز آلفا-چنل ندارد پس قطعاً Background است؛ png/webp/gif معمولاً برای
-            // تصاویر برش‌خورده(cutout)ی محصول استفاده می‌شوند، پس Transparent در نظر گرفته می‌شوند.
-            // این یک heuristic روی داده‌ی موجود است، نه تشخیص قطعیِ آلفا-چنل.
-            $imageStyle = 'background';
-            if ($image && in_array(strtolower((string) $image->mime_type), ['image/png', 'image/webp', 'image/gif'], true)) {
-                $imageStyle = 'transparent';
-            }
+            $imageStyle = $image && in_array(strtolower((string) $image->mime_type), ['image/png', 'image/webp', 'image/gif'], true)
+                ? 'transparent'
+                : 'background';
 
             return (object) [
                 'product' => $product,
-                'variant' => $variant,
-                'price' => $price,
-                'compare_price' => $variant->compare_price ?? null,
-                'final_price' => $finalPrice,
-                'discount_percent' => $discountPercent,
-                'stock' => $stock,
+                'variant' => $variants->get($row['variant'] ?? 0),
+                'price' => (int) ($row['base'] ?? 0),
+                'compare_price' => null,
+                'final_price' => (int) ($row['price'] ?? 0),
+                'discount_percent' => (int) ($row['discount'] ?? 0),
+                'stock' => (int) ($row['stock'] ?? 0),
                 'image' => $image,
                 'image_style' => $imageStyle,
                 'is_favorited' => in_array($product->id, $this->favoriteProductIds, true),
             ];
         });
+    }
 
-        // فیلترهای «فقط موجود»، «فقط تخفیف‌دار» و بازه‌ی قیمت، چون به قیمت/موجودیِ محاسبه‌شده
-        // وابسته‌اند، بعد از map روی همین کالکشن اعمال می‌شوند (نه در کوئری اصلی).
-        if ($this->onlyInStock) {
-            $rows = $rows->filter(fn ($p) => $p->stock > 0);
+    /*
+    |--------------------------------------------------------------------------
+    | فیلترهای فعال (Chip)
+    |--------------------------------------------------------------------------
+    */
+    #[Computed]
+    public function activeFilters(): array
+    {
+        $chips = [];
+
+        foreach ($this->selectedCategories as $id) {
+            if ($child = $this->childCategories->firstWhere('id', (int) $id)) {
+                $chips[] = ['label' => $child->title, 'type' => 'category', 'key' => (int) $id, 'value' => null];
+            }
         }
 
-        if ($this->onlyDiscounted) {
-            $rows = $rows->filter(fn ($p) => $p->discount_percent > 0);
+        foreach ($this->selectedBrands as $id) {
+            if ($brand = $this->brands->firstWhere('id', (int) $id)) {
+                $chips[] = ['label' => 'برند: ' . $brand->title, 'type' => 'brand', 'key' => (int) $id, 'value' => null];
+            }
         }
 
         if ($this->minPrice !== null || $this->maxPrice !== null) {
-            $rows = $rows->filter(function ($p) {
-                if ($this->minPrice !== null && $p->final_price < $this->minPrice) {
-                    return false;
-                }
-
-                if ($this->maxPrice !== null && $p->final_price > $this->maxPrice) {
-                    return false;
-                }
-
-                return true;
-            });
+            $chips[] = ['label' => 'قیمت: ' . number_format($this->minPrice ?? $this->priceBounds['min']) . ' تا ' . number_format($this->maxPrice ?? $this->priceBounds['max']), 'type' => 'price', 'key' => null, 'value' => null];
         }
 
-        return $rows->values();
+        foreach (['onlyInStock' => 'فقط موجود', 'onlyDiscounted' => 'تخفیف‌دار', 'onlyNew' => 'محصولات جدید'] as $property => $label) {
+            if ($this->{$property}) {
+                $chips[] = ['label' => $label, 'type' => 'flag', 'key' => $property, 'value' => null];
+            }
+        }
+
+        if ($this->minRating) {
+            $chips[] = ['label' => 'امتیاز ' . $this->minRating . ' به بالا', 'type' => 'rating', 'key' => null, 'value' => null];
+        }
+
+        $definitions = $this->definitions->keyBy('key');
+
+        foreach ($this->specs as $specId => $selection) {
+            $definition = $definitions->get('s' . $specId);
+            if (!$definition || $selection === [] || $selection === null || $selection === '') {
+                continue;
+            }
+
+            if ($definition['display'] === 'range') {
+                $chips[] = ['label' => $definition['title'] . ': ' . ($selection['min'] ?? '…') . ' تا ' . ($selection['max'] ?? '…'), 'type' => 'spec', 'key' => (int) $specId, 'value' => null];
+            } elseif ($definition['display'] === 'toggle') {
+                $chips[] = ['label' => $definition['title'], 'type' => 'spec', 'key' => (int) $specId, 'value' => null];
+            } else {
+                foreach ((array) $selection as $value) {
+                    $chips[] = ['label' => $definition['title'] . ': ' . $value, 'type' => 'spec', 'key' => (int) $specId, 'value' => (string) $value];
+                }
+            }
+        }
+
+        $valueTitles = OptionValue::whereIn('id', collect($this->options)->flatten()->map(fn ($v) => (int) $v)->all() ?: [0])->pluck('title', 'id');
+
+        foreach ($this->options as $optionId => $valueIds) {
+            $definition = $definitions->get('o' . $optionId);
+            foreach ((array) $valueIds as $valueId) {
+                if ($definition && isset($valueTitles[(int) $valueId])) {
+                    $chips[] = ['label' => $definition['title'] . ': ' . $valueTitles[(int) $valueId], 'type' => 'option', 'key' => (int) $optionId, 'value' => (string) $valueId];
+                }
+            }
+        }
+
+        return $chips;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | اکشن‌ها (هر تغییر => صفحه ۱)
+    |--------------------------------------------------------------------------
+    */
+
+    /** نتیجه‌های محاسبه‌شده با وضعیت قبلی فیلترها کنار گذاشته می‌شوند */
+    protected function flush(): void
+    {
+        unset($this->result, $this->facets, $this->attributeOptions, $this->priceBounds, $this->paginator, $this->viewProducts, $this->favoriteProductIds, $this->activeFilters);
+    }
+
+    // هر تغییر صفحه (از جمله resetPage پس از تغییر فیلتر) => محاسبه تازه
+    public function updatedPaginators($page, $pageName): void
+    {
+        $this->flush();
+    }
+    public function updated($property): void
+    {
+        if (in_array(explode('.', $property)[0], ['selectedCategories', 'selectedBrands', 'onlyInStock', 'onlyDiscounted', 'onlyNew', 'minRating', 'minPrice', 'maxPrice', 'specs', 'options'], true)) {
+            $this->flush();
+            $this->resetPage();
+        }
+    }
+
+    public function setSort(string $sort): void
+    {
+        $this->sort = array_key_exists($sort, self::SORTS) ? $sort : 'latest';
+        $this->resetPage();
+    }
+
+    public function updatePriceRange($min, $max): void
+    {
+        $bounds = $this->priceBounds;
+        $min = is_numeric($min) ? max($bounds['min'], (int) $min) : null;
+        $max = is_numeric($max) ? min($bounds['max'], (int) $max) : null;
+
+        if ($min !== null && $max !== null && $min > $max) {
+            [$min, $max] = [$max, $min];
+        }
+
+        // بازه کامل = بدون فیلتر قیمت
+        $this->minPrice = $min !== null && $min > $bounds['min'] ? $min : null;
+        $this->maxPrice = $max !== null && $max < $bounds['max'] ? $max : null;
+        $this->resetPage();
+    }
+
+    public function setRating(?int $rating): void
+    {
+        $this->minRating = $this->minRating === $rating ? null : $rating;
+        $this->resetPage();
+    }
+
+    public function toggleOption(int $optionId, int $valueId): void
+    {
+        $values = array_map('intval', (array) ($this->options[$optionId] ?? []));
+        $values = in_array($valueId, $values, true) ? array_values(array_diff($values, [$valueId])) : [...$values, $valueId];
+
+        if ($values) {
+            $this->options[$optionId] = $values;
+        } else {
+            unset($this->options[$optionId]);
+        }
+
+        $this->resetPage();
+    }
+
+    /** فیلتر کشویی ویژگی قیمت‌ساز: فقط یک مقدار */
+    public function toggleOptionSingle(int $optionId, int $valueId): void
+    {
+        $this->options[$optionId] = [$valueId];
+        $this->resetPage();
+    }
+
+    public function toggleSpecValue(int $specId, string $value, bool $single = false): void
+    {
+        $values = array_map('strval', (array) ($this->specs[$specId] ?? []));
+
+        if ($single) {
+            $values = in_array($value, $values, true) ? [] : [$value];
+        } else {
+            $values = in_array($value, $values, true) ? array_values(array_diff($values, [$value])) : [...$values, $value];
+        }
+
+        if ($values) {
+            $this->specs[$specId] = $values;
+        } else {
+            unset($this->specs[$specId]);
+        }
+
+        $this->resetPage();
+    }
+
+    public function setSpecRange(int $specId, $min, $max): void
+    {
+        $bounds = $this->attributeOptions['s' . $specId]['values'] ?? null;
+        $min = is_numeric($min) ? (float) $min : null;
+        $max = is_numeric($max) ? (float) $max : null;
+
+        if ($bounds && $min !== null && $max !== null && $min <= $bounds['min'] && $max >= $bounds['max']) {
+            unset($this->specs[$specId]);
+        } else {
+            $this->specs[$specId] = array_filter(['min' => $min, 'max' => $max], fn ($v) => $v !== null);
+        }
+
+        $this->resetPage();
+    }
+
+    public function toggleSpecFlag(int $specId): void
+    {
+        if (!empty($this->specs[$specId])) {
+            unset($this->specs[$specId]);
+        } else {
+            $this->specs[$specId] = true;
+        }
+
+        $this->resetPage();
+    }
+
+    public function removeFilter(string $type, $key = null, $value = null): void
+    {
+        match ($type) {
+            'category' => $this->selectedCategories = array_values(array_diff(array_map('intval', $this->selectedCategories), [(int) $key])),
+            'brand' => $this->selectedBrands = array_values(array_diff(array_map('intval', $this->selectedBrands), [(int) $key])),
+            'price' => [$this->minPrice, $this->maxPrice] = [null, null],
+            'flag' => in_array($key, ['onlyInStock', 'onlyDiscounted', 'onlyNew'], true) ? $this->{$key} = false : null,
+            'rating' => $this->minRating = null,
+            'spec' => $value === null ? $this->removeSpec((int) $key) : $this->toggleSpecValue((int) $key, (string) $value),
+            'option' => $this->toggleOption((int) $key, (int) $value),
+            default => null,
+        };
+
+        $this->resetPage();
+    }
+
+    protected function removeSpec(int $specId): void
+    {
+        unset($this->specs[$specId]);
+    }
+
+    public function clearFilters(): void
+    {
+        $this->reset(['selectedCategories', 'selectedBrands', 'onlyInStock', 'onlyDiscounted', 'onlyNew', 'minRating', 'minPrice', 'maxPrice', 'specs', 'options']);
+        $this->resetPage();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | علاقه‌مندی و سبد خرید
+    |--------------------------------------------------------------------------
+    */
+    public function toggleFavorite(int $productId): void
+    {
+        if (!Auth::check()) {
+            $this->dispatch('alert', type: 'error', message: 'برای افزودن به علاقه‌مندی ابتدا وارد شوید.');
+            return;
+        }
+
+        if (!Product::active()->whereKey($productId)->exists()) {
+            return;
+        }
+
+        $existing = Auth::user()->wishlists()->where('product_id', $productId)->first();
+
+        $existing
+            ? $existing->delete()
+            : Auth::user()->wishlists()->createOrFirst(['product_id' => $productId]);
+
+        unset($this->favoriteProductIds, $this->viewProducts);
+    }
+
+    public function addToCart(int $variantId): void
+    {
+        if (!Auth::check()) {
+            $this->dispatch('alert', type: 'error', message: 'برای خرید ابتدا وارد شوید.');
+            return;
+        }
+
+        $variant = ProductVariant::query()->with('product')->find($variantId);
+
+        if (!$variant) {
+            $this->dispatch('alert', type: 'error', message: 'این کالا در دسترس نیست.');
+            return;
+        }
+
+        $finalPrice = (int) (rescue(fn () => $variant->priceData(), [], false)['after_discount'] ?? $variant->price);
+
+        $result = app(\App\Services\Cart\CartService::class)->add(Auth::id(), $variant->product_id, $variant->id, $finalPrice);
+
+        if (!$result['ok']) {
+            $this->dispatch('alert', type: 'error', message: $result['message']);
+            return;
+        }
+
+        $this->dispatch('cart-updated');
+        $this->dispatch('alert', type: 'success', message: $result['message']);
     }
 };
 ?>
@@ -653,7 +601,7 @@ new class extends Component
                                   stroke-linejoin="round"/>
                         </svg>
 
-                        <a href="{{ route('home', $category->parent->slug) }}"
+                        <a href="{{ route('categories.show', $category->parent->slug) }}"
                            class="hover:text-brown-500 transition-colors">
                             {{ $category->parent->title }}
                         </a>
@@ -694,11 +642,11 @@ new class extends Component
                             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
 
                             <p class="text-xs text-gray-500 dark:text-gray-400 font-bold">
-                                نمایش
                                 <span class="text-gray-800 dark:text-white">
-                        {{ $this->paginator->total() }}
+                        {{ number_format($this->paginator->total()) }}
                     </span>
-                                محصول موجود
+                                محصول
+                                @if($this->activeFilters)<span class="text-brown-500">با فیلترهای انتخاب‌شده</span>@endif
                             </p>
 
                         </div>
@@ -735,49 +683,20 @@ new class extends Component
                         </div>
 
 
-                        <div class="flex items-center gap-1">
-
-                            {{-- جدیدترین --}}
-                            <button
-                                wire:click="setSort('latest')"
-                                class="px-5 py-2.5 rounded-[1.2rem] text-[11px] font-black
-                           transition-all active:scale-95
-                           {{ $sort === 'latest'
-                                ? 'bg-brown-500 text-white shadow-lg shadow-brown-500/25'
-                                : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-white/5'
-                           }}"
-                            >
-                                جدیدترین
-                            </button>
-
-
-                            {{-- پرفروش‌ترین --}}
-                            <button
-                                wire:click="setSort('sales')"
-                                class="px-5 py-2.5 rounded-[1.2rem] text-[11px] font-black
-                           transition-all active:scale-95
-                           {{ $sort === 'sales'
-                                ? 'bg-brown-500 text-white shadow-lg shadow-brown-500/25'
-                                : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-white/5'
-                           }}"
-                            >
-                                پرفروش‌ترین
-                            </button>
-
-
-                            {{-- ارزان‌ترین --}}
-                            <button
-                                wire:click="setSort('cheap')"
-                                class="px-5 py-2.5 rounded-[1.2rem] text-[11px] font-black
-                           transition-all active:scale-95
-                           {{ $sort === 'cheap'
-                                ? 'bg-brown-500 text-white shadow-lg shadow-brown-500/25'
-                                : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-white/5'
-                           }}"
-                            >
-                                ارزان‌ترین
-                            </button>
-
+                        <div class="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                            @foreach($this::SORTS as $sortKey => $sortLabel)
+                                <button
+                                    wire:click="setSort('{{ $sortKey }}')"
+                                    class="px-4 py-2.5 rounded-[1.2rem] text-[11px] font-black whitespace-nowrap
+                               transition-all active:scale-95
+                               {{ $sort === $sortKey
+                                    ? 'bg-brown-500 text-white shadow-lg shadow-brown-500/25'
+                                    : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-white/5'
+                               }}"
+                                >
+                                    {{ $sortLabel }}
+                                </button>
+                            @endforeach
                         </div>
 
                     </div>
@@ -788,7 +707,10 @@ new class extends Component
 
             <!-- Filter Showing in Responsive Break Point -->
             <div class="fixed bottom-28 right-6 z-[95] lg:hidden">
-                <button onclick="toggleFilters(true)" class="flex items-center justify-center w-14 h-14 bg-white/40 dark:bg-white/[0.05] backdrop-blur-md text-brown-600 rounded-2xl shadow-lg border border-white/60 dark:border-white/10 active:scale-90 transition-all">
+                <button onclick="toggleFilters(true)" aria-label="فیلترها" class="relative flex items-center justify-center w-14 h-14 bg-white/40 dark:bg-white/[0.05] backdrop-blur-md text-brown-600 rounded-2xl shadow-lg border border-white/60 dark:border-white/10 active:scale-90 transition-all">
+                    @if(count($this->activeFilters))
+                        <span class="absolute -top-1.5 -left-1.5 min-w-5 h-5 px-1 rounded-full bg-brown-600 text-white text-[10px] font-black flex items-center justify-center">{{ count($this->activeFilters) }}</span>
+                    @endif
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                     </svg>
@@ -812,7 +734,7 @@ new class extends Component
                     </div>
 
                     <div class="p-6 bg-white/30 dark:bg-black/20 border-t border-white/40 dark:border-white/5">
-                        <button onclick="toggleFilters(false)" class="w-full bg-brown-600 text-white py-4 rounded-[1.8rem] font-black shadow-lg shadow-brown-600/30 active:scale-95 transition-all">اعمال فیلترها</button>
+                        <button onclick="toggleFilters(false)" class="w-full bg-brown-600 text-white py-4 rounded-[1.8rem] font-black shadow-lg shadow-brown-600/30 active:scale-95 transition-all">نمایش {{ number_format($this->paginator->total()) }} محصول</button>
                     </div>
                 </div>
             </div>
@@ -827,6 +749,27 @@ new class extends Component
                 </aside>
 
                 <div class="lg:col-span-3">
+                    {{-- فیلترهای فعال --}}
+                    @if($this->activeFilters)
+                        <div class="flex flex-wrap items-center gap-2 mb-6" dir="rtl">
+                            @foreach($this->activeFilters as $chip)
+                                <button type="button"
+                                        wire:click="removeFilter('{{ $chip['type'] }}', @js($chip['key']), @js($chip['value']))"
+                                        wire:key="chip-{{ $loop->index }}-{{ md5(json_encode($chip)) }}"
+                                        class="group/chip inline-flex items-center gap-2 pl-2 pr-3 py-2 rounded-xl bg-brown-500/10 border border-brown-500/20 text-[11px] font-black text-brown-700 dark:text-brown-300 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-600 transition-all">
+                                    {{ $chip['label'] }}
+                                    <svg class="w-3.5 h-3.5 opacity-60 group-hover/chip:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            @endforeach
+                            <button type="button" wire:click="clearFilters"
+                                    class="px-3 py-2 rounded-xl text-[11px] font-black text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all">
+                                حذف همه فیلترها
+                            </button>
+                        </div>
+                    @endif
+
+                    <div class="relative">
+                    <div wire:loading.delay class="absolute inset-0 z-30 rounded-[2rem] bg-white/40 dark:bg-black/30 backdrop-blur-[2px]"></div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
 
                         @forelse($this->viewProducts as $row)
@@ -899,7 +842,7 @@ new class extends Component
 
                                             @if($row->image)
 
-                                                <a href="{{ route('product.show', $product->slug) }}">
+                                                <a href="{{ route('products.show', $product->slug) }}">
                                                     <img
                                                         src="{{ asset('storage/' . $row->image->file_path) }}"
                                                         class="relative z-10 w-full h-44 object-contain
@@ -946,7 +889,7 @@ new class extends Component
                                                 <div class="relative flex items-center group/tooltip">
 
                                                     <a
-                                                        href="{{ route('product.show', $product->slug) }}"
+                                                        href="{{ route('products.show', $product->slug) }}"
                                                         class="w-10 h-10 quick-view-btn
                                            bg-white/90 dark:bg-zinc-900/90
                                            backdrop-blur-md
@@ -1111,7 +1054,7 @@ new class extends Component
 
                                             {{-- Add To Cart --}}
                                             <a
-                                                href="{{ route('products.show', $variant->product->slug) }}"
+                                                href="{{ route('products.show', $product->slug) }}"
                                                 class="w-10 h-10
                rounded-xl
                bg-gray-100 dark:bg-white/5
@@ -1164,7 +1107,7 @@ new class extends Component
                                         <div class="relative w-full h-56 sm:h-60 shrink-0 overflow-hidden">
 
                                             @if($row->image)
-                                                <a href="{{ route('product.show', $product->slug) }}">
+                                                <a href="{{ route('products.show', $product->slug) }}">
                                                     <img
                                                         src="{{ asset('storage/' . $row->image->file_path) }}"
                                                         class="absolute inset-0 w-full h-full object-cover
@@ -1196,7 +1139,7 @@ new class extends Component
 
                                                 <div class="relative flex items-center group/tooltip">
                                                     <a
-                                                        href="{{ route('product.show', $product->slug) }}"
+                                                        href="{{ route('products.show', $product->slug) }}"
                                                         class="w-9 h-9 quick-view-btn bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-gray-900 dark:text-white rounded-xl flex items-center justify-center shadow-sm hover:bg-secondary-500 hover:text-white transition-all"
                                                     >
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1250,7 +1193,7 @@ new class extends Component
                                             </div>
 
                                             <a
-                                                href="{{ route('products.show', $variant->product->slug) }}"
+                                                href="{{ route('products.show', $product->slug) }}"
                                                 class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-300 flex items-center justify-center hover:bg-brown-500 hover:text-white hover:scale-110 transition-all"
                                                 title="مشاهده محصول"
                                             >
@@ -1297,6 +1240,9 @@ new class extends Component
                                 <p class="text-xs text-gray-400 mt-2">
                                     در این دسته‌بندی محصولی با شرایط انتخاب‌شده وجود ندارد.
                                 </p>
+                                @if($this->activeFilters)
+                                    <button type="button" wire:click="clearFilters" class="mt-5 px-6 py-3 rounded-2xl bg-brown-500 text-white text-xs font-black">حذف همه فیلترها</button>
+                                @endif
 
                             </div>
 
@@ -1304,7 +1250,9 @@ new class extends Component
 
                     </div>
 
-                    {{-- Pagination واقعی (بر پایه‌ی paginate(12)) --}}
+                    </div>
+
+                    {{-- صفحه‌بندی (فیلترها و مرتب‌سازی حفظ می‌شوند) --}}
                     <div class="mt-16 flex items-center justify-center">
                         {{ $this->paginator->onEachSide(1)->links() }}
                     </div>

@@ -227,7 +227,7 @@ new class extends Component
             <div class="flex items-center gap-4">
                 <div class="w-2 h-12 bg-brown-600 rounded-full shadow-[0_0_20px_rgba(120,72,45,0.6)]"></div>
                 <div>
-                    <h1 class="text-4xl font-black text-gray-900 dark:text-white tracking-tight">{{$data['title'] ?? 'تماس  با  زاراچرم'}}</h1>
+                    <h1 class="text-4xl font-black text-gray-900 dark:text-white tracking-tight">{{$data['title'] ?? 'تماس با ' . \App\Models\Setting::option('site_name', config('app.name'))}}</h1>
                     <p class="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[6px] mt-2">Get In Touch With Us</p>
                 </div>
             </div>

@@ -261,7 +261,7 @@ new #[Layout('layouts::main')] class extends Component
 
                         </div>
                          <button id="pass-button" wire:click="loginPassword()" class="w-full py-5 bg-brown-600 text-white rounded-2xl font-black text-[14px] shadow-lg shadow-brown-600/20 hover:bg-brown-700 transition-all active:scale-95">
-                             تایید و ورود به زاراچرم
+                             تایید و ورود به {{ \App\Models\Setting::option('site_name', config('app.name')) }}
                          </button>
                              @error('password')
                              <p class="mt-2 text-red-500 font-bold text-center">{{$message}}</p>

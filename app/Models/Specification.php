@@ -17,6 +17,7 @@ class Specification extends Model
         'slug',
         'type',
         'is_filterable',
+        'filter_type',
         'is_visible',
         'sort',
         'status',

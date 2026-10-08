@@ -14,6 +14,7 @@ class Option extends Model
     protected $fillable = [
         'title',
         'slug',
+        'display_type',
         'sort',
         'status',
     ];

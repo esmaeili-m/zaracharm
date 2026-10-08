@@ -354,11 +354,26 @@ class ProductPriceService
                 'targets',
                 'rewards',
             ])
+            ->withCount('usages')
+            ->when(auth()->id(), fn ($query, $userId) => $query->withCount([
+                'usages as user_usages_count' => fn ($q) => $q->where('user_id', $userId),
+            ]))
             ->get();
 
         $discounts = [];
 
         foreach ($campaigns as $campaign) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | شرایط کمپین (ویزارد کمپین > محدودیت‌ها) — فقط حذف کمپین نامعتبر؛
+            | ترتیب انتخاب بهترین تخفیف تغییری نمی‌کند
+            |--------------------------------------------------------------------------
+            */
+
+            if (!$this->campaignConditionsMet($campaign, $price)) {
+                continue;
+            }
 
             /*
             |--------------------------------------------------------------------------
@@ -461,6 +476,41 @@ class ProductPriceService
         }
 
         return $discounts;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | شرایط کمپین (settings): بازه قیمت کالا و سقف استفاده
+    |--------------------------------------------------------------------------
+    | min_item_price / max_item_price : قیمت تنوع باید در این بازه باشد
+    | usage_limit                     : سقف کل سفارش‌های پرداخت‌شده با این کمپین
+    | usage_per_customer              : سقف برای هر مشتری (کاربر واردشده)
+    */
+
+    private function campaignConditionsMet(Campaign $campaign, int $price): bool
+    {
+        $settings = (array) ($campaign->settings ?? []);
+
+        $min = (int) ($settings['min_item_price'] ?? 0);
+        $max = (int) ($settings['max_item_price'] ?? 0);
+
+        if (($min > 0 && $price < $min) || ($max > 0 && $price > $max)) {
+            return false;
+        }
+
+        $limit = (int) ($settings['usage_limit'] ?? 0);
+
+        if ($limit > 0 && (int) ($campaign->usages_count ?? 0) >= $limit) {
+            return false;
+        }
+
+        $perCustomer = (int) ($settings['usage_per_customer'] ?? 0);
+
+        if ($perCustomer > 0 && auth()->id() && (int) ($campaign->user_usages_count ?? 0) >= $perCustomer) {
+            return false;
+        }
+
+        return true;
     }
 
     /*

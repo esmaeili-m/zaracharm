@@ -9,12 +9,9 @@ new class extends Component
 {
     public $menu;
     public $categories;
-    public $logo;
-    public $setting;
 
     public function mount(): void
     {
-        $this->setting= \App\Models\Setting::pluck('value','key');
         $this->menu = Menu::query()
             ->where('location', 'header')
             ->with([
@@ -34,10 +31,6 @@ new class extends Component
                 'children.children.children',
             ])
             ->get();
-
-        $this->logo = \App\Models\Setting::where('key', 'logo')
-            ->with('media')
-            ->first();
     }
 
     /*
@@ -881,106 +874,42 @@ new class extends Component
         {{-- ================= CUSTOMER SERVICE ============== --}}
         {{-- ================================================= --}}
 
+        @php
+            $servicePhone = \App\Models\Setting::option('phone');
+            $serviceMobile = \App\Models\Setting::option('mobile');
+            $serviceEmail = \App\Models\Setting::option('email');
+            $serviceHours = \App\Models\Setting::option('work_hours');
+            $serviceLinks = [
+                ['title' => 'پشتیبانی و تیکت', 'url' => route('user.dashboard', ['tab' => 'tickets']), 'color' => 'text-brown-500',
+                 'icon' => 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z'],
+                ['title' => 'پیگیری سفارش', 'url' => route('user.dashboard', ['tab' => 'orders']), 'color' => 'text-purple-500',
+                 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'],
+                ['title' => 'سوالات متداول', 'url' => route('page.show', 'faq'), 'color' => 'text-green-500',
+                 'icon' => 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
+                ['title' => 'شرایط مرجوعی', 'url' => route('page.show', \App\Support\Sections\ReturnPolicy::PAGE_SLUG), 'color' => 'text-red-500',
+                 'icon' => 'M3 10h11M3 14h7m10-8v8a2 2 0 01-2 2h-4.586l-1.707 1.707a1 1 0 01-1.414 0L7.586 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2z'],
+            ];
+        @endphp
+
         <div class="flex items-center gap-2 px-3 mt-8 mb-3">
-
             <span class="w-1 h-4 bg-brown-600 rounded-full"></span>
-
             <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest">
                 خدمات مشتریان
             </span>
-
         </div>
 
-
-        <ul class="space-y-3 mb-6">
-
-            <li>
-
-                <a href="#"
-                   class="flex items-center gap-3 p-3 rounded-xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs">
-
-                    <svg class="w-4 h-4 text-brown-500"
-                         fill="none"
-                         stroke="currentColor"
-                         viewBox="0 0 24 24">
-
-                        <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                              stroke-width="1.5"/>
-
-                    </svg>
-
-                    پشتیبانی 24 ساعته
-
-                </a>
-
-            </li>
-
-
-            <li>
-
-                <a href="#"
-                   class="flex items-center gap-3 p-3 rounded-xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs">
-
-                    <svg class="w-4 h-4 text-green-500"
-                         fill="none"
-                         stroke="currentColor"
-                         viewBox="0 0 24 24">
-
-                        <path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                              stroke-width="1.5"/>
-
-                    </svg>
-
-                    سوالات متداول
-
-                </a>
-
-            </li>
-
-
-            <li>
-
-                <a href="#"
-                   class="flex items-center gap-3 p-3 rounded-xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs">
-
-                    <svg class="w-4 h-4 text-purple-500"
-                         fill="none"
-                         stroke="currentColor"
-                         viewBox="0 0 24 24">
-
-                        <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                              stroke-width="1.5"/>
-
-                    </svg>
-
-                    گارانتی و ضمانت
-
-                </a>
-
-            </li>
-
-
-            <li>
-
-                <a href="#"
-                   class="flex items-center gap-3 p-3 rounded-xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 text-gray-700 dark:text-gray-300 text-xs">
-
-                    <svg class="w-4 h-4 text-red-500"
-                         fill="none"
-                         stroke="currentColor"
-                         viewBox="0 0 24 24">
-
-                        <path d="M3 10h11M3 14h7m10-8v8a2 2 0 01-2 2h-4.586l-1.707 1.707a1 1 0 01-1.414 0L7.586 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2z"
-                              stroke-width="1.5"/>
-
-                    </svg>
-
-                    بازگرداندن کالا
-
-                </a>
-
-            </li>
-
+        <ul class="grid grid-cols-2 gap-2 mb-6">
+            @foreach($serviceLinks as $link)
+                <li>
+                    <a href="{{ $link['url'] }}"
+                       class="flex items-center gap-2 p-3 rounded-xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 text-gray-700 dark:text-gray-300 text-[11px] font-bold">
+                        <svg class="w-4 h-4 shrink-0 {{ $link['color'] }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="{{ $link['icon'] }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="truncate">{{ $link['title'] }}</span>
+                    </a>
+                </li>
+            @endforeach
         </ul>
 
 
@@ -990,49 +919,38 @@ new class extends Component
 
         <div class="mt-8 pt-6 border-t border-white/40 dark:border-gray-800 space-y-6">
 
-            <div class="flex flex-col gap-3 px-3">
-                @if(isset($setting['phone']))
+            @if($servicePhone || $serviceMobile || $serviceEmail || $serviceHours)
+                <div class="flex flex-col gap-3 px-3">
+                    @foreach(array_filter(['تلفن' => $servicePhone, 'موبایل' => $serviceMobile]) as $label => $number)
+                        <a href="tel:{{ preg_replace('/[^0-9+]/', '', $number) }}"
+                           class="flex items-center gap-3 text-xs font-bold text-gray-500 dark:text-gray-400">
+                            <svg class="w-5 h-5 p-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" stroke-width="1.5"/>
+                            </svg>
+                            {{ $label }}: <span dir="ltr">{{ $number }}</span>
+                        </a>
+                    @endforeach
 
-                <a href="tel:{{$setting['phone'] ?? ''}}"
-                   class="flex items-center gap-3 text-xs font-bold text-gray-500 dark:text-gray-400">
+                    @if($serviceEmail)
+                        <a href="mailto:{{ $serviceEmail }}"
+                           class="flex items-center gap-3 text-xs font-bold text-gray-500 dark:text-gray-400">
+                            <svg class="w-5 h-5 p-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="1.5"/>
+                            </svg>
+                            ایمیل: <span dir="ltr" class="truncate">{{ $serviceEmail }}</span>
+                        </a>
+                    @endif
 
-                    <svg class="w-5 h-5 p-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm"
-                         fill="none"
-                         stroke="currentColor"
-                         viewBox="0 0 24 24">
-
-                        <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                              stroke-width="1.5"/>
-
-                    </svg>
-
-                    پشتیبانی: {{$setting['phone'] ?? ''}}
-
-                </a>
-                @endif
-
-                @if(isset($setting['email']))
-                    <a href="mailto:info@digikala.com"
-                       class="flex items-center gap-3 text-xs font-bold text-gray-500 dark:text-gray-400">
-
-                        <svg class="w-5 h-5 p-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm"
-                             fill="none"
-                             stroke="currentColor"
-                             viewBox="0 0 24 24">
-
-                            <path d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                  stroke-width="1.5"/>
-
-                        </svg>
-
-                        ایمیل: {{$setting['email'] ?? ''}}
-
-                    </a>
-                @endif
-
-
-            </div>
-
+                    @if($serviceHours)
+                        <p class="flex items-center gap-3 text-xs font-bold text-gray-500 dark:text-gray-400">
+                            <svg class="w-5 h-5 p-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="1.5"/>
+                            </svg>
+                            {{ $serviceHours }}
+                        </p>
+                    @endif
+                </div>
+            @endif
 
             {{-- شبکه‌های اجتماعی از دیتابیس (پنل > شبکه‌های اجتماعی) --}}
             <x-main.site-socials mode="chips" />

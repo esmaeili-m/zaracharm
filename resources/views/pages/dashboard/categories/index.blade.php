@@ -388,6 +388,8 @@ new class extends Component
 
                                             <a  href="{{route('categories.subcategory',$item->id)}}" class="text-info fs-14 lh-1"><i
                                                     class="ri-list-radio"></i></a>
+                                            <a href="{{ route('categories.attributes', $item->id) }}" class="text-primary fs-14 lh-1" title="ویژگی‌ها و فیلترها"><i
+                                                    class="ri-filter-3-line"></i></a>
                                                 @endcan
                                         @can('categories.delete')
 

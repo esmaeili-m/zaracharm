@@ -53,7 +53,7 @@ new class extends Component
                 <div class="relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[4rem] p-4 shadow-lg overflow-hidden group">
                     <img src="{{asset('storage/'.$this->photo?->file_path)}}" class="rounded-[3.2rem] w-full h-[450px] object-cover grayscale group-hover:grayscale-0 transition-all duration-700" alt="تیم زارا">
                     <div class="absolute bottom-10 right-10 left-10 p-6 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-md rounded-3xl border border-white/20 shadow-xl">
-                        <p class="text-xs font-black text-gray-800 dark:text-white">مجموعه زارا چرم </p>
+                        <p class="text-xs font-black text-gray-800 dark:text-white">مجموعه {{ \App\Models\Setting::option('site_name', config('app.name')) }}</p>
                         <p class="text-[10px] text-gray-500 mt-1">دفتر مرکزی قم</p>
                     </div>
                 </div>
@@ -88,7 +88,7 @@ new class extends Component
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                     </div>
                     <h3 class="text-xl font-black text-white">تضمین اصالت کالا</h3>
-                    <p class="text-sm leading-7 text-brown-100/80">تمامی محصولات در مانا با ضمانت‌نامه معتبر و کد رهگیری اصالت کالا عرضه می‌شوند تا خیالتان از بابت اورجینال بودن راحت باشد.</p>
+                    <p class="text-sm leading-7 text-brown-100/80">تمامی محصولات در {{ \App\Models\Setting::option('site_name', config('app.name')) }} با ضمانت‌نامه معتبر و کد رهگیری اصالت کالا عرضه می‌شوند تا خیالتان از بابت اورجینال بودن راحت باشد.</p>
                 </div>
 
                 <div class="space-y-6">
@@ -110,7 +110,7 @@ new class extends Component
         </div>
 
         <div class="mt-20 text-center space-y-6">
-            <h3 class="text-2xl font-black dark:text-white">می‌خواهید بخشی از خانواده مانا باشید؟</h3>
+            <h3 class="text-2xl font-black dark:text-white">می‌خواهید بخشی از خانواده {{ \App\Models\Setting::option('site_name', config('app.name')) }} باشید؟</h3>
             <p class="text-sm text-gray-500 max-w-xl mx-auto">ما همیشه به دنبال استعدادهای درخشان و همکاران خلاق هستیم. رزومه خود را برای ما ارسال کنید.</p>
             <button class="px-10 py-5 bg-brown-600 text-white text-xs font-black rounded-[2rem] shadow-lg shadow-brown-500/25 hover:scale-105 transition-all">مشاهده فرصت‌های شغلی</button>
         </div>

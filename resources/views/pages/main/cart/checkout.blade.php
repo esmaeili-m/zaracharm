@@ -851,7 +851,7 @@ new class extends Component
                                     </button>
 
                                     <p class="text-[9px] text-center text-gray-400 font-bold mt-4 leading-relaxed px-4">
-                                        با ثبت سفارش، قوانین و مقررات زاراچرم را می‌پذیرم.
+                                        با ثبت سفارش، قوانین و مقررات {{ \App\Models\Setting::option('site_name', config('app.name')) }} را می‌پذیرم.
                                     </p>
                                 </div>
 

@@ -157,6 +157,34 @@ new class extends Component
             ->get(['id', 'title', 'type']);
     }
 
+    /** مشخصاتی که برای دسته‌های این محصول (و والدهایشان) در «ویژگی‌ها و فیلترهای دسته» تعریف شده و هنوز ثبت نشده‌اند */
+    #[Computed]
+    public function suggestedSpecifications()
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('category_attributes')) {
+            return collect();
+        }
+
+        $categoryIds = $this->product->categories()->get()
+            ->flatMap(fn ($category) => array_merge([$category->id], $category->ancestorIds()))
+            ->unique()->all();
+
+        $ids = \App\Models\CategoryAttribute::whereIn('category_id', $categoryIds)
+            ->where('attribute_type', \App\Models\CategoryAttribute::SPEC)
+            ->pluck('attribute_id');
+
+        return Specification::where('status', true)->whereIn('id', $ids)->whereNotIn('id', array_keys($this->specs))->orderBy('sort')->get(['id', 'title']);
+    }
+
+    public function addSuggestedSpecs(): void
+    {
+        foreach ($this->suggestedSpecifications as $spec) {
+            $this->specs[$spec->id] ??= null;
+        }
+
+        unset($this->productSpecifications, $this->availableSpecifications, $this->suggestedSpecifications);
+    }
+
     public function addSpecs(): void
     {
         $ids = Specification::where('status', true)->whereIn('id', array_map('intval', $this->addSpecIds))->pluck('id');
@@ -893,6 +921,13 @@ new class extends Component
                 </div>
             </div>
             <div class="card-body">
+                @if($this->suggestedSpecifications->isNotEmpty())
+                    <div class="alert alert-primary d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <span><i class="ri-lightbulb-line"></i> مشخصات تعریف‌شده برای دسته این محصول (فیلترهای صفحه دسته): <strong>{{ $this->suggestedSpecifications->pluck('title')->implode('، ') }}</strong></span>
+                        <button type="button" class="btn btn-sm btn-primary" wire:click="addSuggestedSpecs">افزودن به فرم</button>
+                    </div>
+                @endif
+
                 @if($this->availableSpecifications->isNotEmpty())
                     <div class="row g-2 align-items-end mb-4">
                         <div class="col-md-9">

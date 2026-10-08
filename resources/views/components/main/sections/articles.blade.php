@@ -73,7 +73,7 @@ new class extends Component
                     </div>
                 </div>
                 <div>
-                    <h2 class="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{{$data['title'] ?? 'مقالات زارا چرم'}}</h2>
+                    <h2 class="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{{$data['title'] ?? 'مقالات ' . \App\Models\Setting::option('site_name', config('app.name'))}}</h2>
                     <p class="text-[10px] font-black text-brown-500 uppercase tracking-[0.4em] mt-2 flex items-center gap-2">
                         <span class="w-8 h-[2px] bg-brown-500/30"></span>
                         Latest News

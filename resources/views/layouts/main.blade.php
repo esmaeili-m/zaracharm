@@ -4,12 +4,14 @@
 <head>
     @php
 
-        $settings = \Illuminate\Support\Facades\Cache::remember('settings', 3600, function () {
-            return \App\Models\Setting::pluck('value', 'key')->toArray();
-        });
+        $settings = \App\Models\Setting::cachedAll();
 
         $favicon = $settings['favicon'] ?? null;
         $logo = $settings['logo'] ?? null;
+        // نام فروشگاه از تنظیمات (پنل > تنظیمات)
+        $siteName = \App\Models\Setting::option('site_name', config('app.name'));
+        $siteNameEn = \App\Models\Setting::option('site_name_en', config('app.name'));
+        $siteAbout = \App\Models\Setting::option('about');
     @endphp
 
     <meta charset="UTF-8">
@@ -19,21 +21,21 @@
 
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
 
-    <title>{{ $settings['site_name'] ?? 'کیف و کفش زاراچرم' }}</title>
+    <title>{{ $siteName }}</title>
 
     <meta name="description"
-          content="{{ $settings['meta_description'] ?? 'فروشگاه اینترنتی کیف و کفش زاراچرم' }}">
+          content="{{ $settings['meta_description'] ?? 'فروشگاه اینترنتی ' . $siteName }}">
 
     <meta name="keywords"
-          content="{{ $settings['meta_keywords'] ?? 'کیف و کفش, زاراچرم, فروشگاه اینترنتی' }}">
+          content="{{ $settings['meta_keywords'] ?? $siteName . ', فروشگاه اینترنتی' }}">
 
     <meta name="robots" content="index, follow">
 
     <meta name="author"
-          content="{{ $settings['site_name'] ?? 'زاراچرم' }}">
+          content="{{ $siteName }}">
 
     <meta name="copyright"
-          content="All rights belong to {{ $settings['site_name'] ?? 'زاراچرم' }}.">
+          content="All rights belong to {{ $siteName }}.">
 
     @if($favicon)
         <link rel="apple-touch-icon"
@@ -94,7 +96,7 @@
 <body class="bg-gray-100 dark:bg-[#050505] min-h-screen transition-colors duration-700 selection:bg-brown-500/30 selection:text-brown-600 overflow-x-hidden">
 
 {{-- لودر صفحه (قبل از نمایش محتوا) --}}
-<x-layout.page-loader name="زاراچرم" latin="ZARACHARM" />
+<x-layout.page-loader :name="$siteName" :latin="$siteNameEn" />
 
 <!-- HEADER -->
 <header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
@@ -102,52 +104,56 @@
 {{--        <p>🎉 جشنواره زمستانی: تا ۵۰٪ تخفیف روی تمام محصولات  | کد تخفیف: <span class="text-secondary-400">WINTER2025</span></p>--}}
 {{--    </div>--}}
 
-    <div class="lg:container  ">
-        <div class="flex items-center justify-between h-20 gap-8 mx-1 md:mx-2">
+    <div class="lg:container">
+        <div class="flex items-center justify-between h-16 md:h-20 gap-2 md:gap-8 px-3 md:px-2">
 
-            <div class="flex items-center gap-4">
-                <button id="resMenu" class="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+            {{-- راست: منو + لوگو --}}
+            <div class="flex items-center gap-1 md:gap-4 min-w-0">
+                <button id="resMenu" type="button" aria-label="منو"
+                        class="lg:hidden shrink-0 w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <svg class="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16m-7 6h7"/></svg>
                 </button>
-                <button id="mobile-search-toggle" class="md:hidden p-2.5 rounded-xl border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-white/5 text-gray-600 dark:text-gray-400 transition-all shadow-sm">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                </button>
-                <a href="/" class="flex items-center gap-2  group">
+                <a href="/" class="flex items-center min-w-0" aria-label="{{ $siteName }}">
                     @if($logo)
-                        <img
-                            src="{{ asset('storage/' . $logo) }}"
-                            class="w-30 h-15"
-                            alt=""
-                        >
+                        <img src="{{ asset('storage/' . $logo) }}"
+                             class="h-9 md:h-14 w-auto max-w-[120px] md:max-w-[160px] object-contain"
+                             alt="{{ $siteName }}">
+                    @else
+                        <span class="truncate text-base md:text-xl font-black text-gray-900 dark:text-white">{{ $siteName }}</span>
                     @endif
                 </a>
             </div>
 
-            <!-- Search -->
+            <!-- Search (دسکتاپ) -->
             <livewire:layout.search />
 
-            <!-- Register and action button-->
-            <div class="flex items-center gap-3">
+            {{-- چپ: اکشن‌ها (در موبایل ورود و سبد خرید در نوار پایین هستند) --}}
+            <div class="flex items-center gap-1.5 md:gap-3 shrink-0">
 
-                <button id="dark-mode-toggle"
-                        class="p-2.5 rounded-xl border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-md hover:border-primary-500/50 hover:bg-white/80 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-primary-500 transition-all duration-300 shadow-sm">
+                <button id="mobile-search-toggle" type="button" aria-label="جستجو"
+                        class="md:hidden w-10 h-10 flex items-center justify-center rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </button>
+
+                <button id="dark-mode-toggle" type="button" aria-label="حالت تاریک"
+                        class="w-10 h-10 md:w-auto md:h-auto md:p-2.5 flex items-center justify-center rounded-xl md:border border-gray-200/50 dark:border-white/10 md:bg-white/40 md:dark:bg-white/5 hover:bg-gray-100 md:hover:border-primary-500/50 md:hover:bg-white/80 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-primary-500 transition-all duration-300 md:shadow-sm">
                     <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
                     <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
                 </button>
 
-                <div class="relative group">
-                    <a
-{{--                        id="login-btn" --}}
-                       href="{{ auth()->check() ? route('user.dashboard') : route('login')}}"
-                            class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-md hover:border-primary-500/50 hover:bg-primary-50/50 dark:hover:bg-primary-500/10 transition-all duration-300 group shadow-sm">
+                <div class="relative group hidden md:block">
+                    <a href="{{ auth()->check() ? route('user.dashboard') : route('login')}}"
+                       class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-md hover:border-primary-500/50 hover:bg-primary-50/50 dark:hover:bg-primary-500/10 transition-all duration-300 group shadow-sm">
                         <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-primary-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                        <span class="text-xs font-black text-gray-700 dark:text-gray-200 hidden lg:block uppercase tracking-tighter">{{auth()->check() ? (auth()->user()->fullname == "" ? auth()->user()->fullname : auth()->user()->mobile) : 'ورود یا ثبت ‌نام'}}</span>
+                        <span class="text-xs font-black text-gray-700 dark:text-gray-200 hidden lg:block uppercase tracking-tighter">{{ auth()->check() ? (trim(auth()->user()->full_name) ?: auth()->user()->mobile) : 'ورود یا ثبت ‌نام' }}</span>
                     </a>
                 </div>
                 @auth
-                    <livewire:main.cart />
+                    <div class="hidden md:block">
+                        <livewire:main.cart />
+                    </div>
                 @endauth
             </div>
 
@@ -175,12 +181,13 @@
             <div class="xl:col-span-2 space-y-8">
                 <div class="flex items-center gap-4">
                     <div class="w-14 h-14 bg-brown-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brown-600/30">
-                        <span class="text-white text-2xl font-black">Z</span>
+                        <span class="text-white text-2xl font-black">{{ mb_strtoupper(mb_substr($siteNameEn, 0, 1)) }}</span>
                     </div>
-                    <span class="text-2xl font-black text-gray-900 dark:text-white uppercase">ZARA<span class="text-brown-600">CHARM</span></span>
+                    <span class="text-2xl font-black text-gray-900 dark:text-white uppercase">{{ $siteNameEn }}</span>
                 </div>
                 <p class="text-sm text-gray-500 dark:text-gray-400 leading-8 text-justify font-medium max-w-md">
-                    فروشگاه زارا چرم؛ ترکیبی از اصالت، کیفیت و استایل. ما با ارائه محصولات چرمی باکیفیت و طراحی‌های به‌روز، انتخابی مطمئن برای کسانی هستیم که به جزئیات و ماندگاری اهمیت می‌دهند. اصالت، کیفیت و رضایت شما، سه اصل اصلی ماست.                </p>
+                    {{ $siteAbout ?? ('فروشگاه ' . $siteName . '؛ ترکیبی از اصالت، کیفیت و استایل. اصالت، کیفیت و رضایت شما، سه اصل اصلی ماست.') }}
+                </p>
                 {{-- شبکه‌های اجتماعی از دیتابیس (پنل > شبکه‌های اجتماعی) --}}
                 <x-main.site-socials />
             </div>
@@ -334,7 +341,7 @@
     <div class="relative flex-1 flex flex-col bg-white/10 dark:bg-black/20 overflow-hidden">
 
         <div class="flex items-center justify-between p-5 border-b border-white/10">
-            <span class="text-xl font-black text-gray-800 dark:text-white">جستجو در <span class="text-primary-500">مانا</span></span>
+            <span class="text-xl font-black text-gray-800 dark:text-white">جستجو در <span class="text-primary-500">{{ $siteName }}</span></span>
             <button id="close-search-modal" class="p-2 bg-white/10 rounded-full text-gray-500 dark:text-gray-400">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -550,8 +557,13 @@
                             </svg>
                         </div>
                         <div>
-                            <span class="block font-black text-sm">ورود یا ثبت‌نام</span>
-                            <span class="block text-[10px] opacity-70 mt-0.5">مشاهده پنل کاربری</span>
+                            @auth
+                                <span class="block font-black text-sm">{{ trim(auth()->user()->full_name) ?: auth()->user()->mobile }}</span>
+                                <span class="block text-[10px] opacity-70 mt-0.5">مشاهده پنل کاربری</span>
+                            @else
+                                <span class="block font-black text-sm">ورود یا ثبت‌نام</span>
+                                <span class="block text-[10px] opacity-70 mt-0.5">با شماره موبایل وارد شوید</span>
+                            @endauth
                         </div>
                     </div>
                     <svg class="w-5 h-5 opacity-50 group-hover:translate-x-[-5px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -572,6 +584,11 @@
 
 <script src="{{asset('main/js/dependencies/app.js')}}"></script>
 <script src="{{asset('dashboard')}}/libs/sweetalert2/sweetalert2@11"></script>
+
+{{-- نوار مقایسه محصولات (در خود صفحه مقایسه نمایش داده نمی‌شود) --}}
+@unless(request()->routeIs('compare.index'))
+    <livewire:main.compare-bar />
+@endunless
 
 <!-- INITIAL STORY SECTION -->
 @livewireScripts

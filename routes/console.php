@@ -101,3 +101,16 @@ Artisan::command('marketplaces:sync {--orders} {--stock} {--retry} {--prune} {--
 \Illuminate\Support\Facades\Schedule::command('marketplaces:sync --stock')->hourly()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('marketplaces:sync --retry')->everyThirtyMinutes()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('marketplaces:sync --prune')->daily();
+
+/*
+|--------------------------------------------------------------------------
+| تاریخچه قیمت (نمودار قیمت صفحه محصول)
+|--------------------------------------------------------------------------
+| روزی یک‌بار قیمت پایه و نهایی (با تخفیف/کمپین) همه تنوع‌های فعال ثبت می‌شود.
+*/
+Artisan::command('prices:snapshot', function () {
+    $count = app(\App\Services\Pricing\PriceHistoryRecorder::class)->snapshotAll();
+    $this->info("قیمت {$count} تنوع ثبت شد.");
+})->purpose('ثبت روزانه تاریخچه قیمت برای نمودار قیمت');
+
+\Illuminate\Support\Facades\Schedule::command('prices:snapshot')->dailyAt('00:10')->withoutOverlapping();

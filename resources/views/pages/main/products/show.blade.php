@@ -20,6 +20,7 @@ new class extends Component
     public string $consInput = '';
     public array $selectedOptions = [];
     public bool $isWishlisted = false;
+    public bool $isCompared = false;
     public function mount($product)
     {
         $this->product = Product::active()->where('slug',$product)
@@ -33,6 +34,79 @@ new class extends Component
 
         $this->isWishlisted = Auth::check()
             && Auth::user()->hasInWishlist($this->product->id);
+
+        $this->isCompared = app(\App\Services\Catalog\CompareList::class)->has($this->product->id);
+    }
+
+    // افزودن/حذف از لیست مقایسه (Session؛ برای مهمان هم کار می‌کند)
+    public function toggleCompare(): void
+    {
+        $compare = app(\App\Services\Catalog\CompareList::class);
+
+        if ($compare->has($this->product->id)) {
+            $compare->remove($this->product->id);
+            $this->isCompared = false;
+            $this->dispatch('compare-updated');
+            $this->dispatch('alert', type: 'success', message: 'محصول از لیست مقایسه حذف شد.');
+
+            return;
+        }
+
+        $result = $compare->add($this->product->id);
+
+        if ($result === 'full') {
+            $this->dispatch('alert', type: 'warning', message: 'حداکثر ' . \App\Services\Catalog\CompareList::MAX . ' محصول قابل مقایسه است؛ ابتدا یکی را از نوار مقایسه حذف کنید.');
+
+            return;
+        }
+
+        $this->isCompared = true;
+        $this->dispatch('compare-updated');
+        $this->dispatch('alert', type: 'success', message: 'محصول به لیست مقایسه اضافه شد.');
+    }
+
+    /**
+     * تاریخچه قیمت تنوع انتخاب‌شده (نمودار قیمت) — یک نقطه در روز، تا ۳۶۵ روز
+     * قیمت امروز همیشه از موتور قیمت اضافه می‌شود تا نمودار با قیمت فعلی صفحه یکی باشد.
+     */
+    public function priceHistory(): array
+    {
+        $variant = $this->selectedVariant;
+
+        if (!$variant) {
+            return [];
+        }
+
+        try {
+            $rows = \App\Models\PriceHistory::where('product_variant_id', $variant->id)
+                ->where('recorded_on', '>=', today()->subDays(365))
+                ->orderBy('recorded_on')
+                ->get(['recorded_on', 'price', 'final_price'])
+                ->keyBy(fn ($row) => $row->recorded_on->toDateString());
+        } catch (\Throwable) {
+            $rows = collect(); // جدول هنوز ساخته نشده
+        }
+
+        $today = rescue(fn () => $variant->priceData(), [], false) ?: [];
+        $rows[today()->toDateString()] = (object) [
+            'recorded_on' => today(),
+            'price' => (int) ($today['price'] ?? $variant->price),
+            'final_price' => (int) ($today['after_discount'] ?? $variant->price),
+        ];
+
+        return $rows->sortKeys()->values()->map(fn ($row) => [
+            'date' => \Carbon\Carbon::parse($row->recorded_on)->toDateString(),
+            'label' => verta($row->recorded_on)->format('Y/m/d'),
+            'price' => (int) $row->price,
+            'final' => (int) $row->final_price,
+        ])->filter(fn ($p) => $p['price'] > 0)->values()->all();
+    }
+
+    // حذف از نوار مقایسه => وضعیت آیکون همین صفحه هم به‌روز شود
+    #[\Livewire\Attributes\On('compare-updated')]
+    public function syncCompareState(): void
+    {
+        $this->isCompared = app(\App\Services\Catalog\CompareList::class)->has($this->product->id);
     }
     public function toggleWishlist()
     {
@@ -480,7 +554,7 @@ new class extends Component
 
                             {{-- Icon box --}}
                             <div class="absolute top-6 left-1/2 -translate-x-1/2 z-[100] isolate">
-                                <div class="flex items-center gap-1.5 p-1.5 bg-white/40 dark:bg-black/40 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/10 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-[-15px] group-hover:translate-y-0 flex-row-reverse">
+                                <div class="zc-gallery-tools flex items-center gap-1.5 p-1.5 bg-white/40 dark:bg-black/40 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/10 shadow-lg opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-all duration-500 transform translate-y-[-15px] group-hover:translate-y-0 [@media(hover:none)]:translate-y-0 flex-row-reverse">
 
                                     <div class="relative group/tooltip">
                                         <button type="button" wire:click="toggleWishlist" wire:loading.attr="disabled" wire:target="toggleWishlist" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 {{ $isWishlisted ? 'bg-red-500 text-white' : 'text-gray-700 dark:text-gray-200 hover:bg-red-500 hover:text-white' }}">
@@ -495,11 +569,17 @@ new class extends Component
                                     <div class="w-[1px] h-5 bg-gray-400/20 dark:bg-white/10"></div>
 
                                     <div class="relative group/tooltip">
-                                        <button onclick="toggleModal('compareModal')" class="w-10 h-10 rounded-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-teal-500 hover:text-white transition-all duration-300">
-                                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"></path><path d="M8 21H3v-5"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg>
+                                        <button type="button" wire:click="toggleCompare" wire:loading.attr="disabled" wire:target="toggleCompare"
+                                                aria-pressed="{{ $isCompared ? 'true' : 'false' }}" aria-label="{{ $isCompared ? 'حذف از مقایسه' : 'مقایسه محصول' }}"
+                                                class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 {{ $isCompared ? 'zc-compare-active bg-teal-500 text-white' : 'text-gray-700 dark:text-gray-200 hover:bg-teal-500 hover:text-white' }}">
+                                            @if($isCompared)
+                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"></path><path d="M8 21H3v-5"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"></circle></svg>
+                                            @else
+                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"></path><path d="M8 21H3v-5"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg>
+                                            @endif
                                         </button>
                                         <span class="absolute top-full mt-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 dark:bg-zinc-800 text-white text-[10px] font-black rounded-lg whitespace-nowrap opacity-0 -translate-y-1 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-y-0 transition-all duration-300 pointer-events-none shadow-lg z-[110] border border-white/10">
-                                    مقایسه کالا
+                                    {{ $isCompared ? 'حذف از مقایسه' : 'مقایسه محصول' }}
                                     <span class="absolute bottom-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-b-gray-900 dark:border-b-zinc-800"></span>
                                 </span>
                                     </div>
@@ -507,7 +587,7 @@ new class extends Component
                                     <div class="w-[1px] h-5 bg-gray-400/20 dark:bg-white/10"></div>
 
                                     <div class="relative group/tooltip">
-                                        <button onclick="toggleModal('priceModal')" class="w-10 h-10 rounded-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-brown-600 hover:text-white transition-all duration-300">
+                                        <button type="button" x-data @click="$dispatch('open-price-chart')" aria-label="نمودار قیمت" class="w-10 h-10 rounded-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-brown-600 hover:text-white transition-all duration-300">
                                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
                                         </button>
                                         <span class="absolute top-full mt-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 dark:bg-zinc-800 text-white text-[10px] font-black rounded-lg whitespace-nowrap opacity-0 -translate-y-1 group-hover/tooltip:opacity-100 group-hover/tooltip:translate-y-0 transition-all duration-300 pointer-events-none shadow-lg z-[110] border border-white/10">
@@ -700,7 +780,7 @@ new class extends Component
                                                 </div>
 
                                                 <a href="{{ route('page.show', 'about-us') }}" class="cursor-pointer group">
-                                                    <p class="text-[14px] font-black text-gray-900 dark:text-white group-hover:text-brown-600 transition-colors">فروشنده: زاراچرم</p>
+                                                    <p class="text-[14px] font-black text-gray-900 dark:text-white group-hover:text-brown-600 transition-colors">فروشنده: {{ \App\Models\Setting::option('site_name', config('app.name')) }}</p>
                                                     <div class="flex items-center gap-2 mt-1">
                                                         <div class="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-100/50 dark:border-emerald-500/20">
                                                             <span class="text-[10px] font-black text-emerald-700 dark:text-emerald-400">۴.۸</span>
@@ -737,7 +817,7 @@ new class extends Component
                                                         </svg>
                                                     </div>
                                                     <div class="flex flex-col">
-                                                        <p class="text-[12px] font-bold text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">ارسال سریع زاراچرم</p>
+                                                        <p class="text-[12px] font-bold text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">ارسال سریع {{ \App\Models\Setting::option('site_name', config('app.name')) }}</p>
                                                         <p class="text-[10px] text-emerald-600 dark:text-emerald-500/80 font-bold">تحویل سفارش در کوتاه‌ترین زمان</p>
                                                     </div>
                                                 </div>
@@ -2100,5 +2180,159 @@ new class extends Component
             </div>
         </section>
         <!-- END SHOP FEATURE -->
+
+        {{-- ===================== نمودار قیمت ===================== --}}
+        @php
+            $pricePoints = $this->priceHistory();
+            $chartVariantLabel = $selectedVariant?->values?->pluck('title')->implode(' / ');
+        @endphp
+        <div wire:ignore.self
+             x-data="{
+                open: false,
+                range: 90,
+                chart: null,
+                version: 0,
+                // data-points واکنش‌پذیر نیست؛ version در هر باز شدن (پس از تغییر تنوع) محاسبه را تازه می‌کند
+                points() { this.version; try { return JSON.parse(this.$refs.data.dataset.points || '[]') } catch (e) { return [] } },
+                visible() {
+                    const all = this.points();
+                    if (this.range >= 365) return all;
+                    const from = new Date(); from.setDate(from.getDate() - this.range);
+                    const iso = from.toISOString().slice(0, 10);
+                    const list = all.filter(p => p.date >= iso);
+                    const before = all.filter(p => p.date < iso).pop();
+                    return before ? [before, ...list] : list;
+                },
+                stats() {
+                    const list = this.visible();
+                    if (!list.length) return null;
+                    const finals = list.map(p => p.final);
+                    const first = finals[0], last = finals[finals.length - 1];
+                    return { current: last, min: Math.min(...finals), max: Math.max(...finals), change: first ? Math.round((last - first) / first * 1000) / 10 : 0 };
+                },
+                fmt(n) { return Number(n || 0).toLocaleString('fa-IR') },
+                show() { this.version++; this.open = true; document.body.classList.add('overflow-hidden'); this.$nextTick(() => this.render()) },
+                hide() { this.open = false; document.body.classList.remove('overflow-hidden') },
+                render() {
+                    if (!window.Chart || !this.$refs.canvas) return;
+                    const list = this.visible();
+                    const dark = document.documentElement.classList.contains('dark');
+                    const ctx = this.$refs.canvas.getContext('2d');
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+                    gradient.addColorStop(0, 'rgba(139,106,79,.28)');
+                    gradient.addColorStop(1, 'rgba(139,106,79,0)');
+                    const hasBase = list.some(p => p.price !== p.final);
+                    const font = { family: 'payda, sans-serif', size: 11, weight: '600' };
+                    if (this.chart) this.chart.destroy();
+                    this.chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: list.map(p => p.label),
+                            datasets: [
+                                { label: 'قیمت نهایی', data: list.map(p => p.final), stepped: true, borderColor: '#8b6a4f', backgroundColor: gradient, fill: true, borderWidth: 3, pointRadius: list.length < 2 ? 5 : 0, pointHoverRadius: 6, pointBackgroundColor: '#8b6a4f' },
+                                ...(hasBase ? [{ label: 'قیمت بدون تخفیف', data: list.map(p => p.price), stepped: true, borderColor: dark ? 'rgba(255,255,255,.35)' : 'rgba(100,116,139,.55)', borderDash: [6, 6], borderWidth: 2, pointRadius: 0, fill: false }] : []),
+                            ],
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            interaction: { intersect: false, mode: 'index' },
+                            plugins: {
+                                legend: { display: hasBase, labels: { font, color: dark ? '#d4d4d8' : '#475569', boxWidth: 14 } },
+                                tooltip: { rtl: true, backgroundColor: '#18181b', padding: 12, cornerRadius: 12, titleFont: font, bodyFont: font,
+                                    callbacks: { label: c => ' ' + c.dataset.label + ': ' + Number(c.raw).toLocaleString('fa-IR') + ' تومان' } },
+                            },
+                            scales: {
+                                y: { position: 'right', grid: { color: dark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)' }, ticks: { font, color: '#94a3b8', callback: v => Number(v).toLocaleString('fa-IR') } },
+                                x: { grid: { display: false }, ticks: { font, color: '#94a3b8', maxTicksLimit: 6, maxRotation: 0 } },
+                            },
+                        },
+                    });
+                },
+             }"
+             @open-price-chart.window="show()"
+             @keydown.escape.window="open && hide()"
+             x-show="open" x-cloak
+             class="fixed inset-0 z-[1000] flex items-end md:items-center justify-center p-0 md:p-6"
+             dir="rtl" role="dialog" aria-modal="true" aria-label="نمودار قیمت">
+
+            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="hide()"></div>
+
+            <div class="relative w-full md:max-w-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-white/60 dark:border-white/10 rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-lg p-6 md:p-8">
+
+                {{-- داده نمودار (با هر تغییر تنوع به‌روز می‌شود) --}}
+                <span x-ref="data" class="hidden" data-points="{{ json_encode($pricePoints) }}"></span>
+
+                <div class="flex items-start justify-between gap-4 mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-1.5 h-9 bg-brown-600 rounded-full"></div>
+                        <div>
+                            <h3 class="text-lg font-black text-gray-900 dark:text-white">نمودار قیمت</h3>
+                            <p class="text-[11px] font-bold text-gray-400 mt-0.5 line-clamp-1">{{ $product->title }}@if($chartVariantLabel) — {{ $chartVariantLabel }}@endif</p>
+                        </div>
+                    </div>
+                    <button type="button" @click="hide()" aria-label="بستن"
+                            class="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-white/5 text-gray-500 hover:bg-red-500 hover:text-white transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="flex gap-2 mb-5">
+                    @foreach([30 => '۳۰ روز', 90 => '۳ ماه', 365 => '۱ سال'] as $days => $label)
+                        <button type="button" @click="range = {{ $days }}; render()"
+                                :class="range === {{ $days }} ? 'bg-brown-600 text-white shadow-lg shadow-brown-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-brown-600'"
+                                class="px-4 py-2 rounded-xl text-[11px] font-black transition-all">{{ $label }}</button>
+                    @endforeach
+                </div>
+
+                <template x-if="stats()">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                        <div class="p-3 rounded-2xl bg-brown-600/10">
+                            <div class="text-[10px] font-bold text-gray-500 dark:text-gray-400">قیمت فعلی</div>
+                            <div class="text-sm font-black text-brown-600 dark:text-brown-400 tabular-nums mt-1"><span x-text="fmt(stats().current)"></span> <span class="text-[9px]">تومان</span></div>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-emerald-500/10">
+                            <div class="text-[10px] font-bold text-gray-500 dark:text-gray-400">کمترین</div>
+                            <div class="text-sm font-black text-emerald-600 dark:text-emerald-400 tabular-nums mt-1" x-text="fmt(stats().min)"></div>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-red-500/10">
+                            <div class="text-[10px] font-bold text-gray-500 dark:text-gray-400">بیشترین</div>
+                            <div class="text-sm font-black text-red-500 tabular-nums mt-1" x-text="fmt(stats().max)"></div>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-gray-100 dark:bg-white/5">
+                            <div class="text-[10px] font-bold text-gray-500 dark:text-gray-400">تغییر در این بازه</div>
+                            <div class="text-sm font-black tabular-nums mt-1" dir="ltr"
+                                 :class="stats().change > 0 ? 'text-red-500' : (stats().change < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500')"
+                                 x-text="(stats().change > 0 ? '+' : '') + stats().change.toLocaleString('fa-IR') + '٪'"></div>
+                        </div>
+                    </div>
+                </template>
+
+                <div class="relative h-64 md:h-72">
+                    <canvas x-ref="canvas"></canvas>
+                </div>
+
+                <p x-show="points().length < 2" class="mt-4 text-[11px] font-bold text-gray-400 leading-6 text-center">
+                    تاریخچه قیمت این کالا از امروز ثبت می‌شود؛ با تغییر قیمت یا شروع و پایان تخفیف‌ها، نمودار کامل‌تر می‌شود.
+                </p>
+                <p x-show="points().length >= 2" class="mt-4 text-[10px] font-bold text-gray-400 text-center">
+                    قیمت‌ها به تومان و برای تنوع انتخاب‌شده است؛ قیمت نهایی شامل تخفیف‌ها و کمپین‌های همان روز است.
+                </p>
+            </div>
+        </div>
     </main>
 </div>
+
+@push('styles')
+    {{-- ابزارهای گالری (علاقه‌مندی، مقایسه، نمودار قیمت، اشتراک) در موبایل و صفحه‌های لمسی همیشه نمایش داده شوند؛
+         مستقل از build فایل CSS (در نسخه build قدیمی این قاعده وجود نداشت) --}}
+    <style>
+        @media (max-width: 1023px), (hover: none) {
+            .zc-gallery-tools { opacity: 1 !important; transform: none !important; translate: none !important; }
+        }
+        .zc-compare-active { background-color: #14b8a6; color: #fff; }
+    </style>
+@endpush
+
+@push('scripts')
+    <script src="{{ asset('main/js/plugin/chart-js/chart.js') }}"></script>
+@endpush

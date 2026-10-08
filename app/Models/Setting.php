@@ -12,6 +12,26 @@ class Setting extends Model
     {
         return $this->morphMany(Media::class, 'mediable');
     }
+    /**
+     * همه تنظیمات (کش‌شده با کلید settings؛ بعد از ویرایش Cache::forget('settings'))
+     */
+    public static function cachedAll(): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember('settings', 3600, function () {
+            return static::pluck('value', 'key')->toArray();
+        });
+    }
+
+    /**
+     * مقدار یک تنظیم؛ مقدار خالی هم پیش‌فرض برمی‌گرداند
+     */
+    public static function option(string $key, $default = null)
+    {
+        $value = static::cachedAll()[$key] ?? null;
+
+        return filled($value) ? $value : $default;
+    }
+
     public static function logo(): string
     {
         $path = static::where('key', 'logo')

@@ -41,6 +41,21 @@ class ProductVariant extends Model
             $variant->sku = filled($variant->sku) ? trim((string) $variant->sku) : $generator->sku($variant->product_id);
             $variant->barcode = filled($variant->barcode) ? trim((string) $variant->barcode) : $generator->barcode();
         });
+
+        // تاریخچه قیمت (نمودار قیمت صفحه محصول) — پس از commit و بدون اختلال در ذخیره
+        static::saved(function (ProductVariant $variant) {
+            if (!$variant->wasRecentlyCreated && !$variant->wasChanged('price')) {
+                return;
+            }
+
+            app('db')->afterCommit(function () use ($variant) {
+                try {
+                    app(\App\Services\Pricing\PriceHistoryRecorder::class)->record($variant);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            });
+        });
     }
 
 

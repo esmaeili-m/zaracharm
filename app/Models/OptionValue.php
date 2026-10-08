@@ -15,6 +15,7 @@ class OptionValue extends Model
         'option_id',
         'title',
         'slug',
+        'color_code',
         'sort',
         'status',
     ];
