@@ -86,261 +86,145 @@ new class extends Component
 
         @forelse($this->orders as $order)
             @php $status = \App\Support\OrderStatus::badge($order->status); @endphp
+            @php
+                $latestReturn = $order->returnRequests->first();
+                $itemsCount = $order->items->count();
+            @endphp
 
+            <div wire:key="order-{{ $order->id }}" class="relative overflow-hidden bg-white/40 dark:bg-gray-950/60 backdrop-blur-md border border-white/60 dark:border-white/10 rounded-3xl md:rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-none transition-all hover:border-primary-500/30">
 
-            <div class="relative overflow-hidden bg-white/40 dark:bg-gray-950/60 backdrop-blur-md border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-none group transition-all hover:border-primary-500/30">
+                {{-- Header: شماره سفارش + وضعیت --}}
+                <div class="flex items-center justify-between gap-3 px-4 md:px-6 py-4 border-b border-gray-100 dark:border-white/5">
+                    <div class="min-w-0">
+                        <span class="block text-[10px] font-black text-gray-400">شماره سفارش</span>
+                        <span class="block text-[13px] font-black text-gray-900 dark:text-white tabular-nums truncate">#{{ $order->order_number }}</span>
+                    </div>
 
-                <div class="absolute -top-24 -left-24 w-48 h-48 bg-primary-500/5 rounded-full blur-md group-hover:bg-primary-500/10 transition-colors"></div>
+                    <div class="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                        @if($latestReturn)
+                            <button type="button"
+                                    wire:click="$dispatch('open-return-request', { orderId: {{ $order->id }} })"
+                                    class="hidden sm:inline-flex px-3 py-1.5 rounded-xl border text-[10px] font-black {{ $latestReturn->status_class }}">
+                                مرجوعی: {{ $latestReturn->status_label }}
+                            </button>
+                        @endif
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border whitespace-nowrap {{ $status['class'] }}">
+                            <span class="w-2 h-2 rounded-full {{ $status['dot'] }}"></span>
+                            <span class="text-[10px] md:text-[11px] font-black">{{ $status['title'] }}</span>
+                        </span>
+                    </div>
+                </div>
 
-                <div class="relative z-10">
+                {{-- اطلاعات خلاصه --}}
+                <dl class="grid grid-cols-2 {{ $order->delivery_date ? 'md:grid-cols-4' : 'md:grid-cols-3' }} gap-px bg-gray-100 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
+                    <div class="bg-white/70 dark:bg-gray-950 px-4 md:px-6 py-3">
+                        <dt class="text-[10px] font-black text-gray-400">تاریخ سفارش</dt>
+                        <dd class="mt-1 text-[12px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">{{ verta($order->created_at)->format('Y/m/d') }}</dd>
+                    </div>
+                    <div class="bg-white/70 dark:bg-gray-950 px-4 md:px-6 py-3">
+                        <dt class="text-[10px] font-black text-gray-400">مبلغ کل</dt>
+                        <dd class="mt-1 text-[12px] font-black text-primary-500 tabular-nums">{{ number_format($order->total_amount) }} <span class="text-[10px] font-bold">تومان</span></dd>
+                    </div>
+                    <div class="bg-white/70 dark:bg-gray-950 px-4 md:px-6 py-3 {{ $order->delivery_date ? '' : 'col-span-2 md:col-span-1' }}">
+                        <dt class="text-[10px] font-black text-gray-400">تعداد کالا</dt>
+                        <dd class="mt-1 text-[12px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">{{ number_format($order->items->sum('quantity')) }} عدد</dd>
+                    </div>
+                    @if($order->delivery_date)
+                        <div class="bg-white/70 dark:bg-gray-950 px-4 md:px-6 py-3">
+                            <dt class="text-[10px] font-black text-gray-400">تاریخ ارسال</dt>
+                            <dd class="mt-1 text-[12px] font-bold text-brown-600 dark:text-brown-400">{{ verta($order->delivery_date)->format('l j F') }}</dd>
+                        </div>
+                    @endif
+                </dl>
 
-                    {{-- Header --}}
-                    <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-gray-100 dark:border-white/5">
+                {{-- محصولات + دکمه‌ها --}}
+                <div class="px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-                        <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
-
-                            <div class="flex flex-col gap-1">
-
-                            <span class="text-[10px] font-black text-gray-400">
-                                شماره سفارش
-                            </span>
-
-                                <span class="text-[13px] font-black text-gray-900 dark:text-white tabular-nums">
-                                #{{ $order->order_number }}
-                            </span>
-
-                            </div>
-
-
-                            <div class="flex flex-col gap-1">
-
-                            <span class="text-[10px] font-black text-gray-400">
-                                مبلغ کل
-                            </span>
-
-                                <span class="text-[13px] font-black text-primary-500 tabular-nums">
-                                {{ number_format($order->total_amount) }}
-                                تومان
-                            </span>
-
-                            </div>
-
-
-                            <div class="flex flex-col gap-1">
-
-                            <span class="text-[10px] font-black text-gray-400">
-                                تاریخ سفارش
-                            </span>
-                                <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400">
-                                {{ verta($order->created_at)->format('Y/m/d')}}
-                            </span>
-
-                            </div>
-
-                            @if($order->delivery_date)
-                                <div class="flex flex-col gap-1">
-                                <span class="text-[10px] font-black text-gray-400">
-                                    تاریخ ارسال
-                                </span>
-                                    <span class="text-[11px] font-bold text-brown-600 dark:text-brown-400">
-                                    {{ verta($order->delivery_date)->format('l j F') }}
-                                </span>
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="flex items-center -space-x-3 space-x-reverse shrink-0">
+                            @foreach($order->items->take(3) as $item)
+                                <div class="w-11 h-11 md:w-12 md:h-12 rounded-2xl border-2 border-white dark:border-gray-900 bg-gray-50 dark:bg-white/10 overflow-hidden shadow-sm">
+                                    @if($image = $item->variant?->product?->featuredImageUrl)
+                                        <img src="{{ $image }}" alt="{{ $item->variant?->product?->title }}" class="w-full h-full object-cover" loading="lazy">
+                                    @else
+                                        <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                            @if($itemsCount > 3)
+                                <div class="w-11 h-11 md:w-12 md:h-12 rounded-2xl border-2 border-white dark:border-gray-900 bg-primary-500/15 flex items-center justify-center">
+                                    <span class="text-[10px] font-black text-primary-600 dark:text-primary-400 tabular-nums">+{{ $itemsCount - 3 }}</span>
                                 </div>
                             @endif
-
                         </div>
 
-
-                        {{-- Status --}}
-                        <div class="flex flex-wrap items-center gap-2">
-
-                            @if($latestReturn = $order->returnRequests->first())
-                                <button type="button"
-                                        wire:click="$dispatch('open-return-request', { orderId: {{ $order->id }} })"
-                                        class="px-3 py-2 rounded-xl border text-[10px] font-black {{ $latestReturn->status_class }}">
-                                    مرجوعی: {{ $latestReturn->status_label }}
-                                </button>
+                        <div class="min-w-0">
+                            <p class="text-[12px] font-bold text-gray-800 dark:text-gray-200 truncate">
+                                {{ $order->items->first()?->variant?->product?->title ?? $order->items->first()?->product_name ?? 'محصول حذف شده' }}
+                            </p>
+                            @if($itemsCount > 1)
+                                <p class="text-[10px] font-bold text-gray-400 mt-0.5">و {{ $itemsCount - 1 }} کالای دیگر</p>
                             @endif
-
-                        <div class="flex items-center gap-2 px-4 py-2 rounded-xl {{ $status['class'] }} border">
-
-                            <span class="w-2.5 h-2.5 rounded-full {{ $status['dot'] }}"></span>
-
-                            <span class="text-[11px] font-black">
-                            {{ $status['title'] }}
-                        </span>
-
                         </div>
-
-                        </div>
-
                     </div>
 
+                    {{-- دکمه‌ها (در موبایل دو ستونه و تمام‌عرض) --}}
+                    <div class="grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-end gap-2 md:shrink-0 [&>*:only-child]:col-span-2 [&>*:last-child:nth-child(odd)]:col-span-2">
 
-                    {{-- Products --}}
-                    <div class="py-6 flex flex-wrap items-start justify-between gap-6">
-
-                        {{-- محصولات --}}
-                        <div class="flex flex-col items-start gap-4">
-
-                            {{-- تصاویر محصولات --}}
-                            <div class="flex items-center -space-x-4 space-x-reverse">
-
-                                @foreach($order->items->take(4) as $item)
-                                    <div class="w-14 h-14 rounded-full border-4 border-white/50 dark:border-gray-900/50 bg-white/30 dark:bg-white/10 backdrop-blur-md overflow-hidden shadow-lg transform transition-transform group-hover:-translate-y-1">
-                                        @if($image = $item->variant?->product?->featuredImageUrl)
-                                            <img src="{{ $image }}" alt="{{ $item->variant?->product?->title }}" class="w-full h-full object-cover">
-                                        @else
-                                            <div class="w-full h-full flex items-center justify-center text-gray-400">
-                                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                            </div>
-                                        @endif
-                                    </div>
-                                @endforeach
-
-
-                                @if($order->items->count() > 4)
-
-                                    <div
-                                        class="w-14 h-14 rounded-full border-4 border-white/50 dark:border-gray-900/50
-                           bg-primary-500/20 dark:bg-primary-500/10 backdrop-blur-md
-                           flex items-center justify-center shadow-lg"
-                                    >
-                    <span class="text-[10px] font-black text-primary-600 dark:text-primary-400">
-                        +{{ $order->items->count() - 4 }}
-                    </span>
-                                    </div>
-
-                                @endif
-
-                            </div>
-
-
-                            {{-- اسم محصولات زیر تصاویر --}}
-                            <div class="flex flex-col gap-1.5 pr-1">
-
-                                @foreach($order->items->take(4) as $item)
-
-                                    <div class="flex items-center gap-2">
-
-                                        <span class="w-1.5 h-1.5 rounded-full bg-primary-500 shrink-0"></span>
-
-                                        <span
-                                            class="text-[11px] font-bold text-gray-700 dark:text-gray-300
-                               leading-5"
-                                        >
-                        {{ $item->variant?->product?->title ?? 'محصول حذف شده' }}
-                    </span>
-
-                                    </div>
-
-                                @endforeach
-
-
-                                @if($order->items->count() > 4)
-
-                                    <span class="text-[10px] font-bold text-gray-400 pr-3.5">
-                    و {{ $order->items->count() - 4 }} محصول دیگر
-                </span>
-
-                                @endif
-
-                            </div>
-
-                        </div>
-
-
-                        {{-- دکمه‌ها سمت چپ --}}
-                        <div class="flex items-center gap-3 mr-auto">
-
-                            <button
-                                type="button"
+                        <button type="button"
                                 wire:click="toggleDetails({{ $order->id }})"
-                                class="px-6 py-3 rounded-2xl bg-primary-500 text-white text-[11px]
-                   font-black shadow-lg shadow-primary-500/25
-                   hover:bg-primary-600 transition-all active:scale-95 whitespace-nowrap"
-                            >
-                                {{ $expandedId === $order->id ? 'بستن جزئیات' : 'مشاهده جزئیات' }}
-                            </button>
+                                class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary-500 text-white text-[11px] font-black shadow-lg shadow-primary-500/20 hover:bg-primary-600 transition-all active:scale-95 whitespace-nowrap">
+                            {{ $expandedId === $order->id ? 'بستن جزئیات' : 'مشاهده جزئیات' }}
+                            <svg class="w-3.5 h-3.5 transition-transform {{ $expandedId === $order->id ? 'rotate-180' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
 
-
-                            @if($order->status === 'shipped' && $order->shipment?->tracking_code)
-
-                                <button
-                                    type="button"
+                        @if($order->status === 'shipped' && $order->shipment?->tracking_code)
+                            <button type="button"
                                     wire:click="toggleDetails({{ $order->id }})"
-                                    class="px-6 py-3 rounded-2xl bg-purple-500 text-white text-[11px]
-                       font-black shadow-lg shadow-purple-500/20
-                       hover:bg-purple-600 transition-all active:scale-95 whitespace-nowrap"
-                                >
-                                    رهگیری مرسوله
-                                </button>
-
-                            @elseif($order->status === 'pending' && $order->payment_status === 'unpaid')
-
-                                @if(\App\Support\OrderStatus::isPayable($order))
-
-                                    <a
-                                        href="{{ route('checkout', $order->order_number) }}"
-                                        class="px-6 py-3 rounded-2xl bg-amber-500 text-white text-[11px]
-                       font-black shadow-lg shadow-amber-500/20
-                       hover:bg-amber-600 transition-all active:scale-95 whitespace-nowrap"
-                                    >
-                                        پرداخت سفارش
-                                    </a>
-
-                                @else
-
-                                    <span
-                                        class="px-6 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 text-gray-400 text-[11px]
-                       font-black whitespace-nowrap"
-                                    >
-                                        مهلت پرداخت تمام شده
-                                    </span>
-
-                                @endif
-
-                            @elseif($order->payment_status === 'pending')
-
-                                <span class="px-6 py-3 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-black whitespace-nowrap">
-                                    پرداخت در حال بررسی
+                                    class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-purple-500 text-white text-[11px] font-black hover:bg-purple-600 transition-all active:scale-95 whitespace-nowrap">
+                                رهگیری مرسوله
+                            </button>
+                        @elseif($order->status === 'pending' && $order->payment_status === 'unpaid')
+                            @if(\App\Support\OrderStatus::isPayable($order))
+                                <a href="{{ route('checkout', $order->order_number) }}"
+                                   class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-amber-500 text-white text-[11px] font-black hover:bg-amber-600 transition-all active:scale-95 whitespace-nowrap">
+                                    پرداخت سفارش
+                                </a>
+                            @else
+                                <span class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-400 text-[11px] font-black whitespace-nowrap">
+                                    مهلت پرداخت تمام شده
                                 </span>
-
                             @endif
+                        @elseif($order->payment_status === 'pending')
+                            <span class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-black whitespace-nowrap">
+                                پرداخت در حال بررسی
+                            </span>
+                        @endif
 
-                            {{-- مرجوعی --}}
-                            @if($this->canRequestReturn($order))
-
-                                <button
-                                    type="button"
+                        {{-- مرجوعی --}}
+                        @if($this->canRequestReturn($order))
+                            <button type="button"
                                     wire:click="$dispatch('open-return-request', { orderId: {{ $order->id }} })"
-                                    class="px-6 py-3 rounded-2xl bg-white/70 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 text-[11px]
-                       font-black hover:border-amber-500/50 hover:text-amber-600 transition-all active:scale-95 whitespace-nowrap"
-                                >
-                                    درخواست مرجوعی
-                                </button>
-
-                            @elseif($order->returnRequests->isNotEmpty())
-
-                                <button
-                                    type="button"
+                                    class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 text-[11px] font-black hover:border-amber-500/50 hover:text-amber-600 transition-all active:scale-95 whitespace-nowrap">
+                                درخواست مرجوعی
+                            </button>
+                        @elseif($latestReturn)
+                            <button type="button"
                                     wire:click="$dispatch('open-return-request', { orderId: {{ $order->id }} })"
-                                    class="px-6 py-3 rounded-2xl bg-amber-500 text-white text-[11px]
-                       font-black shadow-lg shadow-amber-500/20
-                       hover:bg-amber-600 transition-all active:scale-95 whitespace-nowrap"
-                                >
-                                    جزئیات مرجوعی
-                                </button>
-
-                            @endif
-
-                        </div>
-
+                                    class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-amber-500 text-white text-[11px] font-black hover:bg-amber-600 transition-all active:scale-95 whitespace-nowrap">
+                                <span class="sm:hidden">مرجوعی: {{ $latestReturn->status_label }}</span>
+                                <span class="hidden sm:inline">جزئیات مرجوعی</span>
+                            </button>
+                        @endif
                     </div>
+                </div>
 
+                <div class="px-4 md:px-6">
                     {{-- جزئیات سفارش --}}
                     @if($expandedId === $order->id)
-                        <div class="pt-6 mt-2 border-t border-gray-100 dark:border-white/5 grid grid-cols-1 lg:grid-cols-3 gap-6" wire:key="order-details-{{ $order->id }}">
+                        <div class="py-5 border-t border-gray-100 dark:border-white/5 grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6" wire:key="order-details-{{ $order->id }}">
 
                             {{-- اقلام --}}
                             <div class="lg:col-span-2 space-y-3">
@@ -350,18 +234,18 @@ new class extends Component
                                         $options = $item->variant?->optionValues
                                             ?->map(fn ($ov) => $ov->optionValue?->title)->filter()->implode(' / ');
                                     @endphp
-                                    <div class="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/50 dark:bg-white/[0.03] border border-white/60 dark:border-white/5">
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-4 rounded-2xl bg-white/50 dark:bg-white/[0.03] border border-white/60 dark:border-white/5">
                                         <div class="min-w-0">
                                             @if($item->variant?->product?->slug)
                                                 <a href="{{ route('products.show', $item->variant->product->slug) }}" class="text-[12px] font-black text-gray-900 dark:text-white hover:text-primary-500 truncate block">{{ $item->variant->product->title }}</a>
                                             @else
-                                                <span class="text-[12px] font-black text-gray-900 dark:text-white">{{ $item->product_name ?? 'محصول حذف شده' }}</span>
+                                                <span class="block text-[12px] font-black text-gray-900 dark:text-white">{{ $item->product_name ?? 'محصول حذف شده' }}</span>
                                             @endif
                                             @if($options)
-                                                <span class="text-[10px] font-bold text-gray-400">{{ $options }}</span>
+                                                <span class="block text-[10px] font-bold text-gray-400 mt-0.5">{{ $options }}</span>
                                             @endif
                                         </div>
-                                        <div class="text-left shrink-0">
+                                        <div class="flex sm:block items-center justify-between sm:text-left shrink-0">
                                             <div class="text-[11px] font-bold text-gray-500 tabular-nums">{{ number_format($item->quantity) }} × {{ number_format($item->price) }}</div>
                                             <div class="text-[12px] font-black text-gray-900 dark:text-white tabular-nums">{{ number_format($item->total_price ?? $item->price * $item->quantity) }} تومان</div>
                                         </div>
