@@ -5,6 +5,7 @@ use Livewire\Attributes\Layout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 
 new #[Layout('layouts::main')] class extends Component
 {
@@ -26,6 +27,11 @@ new #[Layout('layouts::main')] class extends Component
     }
     public function sendOtp(\App\Services\OtpService $otpService)
     {
+        $this->validate(['mobile' => 'required|regex:/^09[0-9]{9}$/'], [
+            'mobile.required' => 'وارد کردن شماره موبایل الزامی است.',
+            'mobile.regex' => 'شماره موبایل معتبر نیست. مثال صحیح: 09123456789',
+        ]);
+
         try {
             $otpService->send($this->mobile);
             $this->step = 3;
@@ -37,13 +43,22 @@ new #[Layout('layouts::main')] class extends Component
     public function verifyOtp(\App\Services\OtpService $otpService)
     {
         $this->validate([
+            'mobile' => 'required|regex:/^09[0-9]{9}$/',
             'otp' => 'required|digits:4',
         ], [
+            'mobile.required' => 'وارد کردن شماره موبایل الزامی است.',
+            'mobile.regex' => 'شماره موبایل معتبر نیست. مثال صحیح: 09123456789',
             'otp.required' => 'لطفاً کد تایید را وارد کنید.',
             'otp.digits' => 'کد تایید باید 4 رقم باشد.',
         ]);
 
-        $ok = $otpService->verify($this->mobile, $this->otp);
+        try {
+            $ok = $otpService->verify($this->mobile, $this->otp);
+        } catch (\RuntimeException $e) {
+            // قفل موقت به‌خاطر کدهای اشتباه زیاد
+            $this->addError('otp', $e->getMessage());
+            return;
+        }
 
         if (!$ok) {
             $this->addError('otp', 'کد اشتباه یا منقضی است');
@@ -54,12 +69,21 @@ new #[Layout('layouts::main')] class extends Component
             [
                 'password' => bcrypt(Str::random(16)),
             ]
-        );
-        $user->assignRole('user');
-        if ($user->status === false){
-            abort(403, ' کاربر شما غیر فعال است با پشتیبانی تماس بگیرید');
+        )->fresh(); // مقدار پیش‌فرض status از دیتابیس خوانده شود
+
+        // status به boolean cast نشده (0/1)؛ مقایسه === false هیچ‌وقت درست نبود و کاربر غیرفعال وارد می‌شد
+        if (! $user->status) {
+            $this->addError('otp', 'کاربر شما غیرفعال است. لطفاً با پشتیبانی تماس بگیرید.');
+            return;
         }
+
+        // نقش «user» فقط برای کاربر بدون نقش (به مدیرها نقش اضافه نشود)
+        if ($user->roles()->doesntExist()) {
+            $user->assignRole('user');
+        }
+
         Auth::login($user);
+        session()->regenerate(); // جلوگیری از Session Fixation
 
         return redirect()->intended('/');
     }
@@ -77,13 +101,34 @@ new #[Layout('layouts::main')] class extends Component
             'password.required' => 'رمز عبور را وارد کنید.',
         ]);
 
+        // جلوگیری از حدس رمز: ۵ تلاش در دقیقه برای هر شماره + IP، و ۲۰ تلاش در ساعت برای هر شماره
+        $throttleKeys = [
+            'login-password:' . $this->mobile . '|' . request()->ip() => [5, 60],
+            'login-password-mobile:' . $this->mobile => [20, 3600],
+        ];
+
+        foreach ($throttleKeys as $key => [$max, $decay]) {
+            if (RateLimiter::tooManyAttempts($key, $max)) {
+                $minutes = max(1, (int) ceil(RateLimiter::availableIn($key) / 60));
+                $this->addError('password', "تعداد تلاش‌های ناموفق زیاد است. لطفاً {$minutes} دقیقه دیگر دوباره تلاش کنید.");
+                return;
+            }
+        }
+
         if (! Auth::attempt([
             'mobile' => $this->mobile,
             'password' => $this->password,
         ])) {
+            foreach ($throttleKeys as $key => [$max, $decay]) {
+                RateLimiter::hit($key, $decay);
+            }
 
             $this->addError('password', 'شماره موبایل یا رمز عبور اشتباه است.');
             return;
+        }
+
+        foreach (array_keys($throttleKeys) as $key) {
+            RateLimiter::clear($key);
         }
 
         $user = Auth::user();
