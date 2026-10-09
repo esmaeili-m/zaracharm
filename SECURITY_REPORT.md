@@ -32,14 +32,14 @@
 | H4 | نبود محدودیت تلاش برای ورود با رمز | بالا | `resources/views/pages/auth/login.blade.php:92` | امکان حدس رمز، از جمله رمز مدیرها. | رفع شد (`e65d1de`)؛ ۵ تلاش در دقیقه و ۲۰ تلاش در ساعت |
 | H5 | ۴۲ آسیب‌پذیری در ۱۳ پکیج composer | بالا | `composer.lock` | Guzzle، symfony/mime و http-kernel، league/commonmark، livewire (XSS)، laravel/framework (CRLF در email rule) و غیره. | **نیاز به اقدام شما** (طبق تصمیم شما انجام نشد) |
 | H6 | اعمال نشدن سقف کد تخفیف و خطای تاریخ | بالا (منطق کسب‌وکار) | `resources/views/pages/main/cart/cart-item.blade.php:66`، `app/Payments/PaymentService.php:225` | استفاده از کوپن هیچ‌جا ثبت نمی‌شد، پس `usage_limit` و `usage_per_user` بی‌اثر بودند. تاریخ‌ها هم با رشته شمسی مقایسه می‌شدند، پس هر کوپنِ دارای تاریخ پایان همیشه «منقضی» حساب می‌شد. | رفع شد (`9cf5857`) |
-| M1 | ذخیره کد OTP به‌صورت متن ساده در لاگ | متوسط | `app/Services/OtpService.php:129` | هر کسی که به لاگ دسترسی داشت، کد ورود را می‌دید. | رفع شد؛ کد فقط در محیط local لاگ می‌شود |
+| M1 | ذخیره کد OTP (و احتمالاً رمز پنل پیامک در stack trace) در لاگ | متوسط | `app/Services/OtpService.php`، `app/Services/SmsService.php` | هر کسی که به لاگ دسترسی داشت، کد ورود را می‌دید. | رفع شد (`e65d1de`، `f234c55`)؛ کد هیچ‌وقت لاگ نمی‌شود و موبایل ماسک می‌شود |
 | M2 | نبود چک دسترسی در سه اکشن ادمین | متوسط | `dashboard/categories/subcategory.blade.php:65`، `dashboard/products/index.blade.php:438`، `dashboard/tickets/index.blade.php:62` | کاربری که فقط دسترسی «مشاهده» داشت، می‌توانست حذف یا ویرایش کند. | رفع شد (`53cb40f`) |
 | M3 | آپلود فایل اجرایی (PHP) در `public/storage` | متوسط و رو به بالا | `app/Traits/FileUploadTrait.php:149`، و `saveEditorImage` در ۱۰ کامپوننت ادمین (مثلاً `dashboard/products/index.blade.php:135`) | آپلود تصویر ویرایشگر هیچ اعتبارسنجی نداشت و `.php` قابل اجرا ذخیره می‌شد. | رفع شد (`1f2ea30`) |
 | M4 | نبود هدرهای امنیتی و کوکی سشن غیر Secure | متوسط | `bootstrap/app.php`، `config/session.php:173` | Clickjacking، MIME sniffing، و ارسال کوکی روی http. | رفع شد (`b28ec39`)؛ CSP اضافه نشد (پیشنهادها را ببینید) |
 | M5 | Stored XSS در متن‌های غنی ادمین (`{!! !!}`) | متوسط | توضیحات محصول، مقاله، کمپین، دوره و about | ادمینی با دسترسی محتوا می‌توانست اسکریپت ذخیره کند. | رفع شد (`5cc77e4`) با `App\Support\SafeHtml` |
 | M6 | `public/vendor.7z` در پوشه عمومی و در git | متوسط | `public/vendor.7z` | برای همه قابل دانلود است. | **نیاز به اقدام شما** (طبق تصمیم شما دست نخورد) |
 | M7 | خطای ۵۰۰ و افشای stack trace روی routeها | متوسط | `routes/web.php:15` (`/product`)، `:84` (`/services/{slug}`) | مهمان یا کامپوننت ناموجود باعث ۵۰۰ می‌شد و با `APP_DEBUG=true` جزئیات داخلی لو می‌رفت. | رفع شد (`4cc31fd`) |
-| L1 | کد باقی‌مانده از پروژه دیگر (LMS، فهرست فایل S3، دامنه‌های madaranee/liara) | پایین | `pages/main/cart/index.blade.php:39`، `pages/main/courses/*`، `dashboard/storage/index.blade.php` | روت `/cart` فهرست فایل S3 است (فقط برای ادمین). جدول `courses` اصلاً وجود ندارد، پس `/courses/*` همیشه ۵۰۰ می‌دهد. | نیاز به اقدام شما (حذف ماژول‌های بلااستفاده) |
+| L1 | کد باقی‌مانده از پروژه دیگر (LMS، فهرست فایل S3، دامنه‌های madaranee/liara) | پایین | `pages/main/cart/index.blade.php:39`، `pages/main/courses/*`، `dashboard/storage/index.blade.php` | روت `/cart` فهرست فایل S3 است (فقط برای ادمین). جدول `courses` اصلاً وجود ندارد، پس `/courses/*` همیشه ۵۰۰ می‌دهد. | رفع شد (`75fe813`) |
 | L2 | تست‌ها اجرا نمی‌شوند | پایین | `phpunit.xml`، `tests/Feature/ExampleTest.php` | تست روی SQLite حافظه‌ای و بدون migration اجرا می‌شود، ولی migrationها فقط با MySQL سازگارند. | نیاز به اقدام (دیتابیس تست MySQL) |
 | L3 | ورود OTP به مدیرها هم نقش `user` اضافه می‌کرد | پایین | `pages/auth/login.blade.php:43` | — | رفع شد (`e65d1de`) |
 | L4 | کوئری‌های تکراری در هر درخواست | پایین (کارایی) | `layouts/dashboard.blade.php` (شمارنده‌های منو)، فوتر `layouts/main.blade.php` | بدون cache. | پیشنهاد |
@@ -80,16 +80,18 @@
    ```
 3. **`public/vendor.7z` (M6):** از هاست و از git حذف کنید. محتوای آن را بررسی کنید و اگر داخلش فایل تنظیمات یا کلیدی هست، آن کلیدها را **rotate** کنید.
 4. **غیرفعال کردن اجرای PHP در پوشه آپلود (لایه دوم دفاع M3):**
-   - روی Apache، یک فایل `.htaccess` در `storage/app/public` قرار دهید:
+   - روی Apache یا LiteSpeed (cPanel / DirectAdmin)، یک فایل `.htaccess` در پوشه واقعی فایل‌های آپلودی (`storage/app/public`، یا `public_html/storage` اگر symlink نیست) قرار دهید:
      ```
-     <FilesMatch "\.(php\d?|phtml|phar|pht)$">
+     <FilesMatch "(?i)\.(php\d?|phtml|pht|phar|phps|cgi|pl|py|sh)$">
          Require all denied
      </FilesMatch>
-     php_flag engine off
+     RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+     Options -ExecCGI -Indexes
      ```
+   - از `php_flag engine off` استفاده نکنید؛ روی PHP-FPM و LiteSpeed باعث خطای ۵۰۰ در کل پوشه می‌شود.
    - روی nginx، اجرای PHP را برای مسیر `/storage/` ببندید.
-5. **بررسی لاگ‌های قدیمی:** لاگ‌های موجود روی سرور (`storage/logs/*.log`) کدهای OTP را به‌صورت متن ساده دارند. آن‌ها را پاک یا بایگانی امن کنید.
-6. **حذف ماژول‌های باقی‌مانده از پروژه قبلی (L1):** LMS (`courses`، `services`، `hospitals`)، صفحه فهرست فایل S3 روی `/cart`، و دامنه‌های madaranee و liara. جدول `courses` وجود ندارد، پس این بخش‌ها فقط سطح حمله و خطا اضافه می‌کنند.
+5. **بررسی لاگ‌های قدیمی:** ثبت کد OTP و رمز پنل پیامک در لاگ کاملاً متوقف شد (commit `f234c55`). شماره موبایل هم در لاگ ماسک می‌شود. ولی لاگ‌هایی که **قبل از این تغییر** نوشته شده‌اند (روی سرور و لوکال، `storage/logs/*.log`) هنوز کدهای OTP را دارند؛ آن‌ها را پاک کنید.
+6. ~~حذف ماژول‌های باقی‌مانده از پروژه قبلی (L1)~~ — **انجام شد** (commit `75fe813`): LMS، services، hospitals، سکشن team، صفحه S3 روی `/cart` و دامنه‌های madaranee و liara حذف شدند. ردیف‌های دسترسی `courses.*` و `services.*` در جدول دسترسی‌ها مانده‌اند و بی‌اثرند؛ اگر خواستید از صفحه نقش‌ها پاکشان کنید.
 7. **(اختیاری) OTP شش‌رقمی:** طبق تصمیم شما کد ۴ رقمی ماند. با محدودیت‌های جدید، شانس حدس زدن حدود ۰٫۱٪ در روز برای هر شماره است. کد ۶ رقمی این عدد را ۱۰۰ برابر کمتر می‌کند.
 
 **Rotate کلیدها:** در کد و تاریخچه git هیچ secretی لو نرفته است، پس rotate اجباری نیست؛ فقط بند ۳ درباره `vendor.7z` را در نظر داشته باشید.
