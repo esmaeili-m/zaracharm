@@ -219,6 +219,13 @@ class PaymentService
         } catch (\Throwable $e) {
             report($e);
         }
+
+        // ثبت استفاده از کد تخفیف (سقف کل و سقف هر کاربر)
+        try {
+            app(\App\Services\Coupons\CouponUsageRecorder::class)->recordForOrder($order);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function log(Payment $payment, string $event, ?string $from, ?string $to, ?string $message = null, array $data = []): void

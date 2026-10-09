@@ -62,12 +62,16 @@ new class extends Component
 
         $now = now();
 
-        if ($discount->starts_at && $now->lt($discount->starts_at)) {
+        // accessorهای starts_at/ends_at رشته شمسی برمی‌گردانند؛ مقایسه باید با مقدار خام دیتابیس باشد
+        $startsAt = $discount->getRawOriginal('starts_at') ? \Illuminate\Support\Carbon::parse($discount->getRawOriginal('starts_at')) : null;
+        $endsAt = $discount->getRawOriginal('ends_at') ? \Illuminate\Support\Carbon::parse($discount->getRawOriginal('ends_at'))->endOfDay() : null;
+
+        if ($startsAt && $now->lt($startsAt)) {
             $this->addError('couponCode', 'زمان استفاده از این کد تخفیف هنوز شروع نشده است.');
             return;
         }
 
-        if ($discount->ends_at && $now->gt($discount->ends_at)) {
+        if ($endsAt && $now->gt($endsAt)) {
             $this->addError('couponCode', 'زمان استفاده از این کد تخفیف به پایان رسیده است.');
             return;
         }
@@ -85,7 +89,7 @@ new class extends Component
             ->where('user_id', Auth::id())
             ->count();
 
-        if ($userUsage >= $coupon->usage_per_user) {
+        if ($coupon->usage_per_user !== null && $userUsage >= $coupon->usage_per_user) {
             $this->addError(
                 'couponCode',
                 'شما قبلاً به حداکثر میزان مجاز از این کد تخفیف استفاده کرده‌اید.'
