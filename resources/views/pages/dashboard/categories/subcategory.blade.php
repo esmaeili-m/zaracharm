@@ -64,6 +64,8 @@ new class extends Component
     }
     public function delete()
     {
+        abort_if(!auth()->user()->can('categories.delete'), 403);
+
         if ($this->selectItem){
             $item = $this->model->findOrFail($this->selectItem->id);
             $item->delete();

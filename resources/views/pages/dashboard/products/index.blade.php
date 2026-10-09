@@ -426,6 +426,8 @@ new class extends Component
     }
     public function saveGallery()
     {
+        abort_if(!auth()->user()->can('products.edit'), 403);
+
         $this->validate(
             $this->galleryRules(),
             $this->galleryMessages()

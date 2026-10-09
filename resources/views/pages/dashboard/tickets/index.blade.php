@@ -61,6 +61,8 @@ new class extends Component
 
     public function clsoe()
     {
+        abort_if(!auth()->user()->can('tickets.edit'), 403);
+
         $this->selectedTicket->update([
             'is_read'=> 1,
             'status' => 'answered'
