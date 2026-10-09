@@ -197,6 +197,11 @@ new class extends Component
 
     public function selectAddress(int $id): void
     {
+        // فقط آدرس‌های خود کاربر
+        if (! $this->ownsAddress($id)) {
+            return;
+        }
+
         $this->selectedAddressId = $id;
         $this->showAddressList = false;
     }
@@ -309,6 +314,11 @@ new class extends Component
     /**
      * ذخیره آدرس، تاریخ و هزینه ارسال روی سفارش/فاکتور قبل از شروع پرداخت
      */
+    protected function ownsAddress(?int $addressId): bool
+    {
+        return $addressId && Address::where('user_id', Auth::id())->whereKey($addressId)->exists();
+    }
+
     protected function saveShippingDetails(array $delivery): ?\App\Models\Order
     {
         return DB::transaction(function () use ($delivery) {
@@ -321,6 +331,9 @@ new class extends Component
 
             $shipping = (int) $delivery['cost'];
             $total = max(0, (int) $order->subtotal - (int) $order->discount_amount + (int) $order->tax_amount + $shipping);
+
+            // selectedAddressId یک property عمومی است و از مرورگر قابل تغییر؛ آدرس کاربر دیگر ذخیره نشود
+            abort_unless($this->ownsAddress($this->selectedAddressId), 403);
 
             $order->update([
                 'address_id'       => $this->selectedAddressId,
@@ -372,7 +385,7 @@ new class extends Component
     {
         $this->errorMessage = '';
 
-        if (!$this->selectedAddressId) {
+        if (!$this->selectedAddressId || !$this->ownsAddress($this->selectedAddressId)) {
             $this->errorMessage = 'لطفاً یک آدرس تحویل انتخاب کنید.';
             return;
         }
@@ -445,7 +458,7 @@ new class extends Component
             'payerCard.max'             => 'چهار رقم آخر کارت را وارد کنید.',
         ]);
 
-        if (!$this->selectedAddressId) {
+        if (!$this->selectedAddressId || !$this->ownsAddress($this->selectedAddressId)) {
             $this->errorMessage = 'لطفاً یک آدرس تحویل انتخاب کنید.';
             $this->showModal = false;
             return;
