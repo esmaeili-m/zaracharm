@@ -76,8 +76,8 @@ new class extends Component
 
         @push('scripts')
 
-            {{-- ?v= برای جلوگیری از کش شدن نسخه قدیمی اسکریپت در مرورگر --}}
-            <script src="{{ asset('main/js/plugin/story-player/story-player.js') }}?v={{ @filemtime(public_path('main/js/plugin/story-player/story-player.js')) ?: '3' }}"></script>
+            {{-- ?v= نسخه ثابت (روی هاست اشتراکی public_path به پوشه public واقعی اشاره نمی‌کند و filemtime قابل اتکا نیست)؛ با هر تغییر story-player.js این عدد را هم بالا ببرید --}}
+            <script src="{{ asset('main/js/plugin/story-player/story-player.js') }}?v=4.0.0"></script>
 
             <script>
                 const stories = @js(

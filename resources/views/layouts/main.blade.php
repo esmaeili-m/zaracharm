@@ -74,7 +74,7 @@
               type="image/png"
               href="{{ asset('main/images/favicon_io/favicon-32x32.png') }}">
     @endif
-    <link rel="stylesheet" href="{{asset('main/js/plugin/story-player/styles.css')}}?v={{ @filemtime(public_path('main/js/plugin/story-player/styles.css')) ?: '3' }}">
+    <link rel="stylesheet" href="{{asset('main/js/plugin/story-player/styles.css')}}?v=4.0.0">
     <link rel="stylesheet" href="{{asset('main/js/plugin/swiper/swiper-bundle.min.css')}}">
     <link rel="stylesheet" href="{{asset('main/css/app.css')}}">
     <style>
