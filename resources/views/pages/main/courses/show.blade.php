@@ -271,7 +271,7 @@ new class extends Component
                                     <div class="tab active-tab" id="overview">
                                         <div class="course-details__tab-inner">
                                             <div class="course-details__overview">
-                                                {!! $course->description !!}
+                                                {!! \App\Support\SafeHtml::clean($course->description) !!}
                                             </div>
                                         </div>
                                     </div>

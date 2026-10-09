@@ -146,7 +146,7 @@ new class extends Component
                                     </li>
                                 </ul>
                             </div>
-                          {!! $article->description !!}
+                          {!! \App\Support\SafeHtml::clean($article->description) !!}
                             <div class="blog-details__tag-and-share">
                                 <div class="blog-details__tag">
                                     <span>تگ:</span>

@@ -137,7 +137,7 @@ new class extends Component
                                         <span class="absolute bottom-2 right-0 w-full h-3 bg-secondary-500/20 -rotate-2"></span>
                                     </h2>
                                     <p class="text-gray-500 dark:text-gray-400 text-sm leading-8 mb-10 font-medium">
-                                        {!! $campaign->description !!}
+                                        {!! \App\Support\SafeHtml::clean($campaign->description) !!}
                                     </p>
                                 </div>
                                 <div class="bg-black/5 dark:bg-white/5 backdrop-blur-md rounded-[2.5rem] p-8 border border-black/5 dark:border-white/10 shadow-inner" dir="ltr">

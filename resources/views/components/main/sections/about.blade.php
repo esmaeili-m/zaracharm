@@ -23,7 +23,7 @@ new class extends Component
                     <h1 class="text-4xl font-black text-gray-900 dark:text-white tracking-tight">{{$data['title'] ?? 'داستان زارا؛ فراتر از یک فروشگاه'}}</h1>
                 </div>
                 <p class="text-sm leading-9 text-gray-500 dark:text-gray-400 text-justify font-medium">
-                    {!! $data['description'] ?? '' !!}
+                    {!! \App\Support\SafeHtml::clean($data['description'] ?? '') !!}
                 </p>
                 <div class="flex flex-wrap gap-4">
                     <div class="px-6 py-3 bg-brown-600/5 border border-brown-600/10 rounded-2xl text-brown-600 text-xs font-black">

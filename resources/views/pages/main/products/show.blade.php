@@ -1148,7 +1148,7 @@ new class extends Component
     leading-9 text-justify
     [&_*]:dark:text-white
 ">
-                                            {!! $product->description !!}
+                                            {!! \App\Support\SafeHtml::clean($product->description) !!}
                                         </div>
 
                                     </div>
