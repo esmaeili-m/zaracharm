@@ -16,6 +16,9 @@ new class extends Component
 
     public function openFile($fileId)
     {
+        // فقط فایل‌های همین دوره (خود دوره، بخش‌ها و درس‌هایش) قابل باز شدن هستند
+        abort_unless(in_array((int) $fileId, $this->allowedMediaIds(), true), 404);
+
         $this->selectedFile = \App\Models\Media::with('mediable')->findOrFail($fileId);
         $url = $this->selectedFile->external_url
             ?: Storage::url($this->selectedFile->file_path);
@@ -37,7 +40,7 @@ new class extends Component
         }
     }
 
-    public function generatePresignedUrl(string $file)
+    protected function generatePresignedUrl(string $file)
     {
         try {
             $handler = new \GuzzleHttp\Handler\CurlHandler();
@@ -90,16 +93,32 @@ new class extends Component
 
     public function mount($course)
     {
-
         $this->course = Course::where('slug', $course)
-            ->with(['sections.lessons.media', 'media'])
-            ->first();
-        $hasAccess = auth()->user()
+            ->with(['sections.media', 'sections.lessons.media', 'media'])
+            ->firstOrFail();
+
+        $hasAccess = auth()->check() && auth()->user()
             ->courses()
-            ->where('course_id',$this->course?->id)
+            ->where('course_id', $this->course->id)
             ->exists();
 
         abort_unless($hasAccess, 403);
+    }
+
+    /**
+     * شناسه رسانه‌های متعلق به همین دوره
+     */
+    protected function allowedMediaIds(): array
+    {
+        $course = $this->course->loadMissing(['sections.media', 'sections.lessons.media', 'media']);
+
+        return $course->media->pluck('id')
+            ->merge($course->sections->flatMap(fn ($section) => $section->media->pluck('id')))
+            ->merge($course->sections->flatMap(fn ($section) => $section->lessons->flatMap(fn ($lesson) => $lesson->media->pluck('id'))))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function getFileUrl($file): string

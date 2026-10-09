@@ -86,7 +86,7 @@ Route::livewire('/brands', 'pages::main.brands.index')->name('brands.list');
 Route::livewire('/brands/{slug}', 'pages::main.brands.show')->name('brands.show');
 Route::livewire('/tags/{slug}', 'pages::main.tags.show')->name('tags.show');
 
-Route::livewire('/courses/{course}/learn', 'pages::main.courses.learn')->name('courses.learn');
+Route::livewire('/courses/{course}/learn', 'pages::main.courses.learn')->name('courses.learn')->middleware(['auth']);
 Route::livewire('/courses/{slug}', 'pages::main.courses.show')->name('courses.show');
 
 // ─── Catch-all (باید آخر باشه) ───────────────────────────
