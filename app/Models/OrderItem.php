@@ -26,6 +26,12 @@ class OrderItem extends Model
 
     ];
 
+    // قیمت خرید لحظه فروش برای گزارش سود (App\Services\Accounting\CostSnapshot)
+    protected static function booted(): void
+    {
+        static::creating(fn ($item) => \App\Services\Accounting\CostSnapshot::fill($item, 'variant_id'));
+    }
+
 
 
     public function order()

@@ -115,6 +115,12 @@ class SectionTableSeeder extends Seeder
                 'component' => 'main.sections.return-policy',
                 'is_livewire' => 1,
             ],
+            [
+                'name' => 'هیرو (بنر اصلی با تصویر / ویدیو)',
+                'key' => 'hero',
+                'component' => 'main.sections.hero',
+                'is_livewire' => 1,
+            ],
 
 
         ];

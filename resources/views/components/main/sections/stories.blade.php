@@ -59,7 +59,7 @@ new class extends Component
         <section class="pt-12">
             <h2 class="sr-only">استوری های فروشگاه</h2>
 
-            <div class="container">
+            <div class="">
 
                 <div
                     id="stories-container"

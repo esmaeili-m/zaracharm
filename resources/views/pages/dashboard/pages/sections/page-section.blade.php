@@ -51,6 +51,8 @@ new class extends Component {
     public $brands;
     public $faqs;
     public RowSection $model;
+    // list = صفحه قدیمی لیست سکشن‌های یک ردیف | editor = فقط فرم تنظیمات، داخل صفحه‌ساز بصری
+    public string $mode = 'list';
 
     // سکشن‌هایی که تصویر محصول/دسته‌بندی دارند و تنظیم pictureMode می‌گیرند
     const PICTURE_MODE_SECTIONS = ['categories', 'instantOffers', 'products', 'campaigns', 'brands', 'brandProducts'];
@@ -58,9 +60,11 @@ new class extends Component {
     use \App\Traits\FileUploadTrait;
 
     #[\Livewire\Attributes\Layout('layouts.dashboard')]
-    public function mount(PageRow $row, RowSection $model)
+    public function mount(PageRow $row, RowSection $model, string $mode = 'list')
     {
         abort_if(!auth()->user()->can('sections.view'), 403);
+
+        $this->mode = $mode === 'editor' ? 'editor' : 'list';
 
         $this->model = $model;
         $this->parentModel = $row;
@@ -274,6 +278,36 @@ new class extends Component {
 
                 'speed' => 5000,
 
+                'height_mode' => 'fixed',
+
+                'height_mobile' => 200,
+
+                'height_desktop' => 480,
+
+            ],
+            'hero' => [
+                'style' => 'split',
+                'media_position' => 'end',
+                'animate' => true,
+                'eyebrow' => null,
+                'heading' => null,
+                'highlight' => null,
+                'description' => null,
+                'primary_text' => null,
+                'primary_link' => null,
+                'secondary_text' => null,
+                'secondary_link' => null,
+                'stat1_value' => null, 'stat1_label' => null,
+                'stat2_value' => null, 'stat2_label' => null,
+                'stat3_value' => null, 'stat3_label' => null,
+                'badge_title' => null,
+                'badge_text' => null,
+                'video_url' => null,
+                'video_on_mobile' => true,
+                'overlay_opacity' => 45,
+                'height_mobile' => null,
+                'height_desktop' => null,
+                'images' => [],
             ],
             'map' => [
 
@@ -456,6 +490,48 @@ new class extends Component {
                         'exists:sliders,id'
                     ],
 
+                    // بدون قانون، validate() این کلیدها را حذف می‌کرد و ذخیره نمی‌شدند
+                    'formData.height_mode' => ['nullable', 'in:fixed,max'],
+                    'formData.height_mobile' => ['nullable', 'integer', 'min:120', 'max:800'],
+                    'formData.height_desktop' => ['nullable', 'integer', 'min:150', 'max:1000'],
+                    'formData.autoplay' => ['nullable', 'boolean'],
+                    'formData.loop' => ['nullable', 'boolean'],
+                    'formData.speed' => ['nullable', 'integer', 'in:3000,5000,7000'],
+
+                ],
+                'hero' => [
+                    'formData.style' => ['required', 'in:split,overlay'],
+                    'formData.media_position' => ['nullable', 'in:start,end'],
+                    'formData.animate' => ['nullable', 'boolean'],
+                    'formData.eyebrow' => ['nullable', 'string', 'max:80'],
+                    'formData.heading' => ['required', 'string', 'max:120'],
+                    'formData.highlight' => ['nullable', 'string', 'max:60'],
+                    'formData.description' => ['nullable', 'string', 'max:400'],
+                    'formData.primary_text' => ['nullable', 'string', 'max:40', 'required_with:formData.primary_link'],
+                    'formData.primary_link' => ['nullable', 'string', 'max:500', 'required_with:formData.primary_text', 'regex:/^(https?:\/\/|\/|#)/i'],
+                    'formData.secondary_text' => ['nullable', 'string', 'max:40', 'required_with:formData.secondary_link'],
+                    'formData.secondary_link' => ['nullable', 'string', 'max:500', 'required_with:formData.secondary_text', 'regex:/^(https?:\/\/|\/|#)/i'],
+                    'formData.stat1_value' => ['nullable', 'string', 'max:20'],
+                    'formData.stat1_label' => ['nullable', 'string', 'max:40'],
+                    'formData.stat2_value' => ['nullable', 'string', 'max:20'],
+                    'formData.stat2_label' => ['nullable', 'string', 'max:40'],
+                    'formData.stat3_value' => ['nullable', 'string', 'max:20'],
+                    'formData.stat3_label' => ['nullable', 'string', 'max:40'],
+                    'formData.badge_title' => ['nullable', 'string', 'max:60'],
+                    'formData.badge_text' => ['nullable', 'string', 'max:80'],
+                    'formData.video_url' => ['nullable', 'url:https,http', 'max:1000'],
+                    'formData.video_on_mobile' => ['nullable', 'boolean'],
+                    'formData.overlay_opacity' => ['nullable', 'integer', 'min:0', 'max:90'],
+                    'formData.height_mobile' => ['nullable', 'integer', 'min:240', 'max:1000'],
+                    'formData.height_desktop' => ['nullable', 'integer', 'min:320', 'max:1200'],
+                    // تصویر حداکثر ۵ و ویدیو حداکثر ۳۰ مگابایت
+                    'formData.images.hero_media' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/webp,video/mp4,video/webm', 'max:30720',
+                        function ($attribute, $value, $fail) {
+                            if ($value instanceof UploadedFile && str_starts_with((string) $value->getMimeType(), 'image/') && $value->getSize() > 5 * 1024 * 1024) {
+                                $fail('حجم تصویر هیرو نباید بیشتر از ۵ مگابایت باشد.');
+                            }
+                        }],
+                    'formData.images.hero_poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
                 ],
                 'categories' => [
 
@@ -896,6 +972,46 @@ new class extends Component {
             'formData.slider_id.exists' =>
                 'اسلایدر انتخاب شده وجود ندارد.',
 
+            // Hero
+            'formData.style.required' => 'سبک نمایش هیرو را انتخاب کنید.',
+            'formData.style.in' => 'سبک نمایش هیرو نامعتبر است.',
+            'formData.heading.required' => 'عنوان اصلی هیرو الزامی است.',
+            'formData.heading.max' => 'عنوان اصلی نباید بیشتر از ۱۲۰ کاراکتر باشد.',
+            'formData.eyebrow.max' => 'متن بالای عنوان نباید بیشتر از ۸۰ کاراکتر باشد.',
+            'formData.highlight.max' => 'بخش برجسته نباید بیشتر از ۶۰ کاراکتر باشد.',
+            'formData.description.max' => 'توضیح نباید بیشتر از ۴۰۰ کاراکتر باشد.',
+            'formData.primary_text.required_with' => 'برای دکمه اصلی متن را وارد کنید.',
+            'formData.primary_link.required_with' => 'برای دکمه اصلی لینک را وارد کنید.',
+            'formData.primary_link.regex' => 'لینک دکمه اصلی باید با / یا http(s):// شروع شود.',
+            'formData.secondary_text.required_with' => 'برای دکمه دوم متن را وارد کنید.',
+            'formData.secondary_link.required_with' => 'برای دکمه دوم لینک را وارد کنید.',
+            'formData.secondary_link.regex' => 'لینک دکمه دوم باید با / یا http(s):// شروع شود.',
+            'formData.primary_text.max' => 'متن دکمه نباید بیشتر از ۴۰ کاراکتر باشد.',
+            'formData.secondary_text.max' => 'متن دکمه نباید بیشتر از ۴۰ کاراکتر باشد.',
+            'formData.stat1_value.max' => 'مقدار آمار نباید بیشتر از ۲۰ کاراکتر باشد.',
+            'formData.stat2_value.max' => 'مقدار آمار نباید بیشتر از ۲۰ کاراکتر باشد.',
+            'formData.stat3_value.max' => 'مقدار آمار نباید بیشتر از ۲۰ کاراکتر باشد.',
+            'formData.badge_title.max' => 'عنوان کارت شناور نباید بیشتر از ۶۰ کاراکتر باشد.',
+            'formData.badge_text.max' => 'توضیح کارت شناور نباید بیشتر از ۸۰ کاراکتر باشد.',
+            'formData.video_url.url' => 'لینک ویدیو باید یک آدرس کامل http(s) باشد.',
+            'formData.overlay_opacity.max' => 'تیرگی حداکثر ۹۰٪ است.',
+            'formData.height_mobile.min' => 'ارتفاع موبایل خارج از محدوده مجاز است.',
+            'formData.height_desktop.min' => 'ارتفاع دسکتاپ خارج از محدوده مجاز است.',
+            'formData.images.hero_media.mimetypes' => 'فایل اصلی باید تصویر (jpg, png, webp) یا ویدیو (mp4, webm) باشد.',
+            'formData.images.hero_media.max' => 'حجم ویدیو نباید بیشتر از ۳۰ مگابایت باشد.',
+            'formData.images.hero_poster.image' => 'پوستر باید تصویر باشد.',
+            'formData.images.hero_poster.mimes' => 'پوستر باید jpg، png یا webp باشد.',
+            'formData.images.hero_poster.max' => 'حجم پوستر نباید بیشتر از ۵ مگابایت باشد.',
+
+            'formData.height_mode.in' => 'نوع ارتفاع اسلایدر نامعتبر است.',
+            'formData.height_mobile.integer' => 'ارتفاع موبایل باید عدد صحیح باشد.',
+            'formData.height_mobile.min' => 'ارتفاع موبایل حداقل ۱۲۰ پیکسل است.',
+            'formData.height_mobile.max' => 'ارتفاع موبایل حداکثر ۸۰۰ پیکسل است.',
+            'formData.height_desktop.integer' => 'ارتفاع دسکتاپ باید عدد صحیح باشد.',
+            'formData.height_desktop.min' => 'ارتفاع دسکتاپ حداقل ۱۵۰ پیکسل است.',
+            'formData.height_desktop.max' => 'ارتفاع دسکتاپ حداکثر ۱۰۰۰ پیکسل است.',
+            'formData.speed.in' => 'سرعت تغییر اسلاید نامعتبر است.',
+
 
             // Products
 
@@ -971,6 +1087,9 @@ new class extends Component {
                 ? 'سکشن با موفقیت ویرایش شد.'
                 : 'سکشن جدید با موفقیت ایجاد شد.'
         );
+
+        // صفحه‌ساز بصری کارت این سکشن را بروز می‌کند
+        $this->dispatch('builder-section-saved', id: $item->id);
     }
 
     public function addSection()
@@ -1002,6 +1121,34 @@ new class extends Component {
     /**
      * افزودن/حذف آیتم در لیست‌های قابل تکرار فرم سکشن (مثل شرایط مرجوعی)
      */
+    /**
+     * صفحه‌ساز بصری: باز کردن فرم تنظیمات یک سکشن
+     */
+    #[\Livewire\Attributes\On('builder-edit-section')]
+    public function editFromBuilder(int $id): void
+    {
+        abort_if(!auth()->user()->can('sections.edit'), 403);
+
+        $this->resetValidation();
+        $this->get_data($id);
+        $this->dispatch('open-section-settings');
+    }
+
+    /**
+     * حذف تصویر/ویدیو یا پوستر سکشن هیرو
+     */
+    public function removeHeroMedia(string $collection): void
+    {
+        abort_if(!auth()->user()->can('sections.edit'), 403);
+        abort_unless(in_array($collection, ['hero_media', 'hero_poster'], true) && $this->selectItem, 404);
+
+        $this->selectItem->media()->where('collection', $collection)->get()->each(fn ($m) => $this->deleteMedia($m));
+        $this->selectItem->load('media');
+        unset($this->formData['images'][$collection]);
+
+        $this->dispatch('alert', type: 'success', title: 'عملیات موفق', text: 'فایل حذف شد.');
+    }
+
     protected function repeatableLists(): array
     {
         return match ($this->selectItem?->section?->key) {
@@ -1045,6 +1192,7 @@ new class extends Component {
 };
 ?>
 <div>
+    @if($mode === 'list')
     <div class="my-4 page-header-breadcrumb d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div>
             <h1 class="page-title fw-medium fs-18 mb-2">
@@ -1141,6 +1289,7 @@ new class extends Component {
             </div>
         </div>
     </div>
+    @endif
     <div wire:ignore.self class="modal fade" id="create">
         <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
             <div class="modal-content modal-content-demo">
@@ -1221,6 +1370,10 @@ new class extends Component {
                                     @include('dashboard.forms.returnPolicy')
                                     @break
 
+                                @case('hero')
+                                    @include('dashboard.forms.hero')
+                                    @break
+
                                 @default
                                     <div class="alert alert-warning">
                                         فرم این سکشن تعریف نشده است.
@@ -1275,6 +1428,7 @@ new class extends Component {
             </div>
         </div>
     </div>
+    @if($mode === 'list')
     <div wire:ignore.self class="modal fade" id="add_section">
         <div class="modal-dialog modal-dialog-centered modal-xl text-center" role="document">
             <div class="modal-content modal-content-demo">
@@ -1406,6 +1560,7 @@ new class extends Component {
             </div>
         </div>
     </div>
+    @endif
     @push('scripts')
 
         <script src="{{asset('dashboard')}}/libs/sortablejs/Sortable.min.js"></script>
@@ -1413,6 +1568,7 @@ new class extends Component {
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 const simple = document.getElementById('simple-list');
+                if (!simple) return; // حالت editor (داخل صفحه‌ساز بصری) لیست ندارد
                 new Sortable(simple, {
                     animation: 150,
                     onEnd: function () {

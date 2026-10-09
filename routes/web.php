@@ -121,6 +121,16 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/delivery', 'pages::dashboard.delivery.index')->name('delivery.index');
     Route::livewire('/payments', 'pages::dashboard.payments.index')->name('payments.index');
     Route::livewire('/payments/settings', 'pages::dashboard.payments.settings')->name('payments.settings');
+
+    // حسابداری
+    Route::livewire('/accounting', 'pages::dashboard.accounting.index')->name('accounting.index');
+    Route::livewire('/accounting/entries', 'pages::dashboard.accounting.entries')->name('accounting.entries');
+    Route::livewire('/accounting/accounts', 'pages::dashboard.accounting.accounts')->name('accounting.accounts');
+    Route::livewire('/accounting/categories', 'pages::dashboard.accounting.categories')->name('accounting.categories');
+    Route::livewire('/suppliers', 'pages::dashboard.purchases.suppliers')->name('suppliers.index');
+    Route::livewire('/purchases', 'pages::dashboard.purchases.index')->name('purchases.index');
+    Route::livewire('/purchases/create', 'pages::dashboard.purchases.form')->name('purchases.create');
+    Route::livewire('/purchases/{purchase}/edit', 'pages::dashboard.purchases.form')->name('purchases.edit');
     Route::livewire('/marketplaces', 'pages::dashboard.marketplaces.index')->name('marketplaces.index');
     Route::livewire('/marketplaces/listings', 'pages::dashboard.marketplaces.listings')->name('marketplaces.listings');
     Route::livewire('/marketplaces/orders', 'pages::dashboard.marketplaces.orders')->name('marketplaces.orders');
@@ -204,6 +214,7 @@ Route::prefix('dashboard') ->middleware([
 
     Route::livewire('/pages', 'pages::dashboard.pages.index')->name('pages.index');
     Route::livewire('/pages/{page}/rows', 'pages::dashboard.pages.rows.index')->name('pages.rows');
+    Route::livewire('/pages/{page}/builder', 'pages::dashboard.pages.builder')->name('pages.builder');
     Route::livewire('/pages/{row}/sections', 'pages::dashboard.pages.sections.page-section')->name('pages.rows.sections');
 
     Route::livewire('/galleries', 'pages::dashboard.galleries.index')->name('galleries.index');

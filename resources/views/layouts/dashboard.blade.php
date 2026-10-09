@@ -1284,7 +1284,7 @@
                     {{-- مالی --}}
                     {{-- ========================================================= --}}
 
-                    @canany(['payments.view', 'payment-settings.view', 'delivery.view', 'invoices.view', 'returns.view'])
+                    @canany(['payments.view', 'payment-settings.view', 'delivery.view', 'invoices.view', 'returns.view', 'accounting.view', 'purchases.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     مالی
@@ -1292,6 +1292,36 @@
                     </li>
                     @endcanany
 
+
+                    {{-- حسابداری --}}
+                    @can('accounting.view')
+                    <li class="slide">
+                        <a class="side-menu__item {{ request()->routeIs('accounting.*') ? 'active' : '' }}"
+                           href="{{ route('accounting.index') }}">
+                            <i class="ri-calculator-line side-menu__icon"></i>
+                            <span class="side-menu__label">حسابداری</span>
+                        </a>
+                    </li>
+                    @endcan
+
+                    {{-- خرید کالا و تأمین‌کنندگان --}}
+                    @can('purchases.view')
+                    <li class="slide">
+                        <a class="side-menu__item {{ request()->routeIs('purchases.*', 'suppliers.*') ? 'active' : '' }}"
+                           href="{{ route('purchases.index') }}">
+                            <i class="ri-shopping-basket-2-line side-menu__icon"></i>
+                            <span class="side-menu__label">خرید کالا</span>
+                            @php
+                                $draftPurchases = \Illuminate\Support\Facades\Schema::hasTable('purchases')
+                                    ? \App\Models\Purchase::where('status', 'draft')->count()
+                                    : 0;
+                            @endphp
+                            @if($draftPurchases)
+                                <span class="badge bg-secondary ms-auto">{{ $draftPurchases }}</span>
+                            @endif
+                        </a>
+                    </li>
+                    @endcan
 
                     {{-- فاکتورها --}}
                     @can('invoices.view')

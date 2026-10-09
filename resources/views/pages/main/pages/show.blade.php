@@ -11,7 +11,11 @@ new class extends Component
         $slug ??= 'home';
         $this->page = \App\Models\Page::query()
             ->with([
-                'rows.sections.section','rows.sections.media'
+                // ردیف/سکشن غیرفعال (مخفی در صفحه‌ساز) نمایش داده نمی‌شود
+                'rows' => fn ($q) => $q->where('status', true),
+                'rows.sections' => fn ($q) => $q->where('status', true),
+                'rows.sections.section',
+                'rows.sections.media',
             ])
             ->where('slug', $slug)
             ->where('status', true)

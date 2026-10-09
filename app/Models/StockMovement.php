@@ -18,6 +18,8 @@ class StockMovement extends Model
         'sale' => 'کسر از انبار',
         'sale_reversal' => 'بازگشت به انبار',
         'adjustment' => 'اصلاح موجودی',
+        'purchase' => 'ورود از خرید',
+        'purchase_reversal' => 'لغو خرید',
     ];
 
     protected $fillable = [

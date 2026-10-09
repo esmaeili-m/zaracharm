@@ -890,7 +890,8 @@ new class extends Component
 
                                                     <a
                                                         href="{{ route('products.show', $product->slug) }}"
-                                                        class="w-10 h-10 quick-view-btn
+                                                        x-data x-on:click.prevent="$dispatch('zc-quick-view', { id: {{ $product->id }} })"
+                                                        class="w-10 h-10
                                            bg-white/90 dark:bg-zinc-900/90
                                            backdrop-blur-md
                                            text-gray-900 dark:text-white
@@ -1140,7 +1141,8 @@ new class extends Component
                                                 <div class="relative flex items-center group/tooltip">
                                                     <a
                                                         href="{{ route('products.show', $product->slug) }}"
-                                                        class="w-9 h-9 quick-view-btn bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-gray-900 dark:text-white rounded-xl flex items-center justify-center shadow-sm hover:bg-secondary-500 hover:text-white transition-all"
+                                                        x-data x-on:click.prevent="$dispatch('zc-quick-view', { id: {{ $product->id }} })"
+                                                        class="w-9 h-9 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-gray-900 dark:text-white rounded-xl flex items-center justify-center shadow-sm hover:bg-secondary-500 hover:text-white transition-all"
                                                     >
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>

@@ -54,6 +54,8 @@ class Permissions
         'discounts' => ['label' => 'تخفیف‌ها', 'group' => 'فروش و مالی', 'actions' => self::CRUD],
         'coupons' => ['label' => 'کدهای تخفیف', 'group' => 'فروش و مالی', 'actions' => self::CRUD],
         'campaigns' => ['label' => 'کمپین‌ها', 'group' => 'فروش و مالی', 'actions' => self::CRUD],
+        'accounting' => ['label' => 'حسابداری (حساب‌ها، دریافت و پرداخت، سود و زیان)', 'group' => 'فروش و مالی', 'actions' => self::CRUD],
+        'purchases' => ['label' => 'خرید کالا و تأمین‌کنندگان', 'group' => 'فروش و مالی', 'actions' => self::CRUD],
 
         // محتوا
         'pages' => ['label' => 'صفحات', 'group' => 'محتوا و صفحه‌ساز', 'actions' => self::CRUD],

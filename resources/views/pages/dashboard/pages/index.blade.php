@@ -212,12 +212,16 @@ new class extends Component
 
                                         <div class="hstack gap-2 flex-wrap">
                                                     @can('sections.view')
+                                                        <a href="{{ route('pages.builder', $item->id) }}"
+                                                           class="btn btn-sm btn-primary-light">
+                                                            <i class="ri-drag-drop-line me-1"></i>صفحه‌ساز
+                                                        </a>
                                                         <a
                                                            data-bs-toggle="tooltip"
                                                            data-bs-placement="top"
-                                                           title="افزودن سطر"
+                                                           title="مدیریت ردیف‌ها (حالت قدیمی)"
                                                            href="{{route('pages.rows',$item->id)}}"
-                                                           class="text-warning fs-14 lh-1">
+                                                           class="text-muted fs-14 lh-1">
                                                                 <i
                                                                     class="ri-list-view">
 

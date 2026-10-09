@@ -14,6 +14,12 @@ class InvoiceItem extends Model
         'stock_deducted' => 'integer',
     ];
 
+    // قیمت خرید لحظه فروش برای گزارش سود (App\Services\Accounting\CostSnapshot)
+    protected static function booted(): void
+    {
+        static::creating(fn ($item) => \App\Services\Accounting\CostSnapshot::fill($item, 'variant_id'));
+    }
+
     public function invoice()
     {
         return $this->belongsTo(Invoice::class);

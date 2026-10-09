@@ -21,6 +21,12 @@ class MarketplaceOrderItem extends Model
         'stock_deducted' => 'integer',
     ];
 
+    // قیمت خرید برای گزارش سود؛ واریانت ممکن است بعداً (هنگام اتصال لیستینگ) مشخص شود => saving
+    protected static function booted(): void
+    {
+        static::saving(fn ($item) => \App\Services\Accounting\CostSnapshot::fill($item, 'product_variant_id'));
+    }
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(MarketplaceOrder::class, 'marketplace_order_id');

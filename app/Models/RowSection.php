@@ -17,6 +17,7 @@ class RowSection extends Model
         return collect([
             $this->gridClasses(),
             $this->spacingClasses(),
+            $this->visibilityClasses(),
         ])
             ->filter()
             ->implode(' ');
@@ -50,6 +51,22 @@ class RowSection extends Model
 
         return implode(' ', $classes);
     }
+    /**
+     * نمایش فقط در موبایل/تبلت (زیر lg) یا فقط دسکتاپ؛ رشته‌ها کامل نوشته شده‌اند تا تیلویند آن‌ها را بسازد
+     */
+    public function visibilityClasses(): ?string
+    {
+        $mobile = (bool) data_get($this->layout, 'visibility.mobile', true);
+        $desktop = (bool) data_get($this->layout, 'visibility.desktop', true);
+
+        return match (true) {
+            ! $mobile && ! $desktop => 'hidden',
+            ! $mobile => 'hidden lg:block',
+            ! $desktop => 'lg:hidden',
+            default => null,
+        };
+    }
+
     public function gridClasses(): string
     {
         $classes = [];
@@ -69,6 +86,11 @@ class RowSection extends Model
 
         return implode(' ', $classes);
     }
+    public function row()
+    {
+        return $this->belongsTo(PageRow::class, 'page_row_id');
+    }
+
     public function section()
     {
         return $this->belongsTo(Section::class);
