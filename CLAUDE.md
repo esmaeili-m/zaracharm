@@ -1,6 +1,6 @@
 # zaracharm — Project Memory
 
-Persian (RTL, `APP_LOCALE=fa`) e-commerce shop + page-builder CMS. Mobile/OTP auth, product variants & multi-warehouse inventory, discounts/campaigns/coupons, cart → order → invoice → payment (wallet / card-to-card; gateway not built). Legacy LMS/blog/services models still present.
+Persian (RTL, `APP_LOCALE=fa`) e-commerce shop + page-builder CMS. Mobile/OTP auth, product variants & multi-warehouse inventory, discounts/campaigns/coupons, cart → order → invoice → payment (wallet / card-to-card / gateways). Legacy LMS/services/hospitals/team modules were removed (Oct 2026); blog remains.
 
 ## Stack
 - Laravel 12, PHP 8.2, **Livewire 4 single-file components (SFC)** — no controllers, no `app/Livewire` classes.
@@ -16,7 +16,7 @@ Persian (RTL, `APP_LOCALE=fa`) e-commerce shop + page-builder CMS. Mobile/OTP au
 
 ## Key directories
 - `resources/views/pages/dashboard/<entity>/` — admin CRUD (index + trash + sub-screens like `products/{prices,settings,specifications}`, `campaign/{targets,conditions,rewards}`).
-- `resources/views/pages/main/` — storefront (products/show, cart/*, blogs, courses, user/dashboard, pages/⚡show).
+- `resources/views/pages/main/` — storefront (products/show, cart/*, blogs, user/dashboard, pages/show).
 - `resources/views/components/main/sections/` — page-builder section components; `components/dashboard/forms/` — matching admin forms for section `data`.
 - `resources/views/layouts/{main,dashboard}.blade.php` — global JS listeners (alerts, seo), asset includes.
 - `app/Enums/` — int-backed enums with Persian `title()/label()` + `options()` for selects.
@@ -38,7 +38,7 @@ Persian (RTL, `APP_LOCALE=fa`) e-commerce shop + page-builder CMS. Mobile/OTP au
 
 ## Auth & permissions
 - Login: `pages/auth/login.blade.php` — mobile `09xxxxxxxxx`; OTP (4 digits, hashed, 5-min TTL, 120 s resend throttle, max 5 attempts) auto-creates user + assigns role `user`; or password login. `users.status=false` → 403.
-- Roles seeded: `admin` (all perms), `user`. Code also references `teacher`/`student` (legacy LMS).
+- Roles seeded: `admin` (all perms), `user`. `User::getRoleLabelAttribute` still maps legacy `teacher`/`student` labels.
 - Permission names `<area>.<action>` (view/create/edit/delete) — see `database/seeders/RoleTableSeeder.php`. Checked inside components via `abort_if(!auth()->user()->can('x.y'), 403)` in mount/actions, plus `@can` in Blade.
 - ⚠ Many shop screens (brands, products, …) reuse `categories.*` permissions. Some checked perms are not seeded (`invoices.edit`, `tickets.create/edit`, `seo.delete`).
 
@@ -66,10 +66,10 @@ Persian (RTL, `APP_LOCALE=fa`) e-commerce shop + page-builder CMS. Mobile/OTP au
 - Only Laravel example tests exist; no project test suite. Verify changes by reasoning + running the app; add tests only if asked.
 
 ## Known pitfalls
-- Route names used but not defined: `payment.gateway`, `order.success`, `register`, `courses.index`, `courses.lessons`, `courses.trash`, `admin.invoices.print`; checkout also redirects to `cart` (actual name `cart.index`).
-- Routes pointing to missing components: `dashboard.hospitals.index`, `dashboard.roles.trash`, `main.services.show`, `dashboard.pages.items`.
-- Duplicate/misnamed routes: `invoices.index` defined twice; `/dashboard/courses` is named `orders.index`; `orders.trash`/`tickets.trash` render the courses trash.
-- `pages/main/cart/⚡index.blade.php` (route `cart.index`) contains S3 file-listing code, not a cart; the real cart is `cart-item` (route `cartItem`).
+- Route names used but not defined: `payment.gateway`, `order.success`, `register`, `admin.invoices.print`; checkout also redirects to `cart` (no such route; the cart is `cartItem`).
+- Routes pointing to missing components: `dashboard.roles.trash`, `dashboard.pages.items`.
+- Duplicate routes: `invoices.index` defined twice.
+- The real cart page is `pages/main/cart/cart-item` (route `cartItem`); there is no `cart`/`cart.index` route.
 - `Page::publishedSections()` references a non-existent `PageSection` model; `Admin`, `PageSectionItem` models are empty.
 - `.env` sets `FILESYSTEM_DISK` twice (last = `s3`), but media is stored on the `public` disk by default.
 - `OtpService` logs the plaintext OTP code (`logger()->info("CODE: ...")`).

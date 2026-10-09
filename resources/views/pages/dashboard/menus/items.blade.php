@@ -3,9 +3,7 @@
 use Livewire\Component;
 use \App\Models\MenuItem;
 use \App\Models\Menu;
-use \App\Models\Service;
 use \App\Models\Page;
-use \App\Models\Course;
 use \App\Models\Category;
 new class extends Component
 {
@@ -27,7 +25,6 @@ new class extends Component
     public $references= [];
     public $types=[
         'page'=> 'صفحه',
-        'course'=> 'دوره',
         'category'=> 'دسته بندی',
         'category_list'=> 'لیست دسته بندی ها',
         'external'=> 'لینک خارجی',
@@ -95,15 +92,8 @@ new class extends Component
             }
         }
 
-        elseif ($value === 'course') {
-            $this->references = Course::select('id', 'title')->get();
-        }
-
         elseif ($value === 'category') {
             $this->references = Category::select('id', 'title')->get();
-        }
-        elseif ($value === 'service') {
-            $this->references = Service::select('id', 'title')->get();
         }
 
         else {
@@ -149,8 +139,8 @@ new class extends Component
             'reference_id' => [
                 'nullable',
                 'integer',
-                'required_if:type,page,course,category,service',
-                'prohibited_if:type,category_group,external,course_list,services',
+                'required_if:type,page,category',
+                'prohibited_if:type,category_group,external',
             ],
 
             'url' => [

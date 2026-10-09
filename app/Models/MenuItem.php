@@ -33,10 +33,6 @@ class MenuItem extends Model
                 ? route('categories.show', $category->slug)
                 : '#',
 
-            'course' => ($course = Course::find($this->reference_id))
-                ? route('courses.show', $course->slug)
-                : '#',
-
             'external' => $this->url ?? '#',
             'home' => '/',
 

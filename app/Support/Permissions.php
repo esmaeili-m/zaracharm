@@ -77,9 +77,6 @@ class Permissions
         'tickets' => ['label' => 'تیکت‌ها', 'group' => 'ارتباط با مشتری', 'actions' => self::CRUD],
         'messages' => ['label' => 'پیام‌های تماس با ما', 'group' => 'ارتباط با مشتری', 'actions' => ['view', 'delete']],
 
-        // آموزش (قدیمی)
-        'courses' => ['label' => 'دوره‌ها', 'group' => 'آموزش و خدمات', 'actions' => self::CRUD],
-        'services' => ['label' => 'خدمات', 'group' => 'آموزش و خدمات', 'actions' => self::CRUD],
     ];
 
     /**

@@ -108,12 +108,6 @@ new class extends Component
             $request = $s3->createPresignedRequest($cmd, '+1 hour');
             $url = (string) $request->getUri();
 
-            $url = str_replace(
-                'https://startwebone.storage.c2.liara.site',
-                'https://cdn.madaranee.ir',
-                $url
-            );
-
             $this->viewUrl = $url;
 
         } catch (\Throwable $e) {
@@ -191,7 +185,7 @@ new class extends Component
                                     <td>
                                         {{ \Illuminate\Support\Str::limit($item['name'], 40) }}
                                     </td>
-                                    <td><button type="button" class="btn btn-sm btn-primary-light" onclick="navigator.clipboard.writeText('https://madaranee.ir/{{ $item['path'] }}'); alert('آدرس کپی شد');"><i class="fa fa-copy"></i> کپی آدرس</button>
+                                    <td><button type="button" class="btn btn-sm btn-primary-light" onclick="navigator.clipboard.writeText({{ \Illuminate\Support\Js::from($item['url']) }}); alert('آدرس کپی شد');"><i class="fa fa-copy"></i> کپی آدرس</button>
                                     </td>
 
 

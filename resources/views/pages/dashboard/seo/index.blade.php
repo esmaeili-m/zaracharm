@@ -22,10 +22,7 @@ new class extends Component
     protected array $typeMap = [
         'page'     => ['model' => \App\Models\Page::class,         'label' => 'title', 'fa' => 'صفحه ثابت'],
         'article'  => ['model' => \App\Models\Article::class,      'label' => 'title', 'fa' => 'مقاله'],
-        'service'  => ['model' => \App\Models\Service::class,      'label' => 'title', 'fa' => 'خدمات'],
-        'category' => ['model' => \App\Models\Category::class,     'label' => 'name',  'fa' => 'دسته‌بندی'],
-        'course'   => ['model' => \App\Models\Course::class,       'label' => 'title', 'fa' => 'دوره'],
-        'lesson'   => ['model' => \App\Models\CourseLesson::class, 'label' => 'title', 'fa' => 'درس'],
+        'category' => ['model' => \App\Models\Category::class,     'label' => 'title', 'fa' => 'دسته‌بندی'],
         'faq'      => ['model' => \App\Models\Faq::class,          'label' => 'question', 'fa' => 'سوال'],
     ];
 

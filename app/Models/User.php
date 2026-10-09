@@ -72,12 +72,6 @@ class User extends Authenticatable
     {
         return $this->hasMany(Wishlist::class);
     }
-    public function hasPurchasedCourse($courseId): bool
-    {
-        return $this->courses()
-            ->where('course_id', $courseId)
-            ->exists();
-    }
     public function notificationPreference()
     {
         return $this->hasOne(NotificationPreference::class);
@@ -87,10 +81,6 @@ class User extends Authenticatable
     {
         return $this->hasOne(NotificationPreference::class);
     }
-    public function socials()
-    {
-        return $this->hasMany(TeacherSocial::class, 'teacher_id');
-    }
     public function cart()
     {
         return $this->hasOne(Cart::class);
@@ -98,10 +88,6 @@ class User extends Authenticatable
     public function messages()
     {
         return $this->hasMany(TicketMessage::class);
-    }
-    public function wishlistCourses()
-    {
-        return $this->belongsToMany(Course::class, 'wishlists');
     }
     public function wishlistProducts()
     {
@@ -161,11 +147,6 @@ class User extends Authenticatable
             'student' => 'دانشجو',
             'admin' => 'ادمین',
         ][$this->getRoleNames()->first()] ?? null;
-    }
-    public function courses()
-    {
-        return $this->belongsToMany(Course::class)
-            ->withPivot('purchased_at');
     }
     public function lastMessage()
     {

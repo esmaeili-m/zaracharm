@@ -75,20 +75,15 @@ Route::match(['get', 'post'], '/marketplaces/{provider}/feed', function (string 
 Route::livewire('/order/{code}/payment', 'pages::main.cart.payment')
     ->name('order.payment.result')->middleware(['auth']);
 // ─── Static Pages ────────────────────────────────────────
-Route::livewire('/cart', 'pages::main.cart.index')->name('cart.index')->middleware(['auth']);
 Route::livewire('/search', 'pages::main.search.index')->name('search');
 
 // ─── Resources ───────────────────────────────────────────
 Route::livewire('/articles/{slug}', 'pages::main.blogs.show')->name('articles.show');
-// کامپوننت pages::main.services.show وجود ندارد (ماژول قدیمی)؛ به‌جای خطای ۵۰۰، صفحه ۴۰۴ (نام روت حفظ شده چون در سکشن services استفاده می‌شود)
-Route::get('/services/{slug}', fn () => abort(404))->name('services.show');
 Route::livewire('/categories/{slug}', 'pages::main.categories.show')->name('categories.show');
 Route::livewire('/brands', 'pages::main.brands.index')->name('brands.list');
 Route::livewire('/brands/{slug}', 'pages::main.brands.show')->name('brands.show');
 Route::livewire('/tags/{slug}', 'pages::main.tags.show')->name('tags.show');
 
-Route::livewire('/courses/{course}/learn', 'pages::main.courses.learn')->name('courses.learn')->middleware(['auth']);
-Route::livewire('/courses/{slug}', 'pages::main.courses.show')->name('courses.show');
 
 // ─── Catch-all (باید آخر باشه) ───────────────────────────
 Route::livewire('/{slug}', 'pages::main.pages.show')->name('page.show');
@@ -112,8 +107,6 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/articles', 'pages::dashboard.articles.index')->name('articles.index');
     Route::livewire('/articles/trash', 'pages::dashboard.articles.trash')->name('articles.trash');
 
-    Route::livewire('/hospitals', 'pages::dashboard.hospitals.index')->name('hospitals.index');
-    Route::livewire('/services', 'pages::dashboard.services.index')->name('services.index');
     Route::livewire('/invoices', 'pages::dashboard.invoices.index')->name('invoices.index');
     Route::livewire('/{id}/invoices', 'pages::dashboard.invoices.details')->name('invoices.details');
     Route::livewire('/invoices/create', 'pages::dashboard.invoices.form')->name('invoices.create');
@@ -141,13 +134,9 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/comments', 'pages::dashboard.comments.index')->name('comments.index');
     Route::livewire('/product-questions', 'pages::dashboard.product-questions.index')->name('product-questions.index');
     Route::livewire('/product-questions/trash', 'pages::dashboard.product-questions.trash')->name('product-questions.trash');
-    Route::livewire('/services/trash', 'pages::dashboard.services.trash')->name('services.trash');
 
-    Route::livewire('/courses', 'pages::dashboard.courses.index')->name('orders.index');
     Route::livewire('/social-links', 'pages::dashboard.social-media.index')->name('social-links.index');
     Route::livewire('/invoices', 'pages::dashboard.invoices.index')->name('invoices.index');
-    Route::livewire('/orders/trash', 'pages::dashboard.courses.trash')->name('orders.show');
-    Route::livewire('/tickets/trash', 'pages::dashboard.courses.trash')->name('tickets.show');
 
     Route::livewire('/products', 'pages::dashboard.products.index')->name('products.index');
     // مدیریت مرحله‌ای محصول (مشخصات فنی ← ویژگی‌های قیمت‌ساز ← قیمت/SKU/بارکد ← موجودی)
@@ -196,9 +185,6 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/options/trash', 'pages::dashboard.options.trash')->name('options.trash');
     Route::livewire('/options/{option}/value', 'pages::dashboard.options.value')->name('options.value');
 
-    Route::livewire('/sections/{section}/lessons', 'pages::dashboard.courses.lessons.index')->name('sections.lessons');
-    Route::livewire('/courses/{course}/sections', 'pages::dashboard.courses.sections.index')->name('courses.sections');
-    Route::livewire('/courses/{course}/lessons/trash', 'pages::dashboard.courses.lessons.trash')->name('courses.lessons.trash');
 
     Route::livewire('/categories', 'pages::dashboard.categories.index')->name('categories.index');
     // ویژگی‌ها و فیلترهای دسته (منبع فیلترهای صفحه دسته‌بندی)

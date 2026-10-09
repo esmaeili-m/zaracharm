@@ -44,8 +44,6 @@ class Comment extends Model
     {
         return match ($this->commentable_type) {
 
-            \App\Models\Course::class => 'دوره',
-
             \App\Models\Article::class => 'مقاله',
 
             default => 'نامشخص',
