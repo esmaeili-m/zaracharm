@@ -117,6 +117,12 @@ class OtpService
         }
     }
 
+    /** 09121234567 => 0912***4567 */
+    protected function maskMobile(string $mobile): string
+    {
+        return strlen($mobile) >= 8 ? substr($mobile, 0, 4) . '***' . substr($mobile, -4) : '***';
+    }
+
     protected function failedKey(string $mobile): string
     {
         return 'otp-failed:' . $mobile;
@@ -124,11 +130,7 @@ class OtpService
 
     private function sendSms(string $mobile, string $code): void
     {
-        // کد فقط در محیط توسعه لاگ می‌شود (در production کد ورود نباید در لاگ ذخیره شود)
-        if (app()->isLocal()) {
-            logger()->info("CODE: $code");
-        }
-
+        // کد ورود هیچ‌وقت لاگ نمی‌شود (حتی در محیط توسعه)
         try {
 
             $result = app(SmsService::class)->send(
@@ -137,14 +139,14 @@ class OtpService
             );
 
             logger()->info('SMS sent', [
-                'mobile' => $mobile,
-                'result' => $result,
+                'mobile' => $this->maskMobile($mobile),
+                'ok' => (bool) $result,
             ]);
 
         } catch (\Throwable $e) {
 
             logger()->error('SMS failed', [
-                'mobile' => $mobile,
+                'mobile' => $this->maskMobile($mobile),
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),

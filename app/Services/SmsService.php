@@ -33,7 +33,11 @@ class SmsService
 
     } catch (Exception $exception) {
 
-        report($exception);
+        // report() کل stack trace را لاگ می‌کرد که (با تنظیمات پیش‌فرض برخی سرورها) آرگومان‌ها،
+        // یعنی رمز پنل پیامک و کد ورود، را هم شامل می‌شد. فقط پیام خطا ثبت می‌شود.
+        logger()->error('SMS provider error', [
+            'error' => mb_substr($exception->getMessage(), 0, 300),
+        ]);
 
         return false;
     }
