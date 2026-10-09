@@ -169,7 +169,8 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    // در production پیش‌فرض فقط HTTPS (سایت باید روی https باشد؛ در صورت نیاز با SESSION_SECURE_COOKIE=false خاموش شود)
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
 
     /*
     |--------------------------------------------------------------------------
