@@ -12,7 +12,7 @@ Route::post('/logout', function () {
 
 Route::livewire('/login', 'pages::auth.login')->name('login');
 Route::livewire('/user/dashboard', 'pages::main.user.dashboard')->name('user.dashboard')->middleware(['auth']);
-Route::livewire('/product', 'pages::main.user.dashboard')->name('product.show');
+Route::livewire('/product', 'pages::main.user.dashboard')->name('product.show')->middleware(['auth']);
 Route::livewire('/products/{product}', 'pages::main.products.show')->name('products.show');
 Route::livewire('/compare', 'pages::main.compare.index')->name('compare.index');
 Route::livewire('/cartItem', 'pages::main.cart.cart-item')->name('cartItem')->middleware(['auth']);
@@ -80,7 +80,8 @@ Route::livewire('/search', 'pages::main.search.index')->name('search');
 
 // ─── Resources ───────────────────────────────────────────
 Route::livewire('/articles/{slug}', 'pages::main.blogs.show')->name('articles.show');
-Route::livewire('/services/{slug}', 'pages::main.services.show')->name('services.show');
+// کامپوننت pages::main.services.show وجود ندارد (ماژول قدیمی)؛ به‌جای خطای ۵۰۰، صفحه ۴۰۴ (نام روت حفظ شده چون در سکشن services استفاده می‌شود)
+Route::get('/services/{slug}', fn () => abort(404))->name('services.show');
 Route::livewire('/categories/{slug}', 'pages::main.categories.show')->name('categories.show');
 Route::livewire('/brands', 'pages::main.brands.index')->name('brands.list');
 Route::livewire('/brands/{slug}', 'pages::main.brands.show')->name('brands.show');
