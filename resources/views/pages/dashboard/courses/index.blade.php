@@ -177,6 +177,17 @@ new class extends Component
     }
     public function saveEditorImage()
     {
+        // فقط تصویر؛ قبلاً هر فایلی (حتی php) در public/storage ذخیره می‌شد
+        $this->validate(
+            ['editorImage' => ['required', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:5120']],
+            [
+                'editorImage.required' => 'تصویری انتخاب نشده است.',
+                'editorImage.image' => 'فایل انتخاب‌شده باید تصویر باشد.',
+                'editorImage.mimes' => 'فرمت تصویر باید jpg، png، gif یا webp باشد.',
+                'editorImage.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+            ]
+        );
+
         if (!$this->editorImage) {
             abort(400, 'No image uploaded');
         }

@@ -28,6 +28,8 @@ trait FileUploadTrait
             ['file' => 'required|file|max:512000']
         )->validate();
 
+        $this->rejectExecutableUpload($file);
+
         // فشرده‌سازی خودکار تصاویر (config/media.php)؛ در صورت عدم امکان، فایل اصلی ذخیره می‌شود
         $compressed = $compress ? app(\App\Services\Media\ImageCompressor::class)->compress($file) : null;
 
@@ -140,6 +142,39 @@ trait FileUploadTrait
         'meta' => $meta
     ]);
     }
+    /**
+     * لایه دفاعی مشترک: فایل‌های قابل اجرا / اسکریپت هرگز در دیسک عمومی ذخیره نشوند
+     * (store() پسوند را از MIME حدس می‌زند؛ یک فایل PHP با پسوند .php در public/storage قرار می‌گرفت)
+     */
+    protected function rejectExecutableUpload(UploadedFile $file): void
+    {
+        $blocked = [
+            'php', 'php3', 'php4', 'php5', 'php7', 'php8', 'phtml', 'pht', 'phps', 'phar', 'inc',
+            'cgi', 'pl', 'py', 'rb', 'sh', 'bash', 'asp', 'aspx', 'jsp', 'exe', 'bat', 'cmd', 'com', 'msi', 'dll',
+            'html', 'htm', 'xhtml', 'shtml', 'js', 'mjs', 'htaccess', 'htpasswd',
+        ];
+
+        $extensions = array_filter([
+            strtolower((string) $file->getClientOriginalExtension()),
+            strtolower((string) $file->guessExtension()),
+        ]);
+
+        // نام‌هایی مثل shell.php.jpg هم رد می‌شوند
+        $nameParts = array_map('strtolower', explode('.', (string) $file->getClientOriginalName()));
+        array_shift($nameParts);
+        $nameParts = array_filter($nameParts, fn ($part) => preg_match('/^(php\d*|phtml|pht|phar|htaccess)$/', $part));
+
+        $mime = strtolower((string) $file->getMimeType());
+        $badMime = str_contains($mime, 'php') || str_contains($mime, 'x-sh') || str_contains($mime, 'javascript')
+            || in_array($mime, ['text/html', 'application/x-httpd-php', 'application/x-msdownload', 'application/x-executable'], true);
+
+        if ($badMime || array_intersect($blocked, array_merge($extensions, $nameParts))) {
+            throw ValidationException::withMessages([
+                'file' => 'این نوع فایل برای بارگذاری مجاز نیست.',
+            ]);
+        }
+    }
+
     public function attachExternal(
         string $url,
         Model $model,
