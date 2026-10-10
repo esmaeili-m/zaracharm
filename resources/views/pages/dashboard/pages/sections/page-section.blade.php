@@ -338,6 +338,7 @@ new class extends Component {
                 'mode' => 'latest',
                 'limit' => 8,
                 'view' => 1,
+                'layout' => null, // null = پیش‌فرض طرح (نوع ۳ اسلایدر، بقیه زیر هم)
                 'pictureMode' => 'background',
                 'source' => 'all',
                 'brand_id' => null,
@@ -603,6 +604,8 @@ new class extends Component {
                         'min:1',
                         'max:20'
                     ],
+                    // بدون قانون، validate() این کلید را حذف و ذخیره نمی‌کرد
+                    'formData.layout' => ['nullable', 'in:grid,slider'],
                     'formData.pictureMode' => [
                         'nullable',
                     ],
@@ -1003,6 +1006,7 @@ new class extends Component {
             'formData.images.hero_poster.mimes' => 'پوستر باید jpg، png یا webp باشد.',
             'formData.images.hero_poster.max' => 'حجم پوستر نباید بیشتر از ۵ مگابایت باشد.',
 
+            'formData.layout.in' => 'چیدمان محصولات نامعتبر است.',
             'formData.height_mode.in' => 'نوع ارتفاع اسلایدر نامعتبر است.',
             'formData.height_mobile.integer' => 'ارتفاع موبایل باید عدد صحیح باشد.',
             'formData.height_mobile.min' => 'ارتفاع موبایل حداقل ۱۲۰ پیکسل است.',

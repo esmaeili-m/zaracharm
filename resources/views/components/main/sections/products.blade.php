@@ -86,8 +86,30 @@ new class extends Component
 };
 ?>
 
+@php
+    /*
+     * نحوه چیدمان: grid (زیر هم) | slider (یک خط، قابل کشیدن)
+     * پیش‌فرض برای سکشن‌های قبلی: طرح ۳ اسلایدر، طرح ۱ و ۲ زیر هم (ظاهر فعلی تغییر نمی‌کند)
+     */
+    $viewType = (int) ($data['view'] ?? 1);
+    $layoutMode = in_array($data['layout'] ?? null, ['grid', 'slider'], true)
+        ? $data['layout']
+        : ($viewType === 3 ? 'slider' : 'grid');
+    $isSlider = $layoutMode === 'slider';
+
+    // ریل افقی: اسکرول بومی با snap؛ دکمه‌ها راست‌به‌چپ را درست جابه‌جا می‌کنند
+    $railData = "{ atStart: true, atEnd: false,
+        update() { const r = this.\$refs.rail; if (!r) return; const x = Math.abs(r.scrollLeft);
+            this.atStart = x <= 4; this.atEnd = x + r.clientWidth >= r.scrollWidth - 4; },
+        step(d) { const r = this.\$refs.rail; const rtl = getComputedStyle(r).direction === 'rtl';
+            r.scrollBy({ left: d * r.clientWidth * 0.9 * (rtl ? -1 : 1), behavior: 'smooth' }); } }";
+    $railClass = 'flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar pt-3 pb-6 px-1';
+    $gridClass = 'grid pb-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8';
+    $slideClass = 'snap-start shrink-0 w-[82%] sm:w-[calc(50%-12px)] xl:w-[calc(33.333%-16px)]';
+@endphp
+
 <div>
-    @if(($data['view'] ?? 1) == 1)
+    @if($viewType === 1)
         <section class="relative transition-colors duration-500 overflow-hidden">
 
             <div class="lg:container mx-auto relative z-10">
@@ -117,21 +139,26 @@ new class extends Component
                     </div>
                 </div>
 
-                <div id="product-grid" class="grid pb-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                <div class="relative" @if($isSlider) x-data="{{ $railData }}" x-init="update()" x-on:resize.window.debounce.150ms="update()" @endif>
+                <div id="product-grid" @if($isSlider) x-ref="rail" x-on:scroll.debounce.50ms="update()" @endif class="{{ $isSlider ? $railClass : $gridClass }}">
                     @foreach($products ?? [] as $product)
                         <x-main.products.card
                             :product="$product"
                             :picture-mode="$pictureMode"
                             :wishlisted="$this->isWishlisted($product->id)"
-                            class="product-card"
+                            class="product-card {{ $isSlider ? $slideClass : '' }}"
                             data-categories="{{ $product->categories->pluck('slug')->implode(' ') }}"
                         />
 
                     @endforeach
                 </div>
+                @if($isSlider)
+                    @include('components.main.sections.partials.rail-arrows')
+                @endif
+                </div>
             </div>
         </section>
-    @elseif($data['view'] == 2)
+    @elseif($viewType === 2)
         <section class="relative transition-colors duration-500 overflow-hidden">
 
             <div class="lg:container mx-auto relative z-10">
@@ -142,7 +169,8 @@ new class extends Component
                     </div>
                 </div>
 
-                <div id="product-grid" class="grid pb-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                <div class="relative" @if($isSlider) x-data="{{ $railData }}" x-init="update()" x-on:resize.window.debounce.150ms="update()" @endif>
+                <div id="product-grid" @if($isSlider) x-ref="rail" x-on:scroll.debounce.50ms="update()" @endif class="{{ $isSlider ? $railClass : $gridClass }}">
                     @foreach($products as $product)
                         @php
                             $prices = $product->displayVariant?->priceData() ?? [
@@ -152,7 +180,7 @@ new class extends Component
                                 'discount_percent' => 0,
                             ];
                         @endphp
-                        <div class="group relative bg-white/70 dark:bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-gray-200 dark:border-white/10 p-2 transition-all duration-500 hover:shadow-lg hover:shadow-brown-600/20 hover:-translate-y-2"
+                        <div class="group relative bg-white/70 dark:bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-gray-200 dark:border-white/10 p-2 transition-all duration-500 hover:shadow-lg hover:shadow-brown-600/20 hover:-translate-y-2 {{ $isSlider ? str_replace('w-[82%]', 'w-[90%]', $slideClass) : '' }}"
                              data-categories="{{ $product->categories->pluck('slug')->implode(' ') }}">
                             <div class="flex h-[220px]">
                                 <div class="w-2/5 relative overflow-hidden rounded-[2rem] m-1 {{ $pictureMode === 'transparent' ? 'bg-gradient-to-br from-gray-100 to-transparent dark:from-white/5 dark:to-transparent flex items-center justify-center' : '' }}">
@@ -222,9 +250,13 @@ new class extends Component
                         </div>
                     @endforeach
                 </div>
+                @if($isSlider)
+                    @include('components.main.sections.partials.rail-arrows')
+                @endif
+                </div>
             </div>
         </section>
-    @elseif($data['view'] == 3)
+    @elseif($viewType === 3)
         <section class="best-sellers-glass relative overflow-hidden transition-colors duration-700">
             <div class="lg:container pb-7 relative z-10">
 
@@ -257,8 +289,8 @@ new class extends Component
                     </a>
                 </div>
 
-                <div class="swiper productSwiper !overflow-visible">
-                    <div class="swiper-wrapper">
+                <div class="{{ $isSlider ? 'swiper productSwiper !overflow-visible' : '' }}">
+                    <div class="{{ $isSlider ? 'swiper-wrapper' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2' }}">
                         @foreach($products as $product)
                             @php
                                 $prices = $product->cheapestVariant?->priceData() ?? [
@@ -268,7 +300,7 @@ new class extends Component
                                     'discount_percent' => 0,
                                 ];
                             @endphp
-                            <div class="swiper-slide h-auto p-4">
+                            <div class="{{ $isSlider ? 'swiper-slide h-auto' : '' }} p-4">
                                 <div class="group relative h-full pt-12">
                                     <div class="absolute inset-0 bg-white/80 dark:bg-[#0a0f0a]/40 backdrop-blur-[20px] rounded-[3rem] border border-gray-100 dark:border-white/[0.08] shadow-[0_20px_50px_rgba(0,0,0,0.02)] transition-all duration-700 group-hover:border-brown-500/50 dark:group-hover:shadow-[0_0_60px_rgba(120,72,45,0.12)]"></div>
 
@@ -372,7 +404,7 @@ new class extends Component
                     </div>
                 </div>
 
-                <div class="flex justify-center gap-4 mt-10">
+                <div class="{{ $isSlider ? 'flex' : 'hidden' }} justify-center gap-4 mt-10">
                     <div class="prod-prev w-14 h-14 rounded-2xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-brown-600 hover:text-white transition-all shadow-lg group">
                         <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                     </div>

@@ -93,6 +93,18 @@
 
     </div>
 
+    {{-- چیدمان: زیر هم یا اسلایدر یک‌خطی --}}
+    <div class="col-md-3">
+        <label class="form-label">چیدمان محصولات</label>
+        <select wire:model="formData.layout" class="form-select @error('formData.layout') is-invalid @enderror">
+            <option value="">پیش‌فرض طرح</option>
+            <option value="grid">زیر هم (شبکه‌ای)</option>
+            <option value="slider">اسلایدر در یک خط</option>
+        </select>
+        <div class="form-text">پیش‌فرض: نوع ۱ و ۲ زیر هم، نوع ۳ اسلایدری.</div>
+        @error('formData.layout') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+    </div>
+
 
     {{-- منبع محصولات: همه یا یک برند --}}
     <div class="col-md-3">
