@@ -1,13 +1,7 @@
-# جلوگیری از اجرای اسکریپت در پوشه فایل‌های آپلودی (/storage)
-# تصاویر، ویدیوها و PDFها مثل قبل نمایش داده می‌شوند؛ فقط اجرای فایل‌های اسکریپتی بسته است.
-# توجه: php_flag engine off اینجا استفاده نشده چون روی PHP-FPM / LiteSpeed خطای ۵۰۰ می‌دهد.
-
-<FilesMatch "(?i)\.(php\d?|phtml|pht|phar|phps|cgi|pl|py|sh)$">
-    Require all denied
-</FilesMatch>
-
-<IfModule mod_mime.c>
-    RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+# Block running script files inside the uploads folder (/storage).
+# Uses only mod_rewrite, which Laravel's own public/.htaccess already needs,
+# so it works wherever the site itself works.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule \.(php[0-9]?|phtml|pht|phar|phps|cgi|pl|py|sh)$ - [F,NC,L]
 </IfModule>
-
-Options -ExecCGI -Indexes
