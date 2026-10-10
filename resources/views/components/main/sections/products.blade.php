@@ -97,15 +97,8 @@ new class extends Component
         : ($viewType === 3 ? 'slider' : 'grid');
     $isSlider = $layoutMode === 'slider';
 
-    // ریل افقی: اسکرول بومی با snap؛ دکمه‌ها راست‌به‌چپ را درست جابه‌جا می‌کنند
-    $railData = "{ atStart: true, atEnd: false,
-        update() { const r = this.\$refs.rail; if (!r) return; const x = Math.abs(r.scrollLeft);
-            this.atStart = x <= 4; this.atEnd = x + r.clientWidth >= r.scrollWidth - 4; },
-        step(d) { const r = this.\$refs.rail; const rtl = getComputedStyle(r).direction === 'rtl';
-            r.scrollBy({ left: d * r.clientWidth * 0.9 * (rtl ? -1 : 1), behavior: 'smooth' }); } }";
-    $railClass = 'flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar pt-3 pb-6 px-1';
     $gridClass = 'grid pb-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8';
-    $slideClass = 'snap-start shrink-0 w-[82%] sm:w-[calc(50%-12px)] xl:w-[calc(33.333%-16px)]';
+    $wishlistedIds = collect($products ?? [])->pluck('id')->filter(fn ($id) => $this->isWishlisted($id))->values()->all();
 @endphp
 
 <div>
@@ -125,37 +118,36 @@ new class extends Component
                         {{-- همه --}}
                         <button
                             data-filter="all"
-                            class="shop-filter-btn active px-6 py-2.5 rounded-xl font-black text-xs transition-all duration-300">
+                            class="shop-filter-btn active shrink-0 whitespace-nowrap px-6 py-2.5 rounded-xl font-black text-xs transition-all duration-300">
                             همه
                         </button>
 
                         @foreach($categories as $category)
                             <button
                                 data-filter="{{ $category->slug }}"
-                                class="shop-filter-btn px-6 py-2.5 rounded-xl font-black text-xs text-gray-500 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-white/10 transition-all duration-300">
+                                class="shop-filter-btn shrink-0 whitespace-nowrap px-6 py-2.5 rounded-xl font-black text-xs text-gray-500 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-white/10 transition-all duration-300">
                                 {{ $category->title }}
                             </button>
                         @endforeach
                     </div>
                 </div>
 
-                <div class="relative" @if($isSlider) x-data="{{ $railData }}" x-init="update()" x-on:resize.window.debounce.150ms="update()" @endif>
-                <div id="product-grid" @if($isSlider) x-ref="rail" x-on:scroll.debounce.50ms="update()" @endif class="{{ $isSlider ? $railClass : $gridClass }}">
+                @if($isSlider)
+                    @include('components.main.sections.partials.product-rail')
+                @else
+                <div id="product-grid" class="{{ $gridClass }}">
                     @foreach($products ?? [] as $product)
                         <x-main.products.card
                             :product="$product"
                             :picture-mode="$pictureMode"
                             :wishlisted="$this->isWishlisted($product->id)"
-                            class="product-card {{ $isSlider ? $slideClass : '' }}"
+                            class="product-card"
                             data-categories="{{ $product->categories->pluck('slug')->implode(' ') }}"
                         />
 
                     @endforeach
                 </div>
-                @if($isSlider)
-                    @include('components.main.sections.partials.rail-arrows')
                 @endif
-                </div>
             </div>
         </section>
     @elseif($viewType === 2)
@@ -169,8 +161,10 @@ new class extends Component
                     </div>
                 </div>
 
-                <div class="relative" @if($isSlider) x-data="{{ $railData }}" x-init="update()" x-on:resize.window.debounce.150ms="update()" @endif>
-                <div id="product-grid" @if($isSlider) x-ref="rail" x-on:scroll.debounce.50ms="update()" @endif class="{{ $isSlider ? $railClass : $gridClass }}">
+                @if($isSlider)
+                    @include('components.main.sections.partials.product-rail')
+                @else
+                <div id="product-grid" class="{{ $gridClass }}">
                     @foreach($products as $product)
                         @php
                             $prices = $product->displayVariant?->priceData() ?? [
@@ -180,7 +174,7 @@ new class extends Component
                                 'discount_percent' => 0,
                             ];
                         @endphp
-                        <div class="group relative bg-white/70 dark:bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-gray-200 dark:border-white/10 p-2 transition-all duration-500 hover:shadow-lg hover:shadow-brown-600/20 hover:-translate-y-2 {{ $isSlider ? str_replace('w-[82%]', 'w-[90%]', $slideClass) : '' }}"
+                        <div class="group relative bg-white/70 dark:bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-gray-200 dark:border-white/10 p-2 transition-all duration-500 hover:shadow-lg hover:shadow-brown-600/20 hover:-translate-y-2"
                              data-categories="{{ $product->categories->pluck('slug')->implode(' ') }}">
                             <div class="flex h-[220px]">
                                 <div class="w-2/5 relative overflow-hidden rounded-[2rem] m-1 {{ $pictureMode === 'transparent' ? 'bg-gradient-to-br from-gray-100 to-transparent dark:from-white/5 dark:to-transparent flex items-center justify-center' : '' }}">
@@ -250,10 +244,7 @@ new class extends Component
                         </div>
                     @endforeach
                 </div>
-                @if($isSlider)
-                    @include('components.main.sections.partials.rail-arrows')
                 @endif
-                </div>
             </div>
         </section>
     @elseif($viewType === 3)
