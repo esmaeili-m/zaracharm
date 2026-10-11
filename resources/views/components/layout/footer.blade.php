@@ -303,7 +303,7 @@ new class extends Component
                 <small>
                     © {{ date('Y') }}
                     تمامی حقوق برای
-                    <strong>مادرانه</strong>
+                    <strong>زارا</strong>
                     محفوظ است.
                 </small>
 
