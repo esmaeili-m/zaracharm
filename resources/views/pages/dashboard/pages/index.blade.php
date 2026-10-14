@@ -41,6 +41,14 @@ new class extends Component
     public function delete()
     {
         abort_if(!auth()->user()->can('pages.delete'), 403);
+
+        // صفحات پیش‌فرض قابل حذف نیستند (بررسی سمت سرور؛ دکمه حذف هم نمایش داده نمی‌شود)
+        if ($this->selectItem && \App\Support\Pages\DefaultPages::isProtected($this->selectItem->slug)) {
+            $this->resetData('close');
+            $this->dispatch('alert', type: 'error', title: 'غیرمجاز', text: 'صفحات پیش‌فرض سایت قابل حذف نیستند.');
+            return;
+        }
+
         if ($this->selectItem){
             $item = $this->model->findOrFail($this->selectItem->id);
             $item->delete();
@@ -87,7 +95,7 @@ new class extends Component
         return [
             'title' => ['required', 'string', 'max:255'],
 
-            'slug' => ['required', 'string', 'max:255', 'unique:pages,slug'],
+            'slug' => ['required', 'string', 'max:255', \Illuminate\Validation\Rule::unique('pages', 'slug')->ignore($this->selectItem?->id)],
 
 //            'type' => ['required', 'in:page,landing,course,blog,categories'],
         ];
@@ -112,6 +120,13 @@ new class extends Component
     public function save()
     {
         abort_if(!auth()->user()->can($this->selectItem ? 'pages.edit' : 'pages.create'), 403);
+
+        // آدرس و عنوان صفحات پیش‌فرض ثابت است (محتوا از صفحه‌ساز ویرایش می‌شود)
+        if ($this->selectItem && \App\Support\Pages\DefaultPages::isProtected($this->selectItem->slug)) {
+            $this->resetData('close');
+            $this->dispatch('alert', type: 'error', title: 'غیرمجاز', text: 'صفحات پیش‌فرض سایت قابل ویرایش نیستند؛ محتوا را از صفحه‌ساز تغییر دهید.');
+            return;
+        }
 
         $data = $this->validate();
         $this->selectItem
@@ -186,15 +201,7 @@ new class extends Component
                             <tbody>
                             @php
                                     $counter=1;
-                                    $protectedPages = [
-                                        'home',
-                                        'categories',
-                                        'special-offers',
-                                        'about-us',
-                                        'contact-us',
-                                        'articles',
-                                        'products',
-                                    ];
+                                    $protectedPages = array_keys(\App\Support\Pages\DefaultPages::PAGES);
                             @endphp
                             @foreach($data ?? [] as $item)
                                 <tr wire:key="{{$item->id}}">
@@ -204,6 +211,9 @@ new class extends Component
                                     <td>
 
                                         {{$item->title}}
+                                        @if(in_array($item->slug, $protectedPages))
+                                            <span class="badge bg-light text-muted ms-1" title="صفحه پیش‌فرض سایت؛ قابل حذف نیست"><i class="ri-lock-line"></i> پیش‌فرض</span>
+                                        @endif
                                     </td>
                                     <td>
                                         {{$item->slug}}

@@ -114,3 +114,53 @@ Artisan::command('prices:snapshot', function () {
 })->purpose('ثبت روزانه تاریخچه قیمت برای نمودار قیمت');
 
 \Illuminate\Support\Facades\Schedule::command('prices:snapshot')->dailyAt('00:10')->withoutOverlapping();
+
+/*
+|--------------------------------------------------------------------------
+| پیامک (ملی پیامک)
+|--------------------------------------------------------------------------
+| --deliveries : استعلام وضعیت تحویل پیامک‌های پذیرفته‌شده (فقط ارسال واقعی)
+| --templates  : به‌روزرسانی وضعیت الگوها از ملی پیامک
+| --recover    : پیامک‌های گیرکرده در «در حال ارسال» ← نامشخص؛ ادامه عملیات‌های متوقف‌شده صف
+| --prune      : پاک‌کردن مقادیر متغیرهای پیامک‌های قدیمی (حفاظت داده)
+| ارسال گروهی نیازمند `php artisan queue:work` روی سرور است.
+*/
+Artisan::command('sms:sync {--deliveries} {--templates} {--recover} {--prune}', function () {
+    $sender = app(\App\Services\Sms\SmsSender::class);
+    $client = app(\App\Services\Sms\MelipayamakClient::class);
+    $all = ! $this->option('deliveries') && ! $this->option('templates') && ! $this->option('recover') && ! $this->option('prune');
+
+    if ($all || $this->option('recover')) {
+        $sender->recoverStale();
+    }
+
+    if (($all || $this->option('deliveries')) && $client->isConfigured()) {
+        try {
+            $this->line('وضعیت تحویل به‌روز شد: ' . $sender->syncDeliveries($client));
+        } catch (\App\Services\Sms\SmsProviderException $e) {
+            $this->error($e->getMessage());
+        }
+    }
+
+    if (($all || $this->option('templates')) && $client->isConfigured()) {
+        try {
+            $stats = app(\App\Services\Sms\TemplateManager::class)->sync();
+            $this->line("الگوها: {$stats['total']} (جدید {$stats['created']})");
+        } catch (\App\Services\Sms\SmsProviderException $e) {
+            $this->error($e->getMessage());
+        }
+    }
+
+    if ($all || $this->option('prune')) {
+        $count = \App\Models\SmsMessage::whereNotNull('args')
+            ->whereNotIn('status', ['queued', 'sending'])
+            ->where('created_at', '<', now()->subDays((int) config('sms.args_retention_days', 90)))
+            ->update(['args' => null]);
+        $this->line("مقادیر متغیر پاک‌شده: {$count}");
+    }
+})->purpose('همگام‌سازی پیامک: وضعیت تحویل، وضعیت الگوها، بازیابی ارسال‌های متوقف');
+
+\Illuminate\Support\Facades\Schedule::command('sms:sync --recover')->everyFiveMinutes()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('sms:sync --deliveries')->everyTenMinutes()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('sms:sync --templates')->hourly()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('sms:sync --prune')->dailyAt('03:30');

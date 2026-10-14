@@ -853,7 +853,7 @@
                     {{-- محتوا --}}
                     {{-- ========================================================= --}}
 
-                    @canany(['articles.view', 'faq.view', 'menus.view', 'pages.view', 'stories.view'])
+                    @canany(['articles.view', 'faq.view', 'menus.view', 'pages.view', 'stories.view', 'announcements.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     محتوا
@@ -938,6 +938,17 @@
 
                         </a>
 
+                    </li>
+                    @endcan
+
+                    {{-- اطلاعیه‌های سایت --}}
+                    @can('announcements.view')
+                    <li class="slide">
+                        <a class="side-menu__item {{ request()->routeIs('announcements.*') ? 'active' : '' }}"
+                           href="{{ route('announcements.index') }}">
+                            <i class="ri-notification-badge-line side-menu__icon"></i>
+                            <span class="side-menu__label">اطلاعیه‌های سایت</span>
+                        </a>
                     </li>
                     @endcan
 
@@ -1181,7 +1192,7 @@
                     {{-- ارتباطات --}}
                     {{-- ========================================================= --}}
 
-                    @canany(['comments.view', 'messages.view', 'product-questions.view', 'social-links.view', 'tickets.view'])
+                    @canany(['comments.view', 'messages.view', 'product-questions.view', 'social-links.view', 'tickets.view', 'sms.view'])
                     <li class="slide__category">
                 <span class="category-name">
                     ارتباطات
@@ -1189,6 +1200,17 @@
                     </li>
                     @endcanany
 
+
+                    {{-- پیامک --}}
+                    @can('sms.view')
+                    <li class="slide">
+                        <a class="side-menu__item {{ request()->routeIs('sms.*') ? 'active' : '' }}"
+                           href="{{ route('sms.index') }}">
+                            <i class="ri-message-3-line side-menu__icon"></i>
+                            <span class="side-menu__label">مدیریت پیامک</span>
+                        </a>
+                    </li>
+                    @endcan
 
                     {{-- پیام ها --}}
                     @can('messages.view')

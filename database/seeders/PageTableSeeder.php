@@ -2,56 +2,20 @@
 
 namespace Database\Seeders;
 
-use App\Models\Page;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Support\Pages\DefaultPages;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
+/**
+ * صفحات پیش‌فرض (فهرست در App\Support\Pages\DefaultPages)
+ * غیرمخرب: فقط صفحات موجودنبودن ساخته می‌شوند؛ صفحات سوالات متداول و شرایط مرجوعی سکشن پیش‌فرض می‌گیرند.
+ * SectionTableSeeder باید قبل از این اجرا شود.
+ */
 class PageTableSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        $stats = DefaultPages::ensure();
 
-        Page::truncate();
-        $data=[
-            [
-                'title'=>'صفحه اصلی',
-                'slug'=>'home',
-            ],
-            [
-                'title'=>'دسته بندی ها',
-                'slug'=>'categories',
-            ],
-            [
-                'title'=>'شگفت انگیزها',
-                'slug'=>'special-offers',
-            ],
-            [
-                'title'=>'درباره ما',
-                'slug'=>'about-us',
-            ],
-            [
-                'title'=>'ارتباط با ما',
-                'slug'=>'contact-us',
-            ],
-            [
-                'title'=>'مقالات ما',
-                'slug'=>'articles',
-            ],[
-                'title'=>'محصولات',
-                'slug'=>'products',
-            ],[
-                'title'=>'سوالات متداول',
-                'slug'=>'faq',
-            ],
-
-        ];
-        Page::insert($data);
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
+        $this->command?->info("صفحات جدید: {$stats['pages']} ، سکشن‌های پیش‌فرض: {$stats['sections']}");
     }
 }

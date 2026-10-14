@@ -20,6 +20,8 @@ class Catalog
         'sliders' => ['icon' => 'ri-slideshow-3-line', 'group' => 'hero', 'width' => 12, 'description' => 'اسلایدر تصاویر تبلیغاتی'],
         'stories' => ['icon' => 'ri-donut-chart-line', 'group' => 'hero', 'width' => 12, 'description' => 'استوری‌های دایره‌ای مثل اینستاگرام'],
         'about' => ['icon' => 'ri-information-line', 'group' => 'hero', 'width' => 12, 'description' => 'معرفی فروشگاه با تصویر و آمار'],
+        'banners' => ['icon' => 'ri-image-2-line', 'group' => 'hero', 'width' => 12, 'description' => 'یک یا چند بنر تصویری با لینک (شبکه‌ای یا اسلایدی، تصویر جدا برای موبایل)'],
+        'announcements' => ['icon' => 'ri-notification-badge-line', 'group' => 'content', 'width' => 12, 'description' => 'اطلاعیه‌های فعال سایت (نوار، فهرست یا کارت)'],
 
         'products' => ['icon' => 'ri-shopping-bag-3-line', 'group' => 'shop', 'width' => 12, 'description' => 'لیست یا اسلایدر محصولات (جدید، پرفروش، دستی...)'],
         'categories' => ['icon' => 'ri-apps-2-line', 'group' => 'shop', 'width' => 12, 'description' => 'دسته‌بندی‌های محصولات'],

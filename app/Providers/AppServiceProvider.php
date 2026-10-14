@@ -14,6 +14,12 @@ class AppServiceProvider extends ServiceProvider
     {
         // یک نمونه در هر درخواست تا SKU/بارکدهای تولیدشده در ساخت گروهی تنوع‌ها تکراری نشوند
         $this->app->scoped(\App\Services\Catalog\VariantCodeGenerator::class);
+
+        // ماژول مدیریت پیامک: ارسال واقعی فقط با SMS_SENDING=live (پیش‌فرض: شبیه‌سازی)
+        $this->app->singleton(\App\Services\Sms\MelipayamakClient::class);
+        $this->app->singleton(\App\Services\Sms\SmsGateway::class, fn ($app) => config('sms.sending') === 'live'
+            ? $app->make(\App\Services\Sms\MelipayamakClient::class)
+            : new \App\Services\Sms\FakeSmsGateway());
     }
 
     /**

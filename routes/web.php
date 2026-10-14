@@ -129,6 +129,12 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/marketplaces/listings', 'pages::dashboard.marketplaces.listings')->name('marketplaces.listings');
     Route::livewire('/marketplaces/orders', 'pages::dashboard.marketplaces.orders')->name('marketplaces.orders');
     Route::livewire('/marketplaces/logs', 'pages::dashboard.marketplaces.logs')->name('marketplaces.logs');
+    // پیامک (ملی پیامک)
+    Route::livewire('/sms', 'pages::dashboard.sms.index')->name('sms.index');
+    Route::livewire('/sms/send', 'pages::dashboard.sms.send')->name('sms.send');
+    Route::livewire('/sms/templates', 'pages::dashboard.sms.templates')->name('sms.templates');
+    Route::livewire('/sms/contacts', 'pages::dashboard.sms.contacts')->name('sms.contacts');
+    Route::livewire('/sms/reports', 'pages::dashboard.sms.reports')->name('sms.reports');
     Route::livewire('/tickets', 'pages::dashboard.tickets.index')->name('tickets.index');
     Route::livewire('/messages', 'pages::dashboard.contact.index')->name('messages.index');
     Route::livewire('/comments', 'pages::dashboard.comments.index')->name('comments.index');
@@ -195,6 +201,7 @@ Route::prefix('dashboard') ->middleware([
     Route::livewire('/tags', 'pages::dashboard.tags.index')->name('tags.index');
     Route::livewire('/seo', 'pages::dashboard.seo.index')->name('seo.index');
     Route::livewire('/faq', 'pages::dashboard.faq.index')->name('faq.index');
+    Route::livewire('/announcements', 'pages::dashboard.announcements.index')->name('announcements.index');
     Route::livewire('/menus', 'pages::dashboard.menus.index')->name('menus.index');
     Route::livewire('/menus/{id}', 'pages::dashboard.menus.items')->name('menus.item');
 

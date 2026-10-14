@@ -228,6 +228,12 @@ new class extends Component {
         );
         $this->formData = array_merge($default, $dbData);
 
+        // بنرها: تصاویر ذخیره‌شده از media خوانده می‌شوند؛ images فقط فایل‌های جدید را نگه می‌دارد
+        if ($this->selectItem->section->key === \App\Support\Sections\Banners::KEY) {
+            $this->formData['images'] = [];
+            $this->formData['items'] = array_values($this->formData['items'] ?? []) ?: [\App\Support\Sections\Banners::newItem()];
+        }
+
         // نمایش مقدار واقعی حالت تصویر (حتی برای سکشن‌های قدیمی بدون pictureMode)
         if (in_array($this->selectItem->section->key, self::PICTURE_MODE_SECTIONS, true)) {
             $this->formData['pictureMode'] = \App\Enums\PictureMode::forSection(
@@ -365,6 +371,8 @@ new class extends Component {
             ],
 
             \App\Support\Sections\ReturnPolicy::KEY => \App\Support\Sections\ReturnPolicy::defaults(),
+            \App\Support\Sections\Banners::KEY => \App\Support\Sections\Banners::defaults(),
+            \App\Support\Sections\Announcements::KEY => \App\Support\Sections\Announcements::defaults(),
 
             'faq' => [
                 'mode' => 'latest',
@@ -708,6 +716,11 @@ new class extends Component {
                     ],
                 ],
                 \App\Support\Sections\ReturnPolicy::KEY => \App\Support\Sections\ReturnPolicy::rules(),
+                \App\Support\Sections\Banners::KEY => \App\Support\Sections\Banners::rules(
+                    (array) ($this->formData['items'] ?? []),
+                    $this->selectItem?->media?->where('collection', \App\Support\Sections\Banners::DESKTOP)->pluck('purpose')->all() ?? []
+                ),
+                \App\Support\Sections\Announcements::KEY => \App\Support\Sections\Announcements::rules(),
 
                 'faq' => [
                     'formData.mode' => [
@@ -867,7 +880,9 @@ new class extends Component {
 
     protected function messages(): array
     {
-        return \App\Support\Sections\ReturnPolicy::messages() + [
+        return \App\Support\Sections\ReturnPolicy::messages()
+            + \App\Support\Sections\Banners::messages()
+            + \App\Support\Sections\Announcements::messages() + [
 
             // عمومی
 
@@ -1065,6 +1080,11 @@ new class extends Component {
         } else {
             $item = $this->model::create($payload);
         }
+        if ($item->section?->key === \App\Support\Sections\Banners::KEY) {
+            $this->saveBannerMedia($item, $images, (array) ($data['formData']['items'] ?? []));
+            $images = [];
+        }
+
         foreach ($images ?? [] as $collection => $file) {
             if (!$file instanceof UploadedFile || !$file->isValid()) {
                 continue;
@@ -1151,6 +1171,80 @@ new class extends Component {
         unset($this->formData['images'][$collection]);
 
         $this->dispatch('alert', type: 'success', title: 'عملیات موفق', text: 'فایل حذف شد.');
+    }
+
+    /**
+     * بنرها: ذخیره تصویر دسکتاپ/موبایل هر آیتم (purpose = uid) و حذف تصاویر بنرهای حذف‌شده
+     */
+    protected function saveBannerMedia(RowSection $item, array $images, array $items): void
+    {
+        $collections = [\App\Support\Sections\Banners::DESKTOP, \App\Support\Sections\Banners::MOBILE];
+        $uids = array_column($items, 'uid');
+
+        foreach ($uids as $uid) {
+            foreach (['desktop' => \App\Support\Sections\Banners::DESKTOP, 'mobile' => \App\Support\Sections\Banners::MOBILE] as $prefix => $collection) {
+                $file = $images["{$prefix}_{$uid}"] ?? null;
+
+                if (!$file instanceof UploadedFile || !$file->isValid()) {
+                    continue;
+                }
+
+                $item->media()->where('collection', $collection)->where('purpose', $uid)->get()->each(fn ($m) => $this->deleteMedia($m));
+                $this->upload($file, $item, $collection, 'public', $uid, directory: \App\Support\Sections\Banners::DIRECTORY);
+            }
+        }
+
+        // تصاویر آیتم‌هایی که از فرم حذف شده‌اند
+        $item->media()->whereIn('collection', $collections)->whereNotIn('purpose', $uids ?: [''])->get()
+            ->each(fn ($m) => $this->deleteMedia($m));
+    }
+
+    public function addBannerItem(): void
+    {
+        $items = array_values((array) ($this->formData['items'] ?? []));
+
+        if (count($items) < \App\Support\Sections\Banners::MAX_ITEMS) {
+            $items[] = \App\Support\Sections\Banners::newItem();
+            $this->formData['items'] = $items;
+        }
+    }
+
+    /** حذف آیتم از فرم؛ تصاویرش هنگام ذخیره پاک می‌شوند */
+    public function removeBannerItem(int $index): void
+    {
+        $items = array_values((array) ($this->formData['items'] ?? []));
+        $uid = $items[$index]['uid'] ?? null;
+        unset($items[$index]);
+
+        $this->formData['items'] = array_values($items);
+        if ($uid) {
+            unset($this->formData['images']["desktop_{$uid}"], $this->formData['images']["mobile_{$uid}"]);
+        }
+        $this->resetValidation();
+    }
+
+    public function moveBannerItem(int $index, int $direction): void
+    {
+        $items = array_values((array) ($this->formData['items'] ?? []));
+        $target = $index + ($direction < 0 ? -1 : 1);
+
+        if (isset($items[$index], $items[$target])) {
+            [$items[$index], $items[$target]] = [$items[$target], $items[$index]];
+            $this->formData['items'] = $items;
+        }
+    }
+
+    /** حذف فوری تصویر موبایل ذخیره‌شده (تصویر دسکتاپ فقط جایگزین می‌شود) */
+    public function removeBannerMobileImage(string $uid): void
+    {
+        abort_if(!auth()->user()->can('sections.edit'), 403);
+        abort_unless($this->selectItem && preg_match('/^[a-z0-9]{8}$/', $uid), 404);
+
+        $this->selectItem->media()->where('collection', \App\Support\Sections\Banners::MOBILE)->where('purpose', $uid)->get()
+            ->each(fn ($m) => $this->deleteMedia($m));
+        $this->selectItem->load('media');
+
+        $this->dispatch('alert', type: 'success', title: 'عملیات موفق', text: 'تصویر موبایل حذف شد.');
     }
 
     protected function repeatableLists(): array
@@ -1376,6 +1470,14 @@ new class extends Component {
 
                                 @case('hero')
                                     @include('dashboard.forms.hero')
+                                    @break
+
+                                @case('banners')
+                                    @include('dashboard.forms.banners')
+                                    @break
+
+                                @case('announcements')
+                                    @include('dashboard.forms.announcements')
                                     @break
 
                                 @default

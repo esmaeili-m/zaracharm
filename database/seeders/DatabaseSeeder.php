@@ -19,8 +19,9 @@ class DatabaseSeeder extends Seeder
 //            UserTableSeeder::class,
 //            CategorySeeder::class,
 //            TagTableSeeder::class,
-//            PageTableSeeder::class,
-//            SectionTableSeeder::class,
+            // رجیستری سکشن‌ها و صفحات پیش‌فرض (غیرمخرب؛ ترتیب مهم است)
+            SectionTableSeeder::class,
+            PageTableSeeder::class,
 //            FaqSeeder::class,
 //            CourseSeeder::class,
 //            ArticleSeeder::class,

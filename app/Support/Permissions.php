@@ -19,6 +19,11 @@ class Permissions
         'create' => 'ایجاد',
         'edit' => 'ویرایش',
         'delete' => 'حذف',
+        'send' => 'ارسال تکی',
+        'bulk' => 'ارسال گروهی',
+        'templates' => 'مدیریت الگوها',
+        'contacts' => 'مدیریت مخاطبان و لیست‌ها',
+        'export' => 'خروجی',
     ];
 
     public const CRUD = ['view', 'create', 'edit', 'delete'];
@@ -68,6 +73,7 @@ class Permissions
         'tags' => ['label' => 'تگ‌ها', 'group' => 'محتوا و صفحه‌ساز', 'actions' => self::CRUD],
         'menus' => ['label' => 'منوها', 'group' => 'محتوا و صفحه‌ساز', 'actions' => self::CRUD],
         'faq' => ['label' => 'سوالات متداول', 'group' => 'محتوا و صفحه‌ساز', 'actions' => self::CRUD],
+        'announcements' => ['label' => 'اطلاعیه‌های سایت', 'group' => 'محتوا و صفحه‌ساز', 'actions' => self::CRUD],
         'social-links' => ['label' => 'شبکه‌های اجتماعی', 'group' => 'محتوا و صفحه‌ساز', 'actions' => self::CRUD],
         'seo' => ['label' => 'سئو', 'group' => 'محتوا و صفحه‌ساز', 'actions' => self::CRUD],
 
@@ -76,6 +82,8 @@ class Permissions
         'product-questions' => ['label' => 'پرسش و پاسخ محصولات', 'group' => 'ارتباط با مشتری', 'actions' => self::CRUD],
         'tickets' => ['label' => 'تیکت‌ها', 'group' => 'ارتباط با مشتری', 'actions' => self::CRUD],
         'messages' => ['label' => 'پیام‌های تماس با ما', 'group' => 'ارتباط با مشتری', 'actions' => ['view', 'delete']],
+        // view: داشبورد و گزارش پیامک
+        'sms' => ['label' => 'پیامک (ملی پیامک)', 'group' => 'ارتباط با مشتری', 'actions' => ['view', 'send', 'bulk', 'templates', 'contacts', 'export']],
 
     ];
 

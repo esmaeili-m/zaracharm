@@ -20,9 +20,12 @@ trait FileUploadTrait
         $sort=1,
         $name=null,
         $meta=[],
-        bool $compress = true
+        bool $compress = true,
+        ?string $directory = null // پوشه ذخیره؛ پیش‌فرض = نام collection
     ): ?Media
     {
+        $directory ??= $collection;
+
         Validator::make(
             ['file' => $file],
             ['file' => 'required|file|max:512000']
@@ -35,7 +38,7 @@ trait FileUploadTrait
 
         if ($compressed) {
             $path = Storage::disk($disk)->putFileAs(
-                $collection,
+                $directory,
                 new \Illuminate\Http\File($compressed['path']),
                 Str::random(40) . '.' . $compressed['extension']
             );
@@ -48,7 +51,7 @@ trait FileUploadTrait
                 'height' => $compressed['height'],
             ]);
         } else {
-            $path = $file->store($collection, $disk);
+            $path = $file->store($directory, $disk);
         }
 
         if (!$path) return null;

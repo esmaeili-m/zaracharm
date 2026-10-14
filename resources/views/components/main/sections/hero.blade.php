@@ -12,7 +12,7 @@ use Livewire\Component;
  */
 new class extends Component
 {
-    public array $data = [];
+    public ?array $data = []; // سکشن تازه‌اضافه‌شده (بدون تنظیمات) data = null دارد
     public ?string $mediaUrl = null;
     public bool $isVideo = false;
     public ?string $posterUrl = null;

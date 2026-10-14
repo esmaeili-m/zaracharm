@@ -414,7 +414,7 @@ new class extends Component
 };
 ?>
 
-<div class="pb-root" x-data="{ preview: false, previewDevice: 'lg' }">
+<div class="pb-root" x-data="{ preview: false, previewDevice: 'lg', palette: false }" @pb-palette-close="palette = false" @keydown.escape.window="palette = false">
 
     {{-- ================= Header ================= --}}
     <div class="my-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
@@ -424,7 +424,7 @@ new class extends Component
                 <h1 class="page-title fw-semibold fs-18 mb-0">صفحه‌ساز: {{ $page->title }}</h1>
                 <span class="badge bg-{{ $page->status ? 'success' : 'secondary' }}-transparent">{{ $page->status ? 'منتشر شده' : 'غیرفعال' }}</span>
             </div>
-            <div class="text-muted small">سکشن‌ها را از سمت راست بکشید و داخل ردیف‌ها رها کنید. برای جابه‌جایی، دستگیره <i class="ri-draggable"></i> را بکشید.</div>
+            <div class="text-muted small d-none d-md-block">سکشن‌ها را از سمت راست بکشید و داخل ردیف‌ها رها کنید. برای جابه‌جایی، دستگیره <i class="ri-draggable"></i> را بکشید.</div>
         </div>
 
         <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -432,10 +432,15 @@ new class extends Component
                 @foreach($this::DEVICES as $key => $d)
                     <button type="button" wire:click="setDevice('{{ $key }}')"
                             class="btn btn-sm {{ $device === $key ? 'btn-primary' : 'btn-outline-primary' }}" title="ویرایش عرض برای {{ $d['title'] }}">
-                        <i class="{{ $d['icon'] }} me-1"></i>{{ $d['title'] }}
+                        <i class="{{ $d['icon'] }}"></i><span class="d-none d-sm-inline ms-1">{{ $d['title'] }}</span>
                     </button>
                 @endforeach
             </div>
+            @can('sections.create')
+                <button type="button" class="btn btn-sm btn-primary d-xl-none" @click="palette = true">
+                    <i class="ri-add-line me-1"></i>افزودن سکشن
+                </button>
+            @endcan
             <button type="button" class="btn btn-sm btn-info-light" @click="preview = true; $nextTick(() => $refs.frame.src = @js($this->previewUrl()) + '?_pb=' + Date.now())">
                 <i class="ri-eye-line me-1"></i>پیش‌نمایش
             </button>
@@ -449,10 +454,13 @@ new class extends Component
 
         {{-- ================= Palette ================= --}}
         @can('sections.create')
-            <aside class="pb-palette card custom-card mb-0">
-                <div class="card-header py-2">
+            <div class="pb-palette-backdrop d-xl-none" x-show="palette" x-transition.opacity x-cloak @click="palette = false"></div>
+            <aside class="pb-palette card custom-card mb-0" :class="palette && 'is-open'">
+                <div class="card-header py-2 justify-content-between">
                     <div class="card-title fs-14"><i class="ri-stack-line me-1"></i>سکشن‌ها</div>
+                    <button type="button" class="btn btn-sm btn-icon btn-light d-xl-none" @click="palette = false" aria-label="بستن"><i class="ri-close-line"></i></button>
                 </div>
+                <div class="pb-palette-hint d-xl-none">روی <i class="ri-add-line"></i> بزنید تا سکشن به انتهای صفحه اضافه شود، یا آن را بکشید و داخل ردیف رها کنید.</div>
                 <div class="card-body p-2">
                     <input type="search" wire:model.live.debounce.300ms="paletteSearch" class="form-control form-control-sm mb-2" placeholder="جستجوی سکشن...">
 
@@ -467,7 +475,7 @@ new class extends Component
                                         <span class="d-block text-muted fs-11 text-truncate">{{ $item->description }}</span>
                                     </span>
                                     <button type="button" class="btn btn-sm btn-icon btn-light pb-no-drag" title="افزودن به انتهای صفحه"
-                                            wire:click="addSection({{ $item->id }}, {{ $this->rows->last()?->id ?? 'null' }})">
+                                            @click="palette = false" wire:click="addSection({{ $item->id }}, {{ $this->rows->last()?->id ?? 'null' }})">
                                         <i class="ri-add-line"></i>
                                     </button>
                                 </div>
@@ -724,7 +732,19 @@ new class extends Component
 
             .pb-palette { position: sticky; top: 80px; max-height: calc(100vh - 100px); overflow: hidden; display: flex; flex-direction: column; }
             .pb-palette .card-body { overflow-y: auto; }
-            @media (max-width: 1199px) { .pb-palette { position: static; max-height: none; } .pb-palette-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .4rem; } }
+            /* زیر xl: پالت به‌صورت کشوی پایین صفحه */
+            .pb-root [x-cloak] { display: none !important; }
+            .pb-palette-hint { font-size: 11px; color: var(--text-muted, #8c9097); padding: .5rem .75rem 0; }
+            @media (max-width: 1199.98px) {
+                .pb-palette { position: fixed; inset: auto 0 0 0; z-index: 1056; max-height: 78vh; border-radius: 1.1rem 1.1rem 0 0 !important; box-shadow: 0 -12px 40px rgba(0,0,0,.18); transform: translateY(105%); visibility: hidden; transition: transform .28s ease, visibility .28s, opacity .15s; }
+                .pb-palette.is-open { transform: none; visibility: visible; }
+                .pb-palette-backdrop { position: fixed; inset: 0; z-index: 1055; background: rgba(15, 18, 30, .45); }
+                .pb-palette-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .4rem; }
+                .pb-palette-item { margin-bottom: 0; }
+                /* هنگام کشیدن از کشو، کشو کم‌رنگ و غیرقابل‌کلیک می‌شود تا ردیف‌ها دیده شوند */
+                .pb-dragging .pb-palette.is-open { opacity: .12; pointer-events: none; }
+                .pb-dragging .pb-palette-backdrop { opacity: 0 !important; pointer-events: none; }
+            }
             .pb-palette-group { font-size: 11px; font-weight: 700; color: var(--text-muted, #8c9097); margin: .75rem .25rem .35rem; }
             .pb-palette-item { display: flex; align-items: center; gap: .55rem; padding: .5rem; margin-bottom: .35rem; border: 1px dashed rgba(var(--primary-rgb, 132, 90, 223), .35); border-radius: .6rem; background: var(--custom-white, #fff); cursor: grab; transition: border-color .15s, box-shadow .15s, transform .15s; user-select: none; }
             .pb-palette-item:hover { border-style: solid; border-color: rgb(var(--primary-rgb, 132, 90, 223)); box-shadow: 0 4px 14px rgba(0,0,0,.06); transform: translateY(-1px); }
@@ -768,6 +788,27 @@ new class extends Component
             .pb-preview-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .65rem 1rem; color: #fff; }
             .pb-preview-stage { flex: 1; display: flex; justify-content: center; padding: 0 1rem 1rem; min-height: 0; }
             .pb-preview-frame { height: 100%; max-width: 100%; border: 0; border-radius: .75rem; background: #fff; transition: width .3s ease; }
+
+            /* لمسی: دستگیره بزرگ‌تر و بدون اسکرول هنگام کشیدن */
+            .pb-row-handle, .pb-block-handle { touch-action: none; }
+            @media (pointer: coarse) { .pb-row-handle, .pb-block-handle { font-size: 22px; padding: 4px; } }
+
+            /* موبایل */
+            @media (max-width: 767.98px) {
+                .pb-canvas-wrap { padding: .5rem; border-radius: .75rem; }
+                .pb-rows { gap: .6rem; }
+                .pb-row-head { flex-wrap: wrap; padding: .5rem; }
+                .pb-row-head > .pb-no-drag { margin: 0 !important; flex-basis: 100%; justify-content: flex-end; }
+                .pb-grid { padding: .5rem; min-height: 80px; }
+                /* عرض واقعی هر سکشن روی نشان n/12 دیده می‌شود؛ کارت‌ها در صفحه کوچک زیر هم قرار می‌گیرند */
+                .pb-block { grid-column: 1 / -1 !important; }
+                .pb-block-actions .btn-sm { padding: .3rem .55rem; }
+                .pb-newrow { min-height: 72px; font-size: 12px; text-align: center; }
+                .pb-preview-bar { flex-wrap: wrap; gap: .5rem; padding: .5rem; }
+                .pb-preview-bar > span:first-child { flex-basis: 100%; font-size: 13px; }
+                .pb-preview-stage { padding: 0 .25rem .25rem; }
+                .pb-preview-frame { border-radius: .5rem; }
+            }
         </style>
     @endassets
 
@@ -797,6 +838,8 @@ new class extends Component
                 el._pb = Sortable.create(el, {
                     group: { name: 'pb-sections', pull: 'clone', put: false },
                     sort: false, animation: 150, filter: '.pb-no-drag', preventOnFilter: false,
+                    // لمسی: نگه‌داشتن کوتاه برای کشیدن، تا اسکرول کشوی پالت ممکن باشد
+                    delay: 200, delayOnTouchOnly: true, touchStartThreshold: 5,
                     ghostClass: 'pb-ghost', chosenClass: 'pb-chosen', ...dragState,
                 });
             });
@@ -812,6 +855,7 @@ new class extends Component
                         const typeId = evt.item.dataset.typeId;
                         const sectionId = evt.item.dataset.sectionId;
                         revert(evt);
+                        root.dispatchEvent(new CustomEvent('pb-palette-close'));
                         if (typeId) call('addSection', +typeId, rowId, evt.newIndex);
                         else if (sectionId) call('moveSection', +sectionId, rowId, evt.newIndex);
                     },
@@ -833,6 +877,7 @@ new class extends Component
                         const typeId = evt.item.dataset.typeId;
                         const sectionId = evt.item.dataset.sectionId;
                         revert(evt);
+                        root.dispatchEvent(new CustomEvent('pb-palette-close'));
                         if (typeId) call('addSection', +typeId, null, 0);
                         else if (sectionId) call('moveSection', +sectionId, null, 0);
                     },
